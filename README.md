@@ -97,7 +97,7 @@ Program generuje dva typy výstupů:
 Logy jsou ukládány do adresáře `logs/` ve formátu:
 ```
 YYYY-MM-DD HH:MM:SS - LEVEL - Message
-```
+``` 
 
 ## Bezpečnost
 

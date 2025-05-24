@@ -1,35 +1,32 @@
-class EmailValidatorException(Exception):
-    """Základní výjimka pro chyby validace emailu"""
+# src/verifier/exceptions.py
+
+class EmailVerifierException(Exception):
+    def __init__(self, message: str, status_code: str = None, verification_steps: list = None):
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
+        self.verification_steps = verification_steps if verification_steps is not None else []
+
+class TimeoutException(EmailVerifierException):
     pass
 
-class TimeoutException(EmailValidatorException):
-    """Výjimka pro timeout při připojení k SMTP serveru"""
+class NoConnectionException(EmailVerifierException):
     pass
 
-class NoConnectionException(EmailValidatorException):
-    """Výjimka pro chyby připojení k SMTP serveru"""
+class UnexpectedResponseException(EmailVerifierException):
     pass
 
-class UnexpectedResponseException(EmailValidatorException):
-    """Výjimka pro neočekávané odpovědi od SMTP serveru"""
+class RateLimitException(EmailVerifierException):
     pass
 
-class RateLimitException(EmailValidatorException):
-    """Výjimka pro překročení rate limitu"""
+class DNSError(EmailVerifierException):
     pass
 
-class DomainValidationException(EmailValidatorException):
-    """Výjimka pro chyby validace domény"""
+class SyntaxError(EmailVerifierException):
     pass
 
-class ConfigurationError(EmailValidatorException):
-    """Výjimka pro chyby v konfiguraci"""
+class DisposableDomainError(EmailVerifierException):
     pass
 
-class DNSValidationError(EmailValidatorException):
-    """Výjimka pro chyby validace DNS záznamů"""
+class ConfigurationError(EmailVerifierException):
     pass
-
-class SMTPConnectionError(EmailValidatorException):
-    """Výjimka pro chyby SMTP připojení"""
-    pass 

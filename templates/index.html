@@ -345,13 +345,18 @@
             // Footer Year
             document.getElementById('currentYear').textContent = new Date().getFullYear();
 
-            // --- Event Listeners ---
+            // Add event listeners
             if (singleEmailForm) singleEmailForm.addEventListener('submit', handleSingleEmailVerification);
-            
+            if (browseCsvButton) browseCsvButton.addEventListener('click', () => csvFileInput.click());
+            if (csvFileInput) csvFileInput.addEventListener('change', handleFileSelect);
+            if (confirmColumnButton) confirmColumnButton.addEventListener('click', handleColumnConfirmation);
+            if (startVerificationButton) startVerificationButton.addEventListener('click', () => triggerStartVerification(true));
+            if (stopVerificationButton) stopVerificationButton.addEventListener('click', handleStopVerification);
+
+            // Add drag and drop event handlers
             if (dropZone) {
                 ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
                     dropZone.addEventListener(eventName, preventDefaults, false);
-                    document.body.addEventListener(eventName, preventDefaults, false); // Prevent browser default for whole page
                 });
                 ['dragenter', 'dragover'].forEach(eventName => {
                     dropZone.addEventListener(eventName, () => dropZone.classList.add('active'), false);
@@ -359,14 +364,8 @@
                 ['dragleave', 'drop'].forEach(eventName => {
                     dropZone.addEventListener(eventName, () => dropZone.classList.remove('active'), false);
                 });
-                dropZone.addEventListener('drop', handleDrop, false);
+                dropZone.addEventListener('drop', handleDrop);
             }
-
-            if (browseCsvButton) browseCsvButton.addEventListener('click', () => csvFileInput.click());
-            if (csvFileInput) csvFileInput.addEventListener('change', handleFileSelect);
-            if (confirmColumnButton) confirmColumnButton.addEventListener('click', handleColumnConfirmation);
-            if (startVerificationButton) startVerificationButton.addEventListener('click', () => triggerStartVerification(true));
-            if (stopVerificationButton) stopVerificationButton.addEventListener('click', handleStopVerification);
         });
 
         // === Helper Functions ===
@@ -542,66 +541,140 @@
         }
 
         async function handleFileUpload(file) {
-            if (!file.name.toLowerCase().endsWith('.csv')) {
-                displayGlobalAlert('Prosím, vyberte soubor ve formátu CSV.');
-                csvFileInput.value = ''; // Reset inputu
+            console.log("Starting file upload process...");
+            console.log("File details:", {
+                name: file.name,
+                size: file.size,
+                type: file.type
+            });
+
+            if (!file) {
+                console.error("No file provided");
                 return;
             }
 
-            uploadProgressArea.style.display = 'block';
-            uploadProgressBar.style.width = '0%';
-            uploadProgressText.textContent = 'Nahrávám soubor...';
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                console.error("Invalid file type:", file.name);
+                alert('Povoleny jsou pouze CSV soubory.');
+                return;
+            }
+
+            console.log("File validation passed, preparing for upload...");
             
-            // Skrýt ostatní sekce pro hromadnou verifikaci
+            // Get all required DOM elements
+            const dragArea = document.getElementById('dropZone');
+            const uploadProgressBar = document.getElementById('uploadProgressBar');
+            const uploadProgressText = document.getElementById('uploadProgressText');
+            const uploadProgressArea = document.getElementById('uploadProgressArea');
+            const columnSelectionArea = document.getElementById('columnSelectionArea');
+            const bulkUploadArea = document.getElementById('bulkUploadArea');
+
+            // Verify all elements exist
+            if (!dragArea || !uploadProgressBar || !uploadProgressText || !uploadProgressArea || !columnSelectionArea || !bulkUploadArea) {
+                console.error("Required DOM elements not found:", {
+                    dragArea: !!dragArea,
+                    uploadProgressBar: !!uploadProgressBar,
+                    uploadProgressText: !!uploadProgressText,
+                    uploadProgressArea: !!uploadProgressArea,
+                    columnSelectionArea: !!columnSelectionArea,
+                    bulkUploadArea: !!bulkUploadArea
+                });
+                alert('Chyba při inicializaci rozhraní. Prosím, obnovte stránku.');
+                return;
+            }
+
+            // Update UI
+            dragArea.style.display = 'none';
+            uploadProgressArea.style.display = 'block';
             columnSelectionArea.style.display = 'none';
-            bulkVerificationArea.style.display = 'none';
-            downloadResultsArea.style.display = 'none';
+            bulkUploadArea.style.display = 'none';
 
+            // Reset progress
+            uploadProgressBar.style.width = '0%';
+            uploadProgressText.textContent = '0%';
 
-            const formData = new FormData();
-            formData.append('file', file);
+            // Simulate progress more slowly
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                if (progress < 90) {  // Only go up to 90% while waiting for server
+                    progress += 5;  // Slower increment
+                    uploadProgressBar.style.width = `${progress}%`;
+                    uploadProgressText.textContent = `${progress}%`;
+                }
+            }, 200);  // Slower interval
 
             try {
-                // Simulace průběhu nahrávání (reálné nahrávání je rychlé na localhost)
-                let currentProgress = 0;
-                const progressInterval = setInterval(() => {
-                    currentProgress += 10;
-                    if (currentProgress <= 100) {
-                        uploadProgressBar.style.width = `${currentProgress}%`;
-                        uploadProgressText.textContent = `Nahrávám... ${currentProgress}%`;
-                    } else {
-                        clearInterval(progressInterval);
-                    }
-                }, 100);
+                console.log("Preparing to send file to server...");
+                const formData = new FormData();
+                formData.append('file', file);
 
+                // Create AbortController for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
+                console.log("Sending file to server...");
                 const response = await fetch('/load_csv', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    signal: controller.signal
                 });
-                
-                clearInterval(progressInterval); // Zastavit simulaci
-                uploadProgressBar.style.width = `100%`;
-                uploadProgressText.textContent = `Soubor nahrán, zpracovávám...`;
 
-                const data = await response.json();
+                clearTimeout(timeoutId);
+                clearInterval(progressInterval);
+
+                console.log("Server response received:", response.status);
+                console.log("Response headers:", Object.fromEntries(response.headers.entries()));
 
                 if (!response.ok) {
-                    throw new Error(data.error || `Chyba serveru: ${response.status}`);
+                    const errorData = await response.json();
+                    console.error("Server error response:", errorData);
+                    throw new Error(errorData.error || 'Chyba při nahrávání souboru');
                 }
 
-                if (data.status === 'select_column') {
-                    uploadProgressArea.style.display = 'none'; // Skrýt progress bar
+                const data = await response.json();
+                console.log("Server response data:", data);
+
+                if (data.status === 'select_column' && Array.isArray(data.columns)) {
+                    console.log("Columns detected:", data.columns);
+                    console.log("Suggested email column:", data.suggested_email_column);
+                    
+                    // Update progress to 100% only after successful processing
+                    uploadProgressBar.style.width = '100%';
+                    uploadProgressText.textContent = '100%';
+                    
+                    // Show column selection
+                    uploadProgressArea.style.display = 'none';
+                    columnSelectionArea.style.display = 'block';
+                    
+                    // Populate column selection
                     displayColumnSelection(data.columns, data.suggested_email_column);
                 } else {
-                    throw new Error(data.error || "Neočekávaná odpověď serveru po nahrání CSV.");
+                    console.error("Unexpected server response:", data);
+                    throw new Error('Neočekávaná odpověď ze serveru');
                 }
-
             } catch (error) {
-                console.error('Chyba při nahrávání CSV:', error);
-                displayGlobalAlert(`Chyba při nahrávání CSV: ${error.message}`);
+                console.error("Error during CSV upload process:", error);
+                console.error("Error details:", {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                
+                clearInterval(progressInterval);
+                uploadProgressBar.style.width = '0%';
+                uploadProgressText.textContent = '0%';
+                
+                if (error.name === 'AbortError') {
+                    alert('Nahrávání souboru trvalo příliš dlouho. Zkuste to prosím znovu.');
+                } else {
+                    alert(error.message || 'Chyba při nahrávání souboru. Zkuste to prosím znovu.');
+                }
+                
+                // Reset UI
+                dragArea.style.display = 'block';
                 uploadProgressArea.style.display = 'none';
-                csvFileInput.value = ''; // Reset inputu
+                columnSelectionArea.style.display = 'none';
+                bulkUploadArea.style.display = 'block';
             }
         }
         

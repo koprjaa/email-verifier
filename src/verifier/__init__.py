@@ -3,13 +3,13 @@ Modul pro verifikaci emailových adres
 """
 from .email_verifier import EmailVerifier
 from .exceptions import (
-    EmailValidatorException, TimeoutException, NoConnectionException,
+    EmailVerifierException, TimeoutException, NoConnectionException,
     UnexpectedResponseException, RateLimitException
 )
 
 __all__ = [
     'EmailVerifier',
-    'EmailValidatorException',
+    'EmailVerifierException',
     'TimeoutException',
     'NoConnectionException',
     'UnexpectedResponseException',

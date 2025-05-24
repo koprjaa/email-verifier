@@ -8,7 +8,7 @@ typing-extensions==4.10.0
 aiodns==3.1.1
 aiosmtplib==2.0.2
 pycares==4.3.0
-Flask-Limiter==3.5.0
+Flask-Limiter==3.5.0 
 Werkzeug==3.0.1
 click==8.1.7
 itsdangerous==2.1.2
