@@ -35,18 +35,18 @@ SMTP_CODES_TEMP_FAIL = (421, 450, 451, 452)
 SMTP_CODES_PERM_FAIL = (500, 501, 502, 503, 504, 550, 551, 552, 553, 554)
 
 TEMPORARY_ERROR_CODES = {
-    421,  # Service not available
-    450,  # Requested mail action not taken
-    451,  # Requested action aborted
-    452,  # Requested action not taken
-    454,  # Temporary authentication failure
-    458,  # Unable to queue
-    459,  # Server error
-    471,  # Error processing
-    472,  # Message too big
-    552,  # Exceeded storage allocation
-    553,  # Mailbox name not allowed
-    554,  # Transaction failed
+    421,
+    450,
+    451,
+    452,
+    454,
+    458,
+    459,
+    471,
+    472,
+    552,
+    553,
+    554,
 }
 
 KNOWN_FREEMAIL_DOMAINS = {
@@ -160,12 +160,10 @@ class EmailVerifier:
         )
 
         _dns_servers_to_use = dns_servers or self.internal_config.get("dns_servers")
-        # Create DNS resolver for email_validator
         self.dns_resolver = Resolver()
         if _dns_servers_to_use:
             self.dns_resolver.nameservers = _dns_servers_to_use
         
-        # Create async DNS resolver for other operations
         self.async_dns_resolver = aiodns.DNSResolver(
             timeout=self.dns_timeout,
             tries=self.internal_config.get("dns_resolver_tries", 2),

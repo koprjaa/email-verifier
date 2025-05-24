@@ -8,7 +8,6 @@ class EmailVerifierException(Exception):
         self.verification_steps = verification_steps if verification_steps is not None else []
 
 class VerificationError(EmailVerifierException):
-    """Base class for all verification errors"""
     pass
 
 class TimeoutException(EmailVerifierException):
