@@ -12,6 +12,14 @@ Webová aplikace pro verifikaci emailových adres pomocí SMTP a DNS kontrol. Ap
 - Detekce jednorázových emailových adres
 - Rate limiting pro ochranu SMTP serverů
 - Detailní logování a reportování
+- Asynchronní zpracování pro lepší výkon
+- Podpora pro export výsledků ve formátech CSV a JSON
+
+## Technické požadavky
+
+- Python 3.8 nebo novější
+- pip (správce balíčků Python)
+- Virtuální prostředí (doporučeno)
 
 ## Instalace
 
@@ -62,6 +70,20 @@ Content-Type: application/json
 }
 ```
 
+Odpověď:
+```json
+{
+    "results": [
+        {
+            "email": "email1@domain.com",
+            "status": "valid",
+            "error": null,
+            "domain_type": "regular"
+        }
+    ]
+}
+```
+
 ## Konfigurace
 
 Konfigurační soubor `config.json` umožňuje nastavit:
@@ -97,7 +119,7 @@ Program generuje dva typy výstupů:
 Logy jsou ukládány do adresáře `logs/` ve formátu:
 ```
 YYYY-MM-DD HH:MM:SS - LEVEL - Message
-``` 
+```
 
 ## Bezpečnost
 
@@ -105,7 +127,25 @@ YYYY-MM-DD HH:MM:SS - LEVEL - Message
 - Validace vstupních dat
 - Omezení velikosti nahrávaných souborů
 - Ochrana proti DoS útokům
+- Bezpečné zpracování SMTP komunikace
+- Omezení počtu požadavků na API
+
+## Výkon
+
+- Asynchronní zpracování pro maximální výkon
+- Paralelní zpracování více emailů
+- Optimalizované DNS dotazy
+- Efektivní správa paměti
+- Dávkové zpracování pro velké soubory
 
 ## Licence
 
-MIT License 
+MIT License
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request 

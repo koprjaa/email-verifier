@@ -13,12 +13,10 @@ from typing import Dict, Any, List
 from flask import Flask, jsonify, render_template, request, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
+import pandas as pd
 
-from src.verifier.email_verifier import EmailVerifier
-
-# Create global event loop
-loop = asyncio.new_event_loop()
-asyncio.set_event_loop(loop)
+from verifier.email_verifier import EmailVerifier
+from verifier.exceptions import VerificationError
 
 app = Flask(__name__)
 CORS(app)
@@ -88,7 +86,7 @@ email_verifier_instance = EmailVerifier(
 app_logger.info("Global EmailVerifier instance created and configured.")
 
 current_verification_state: Dict[str, Any] = {}
-verification_lock = threading.Lock()
+verification_lock = threading.RLock()  # Changed to RLock for better deadlock prevention
 bulk_verification_thread = None
 
 
@@ -137,9 +135,13 @@ def verify_single_email_route():
     if not email_to_verify:
         app_logger.warning("API /verify_single: Missing 'email' in request payload.")
         return jsonify({"error": "Chybí email v požadavku"}), 400
-    app_logger.info(
-        f"API /verify_single: Received request to verify email: {email_to_verify}"
-    )
+    
+    app_logger.info(f"API /verify_single: Received request to verify email: {email_to_verify}")
+    
+    # Create new event loop for this request
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
     try:
         app_logger.info(f"API /verify_single: Starting verification process for {email_to_verify}")
         result = loop.run_until_complete(
@@ -156,6 +158,8 @@ def verify_single_email_route():
             exc_info=True,
         )
         return jsonify({"error": f"Interní chyba serveru: {str(e)}"}), 500
+    finally:
+        loop.close()
 
 
 @app.route("/load_csv", methods=["POST"])
@@ -281,18 +285,38 @@ def load_csv_route():
             except Exception as e:
                 app_logger.error(f"API /load_csv: Error reading first bytes of file: {str(e)}")
                 raise
+
+            # Try different delimiters
+            delimiters = [',', ';', '\t', '|']
+            detected_delimiter = None
             
             for enc in encodings_to_try:
                 try:
                     app_logger.debug(f"API /load_csv: Trying encoding '{enc}'...")
                     with open(uploaded_filepath, "r", encoding=enc) as f_csv:
-                        reader = csv.reader(f_csv)
-                        headers = next(reader)
-                        detected_encoding = enc
-                        app_logger.info(
-                            f"API /load_csv: Successfully read CSV with encoding '{enc}'. Headers: {headers}"
-                        )
-                        break
+                        # Read first line to detect delimiter
+                        first_line = f_csv.readline().strip()
+                        app_logger.debug(f"API /load_csv: First line with encoding '{enc}': {first_line}")
+                        
+                        # Try to detect delimiter
+                        for delimiter in delimiters:
+                            if delimiter in first_line:
+                                parts = first_line.split(delimiter)
+                                if len(parts) > 1:  # If we have multiple columns
+                                    detected_delimiter = delimiter
+                                    app_logger.info(f"API /load_csv: Detected delimiter '{delimiter}' with encoding '{enc}'")
+                                    break
+                        
+                        if detected_delimiter:
+                            # Reset file pointer and read with detected delimiter
+                            f_csv.seek(0)
+                            reader = csv.reader(f_csv, delimiter=detected_delimiter)
+                            headers = next(reader)
+                            detected_encoding = enc
+                            app_logger.info(
+                                f"API /load_csv: Successfully read CSV with encoding '{enc}' and delimiter '{detected_delimiter}'. Headers: {headers}"
+                            )
+                            break
                 except (UnicodeDecodeError, StopIteration) as e:
                     app_logger.debug(f"API /load_csv: Failed to read with encoding '{enc}': {str(e)}")
                     continue
@@ -306,12 +330,12 @@ def load_csv_route():
                 with verification_lock:
                     current_verification_state["status"] = "error"
                 app_logger.error(
-                    "API /load_csv: Failed to read CSV headers. File might be empty or unsupported encoding."
+                    "API /load_csv: Failed to read CSV headers. File might be empty or unsupported encoding/delimiter."
                 )
                 return (
                     jsonify(
                         {
-                            "error": "Nepodařilo se přečíst CSV soubor. Zkontrolujte kódování a formát."
+                            "error": "Nepodařilo se přečíst CSV soubor. Zkontrolujte kódování a oddělovač sloupců."
                         }
                     ),
                     400,
@@ -335,6 +359,7 @@ def load_csv_route():
                 current_verification_state["uploaded_filepath"] = str(uploaded_filepath)
                 current_verification_state["status"] = "selecting_column"
                 current_verification_state["detected_encoding"] = detected_encoding
+                current_verification_state["detected_delimiter"] = detected_delimiter
                 current_verification_state["last_activity_time"] = time.time()
                 app_logger.info("API /load_csv: Successfully processed CSV file, ready for column selection")
             
@@ -385,6 +410,7 @@ def select_column_route():
 
     uploaded_filepath_str = current_verification_state.get("uploaded_filepath")
     detected_encoding = current_verification_state.get("detected_encoding", "utf-8")
+    detected_delimiter = current_verification_state.get("detected_delimiter", ";")
 
     if not uploaded_filepath_str or not Path(uploaded_filepath_str).exists():
         with verification_lock:
@@ -397,7 +423,7 @@ def select_column_route():
     try:
         emails_to_verify_list = []
         with open(uploaded_filepath_str, "r", encoding=detected_encoding) as f_csv:
-            reader = csv.DictReader(f_csv)
+            reader = csv.DictReader(f_csv, delimiter=detected_delimiter)
             if selected_column not in reader.fieldnames:
                 with verification_lock:
                     current_verification_state["status"] = "error"
@@ -461,18 +487,19 @@ def run_bulk_verification_in_thread():
         run_id_for_thread = current_verification_state.get("verification_run_id")
         current_verification_state["is_thread_active"] = True
 
-    app_logger.info(
-        f"Thread (ID: {run_id_for_thread}): Starting bulk verification process."
-    )
+    # Create new event loop for this thread
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    
+    app_logger.info(f"Thread (ID: {run_id_for_thread}): Starting bulk verification process.")
     email_verifier_instance.reset_internal_state_for_run()
 
-    emails_for_this_run = list(current_verification_state.get("emails_to_verify", []))
-    total_emails_for_this_run = len(emails_for_this_run)
-    ui_app_batch_size = current_verification_state.get("app_batch_size_for_ui", 20)
-
     try:
+        emails_for_this_run = list(current_verification_state.get("emails_to_verify", []))
+        total_emails_for_this_run = len(emails_for_this_run)
+        ui_app_batch_size = current_verification_state.get("app_batch_size_for_ui", 20)
+
         for i in range(0, total_emails_for_this_run, ui_app_batch_size):
-            batch_to_process_list = emails_for_this_run[i : i + ui_app_batch_size]
             with verification_lock:
                 if (
                     current_verification_state.get("stop_requested")
@@ -483,12 +510,15 @@ def run_bulk_verification_in_thread():
                         f"Thread (ID: {run_id_for_thread}): Stop requested or new run started. Terminating current processing."
                     )
                     current_verification_state["status"] = "stopped"
-                    break
+                    current_verification_state["is_thread_active"] = False
+                    save_verification_results(run_id_for_thread)
+                    return
                 current_verification_state["last_activity_time"] = time.time()
                 current_verification_state["current_batch_num"] = (
                     i // ui_app_batch_size
                 ) + 1
 
+            batch_to_process_list = emails_for_this_run[i : i + ui_app_batch_size]
             app_logger.info(
                 f"Thread (ID: {run_id_for_thread}): Processing batch {current_verification_state['current_batch_num']}/{current_verification_state['total_batches']} ({len(batch_to_process_list)} emails)."
             )
@@ -757,6 +787,43 @@ def start_verification_route():
     )
 
 
+def cleanup_old_files():
+    """Clean up old files from uploads and results directories."""
+    try:
+        # Clean up uploads directory
+        uploads_dir = Path(app.config["UPLOAD_FOLDER"])
+        if uploads_dir.exists():
+            for file in uploads_dir.glob("*"):
+                if file.is_file():
+                    try:
+                        file.unlink()
+                        app_logger.debug(f"Cleaned up old upload file: {file}")
+                    except Exception as e:
+                        app_logger.warning(f"Failed to delete upload file {file}: {e}")
+
+        # Clean up results directory
+        results_dir = Path(app.config["RESULTS_FOLDER"])
+        if results_dir.exists():
+            for file in results_dir.glob("*"):
+                if file.is_file():
+                    try:
+                        file.unlink()
+                        app_logger.debug(f"Cleaned up old result file: {file}")
+                    except Exception as e:
+                        app_logger.warning(f"Failed to delete result file {file}: {e}")
+
+        app_logger.info("Cleanup of old files completed successfully")
+    except Exception as e:
+        app_logger.error(f"Error during cleanup of old files: {e}")
+
+
+@app.route("/cleanup", methods=["POST"])
+def cleanup_route():
+    """Explicit cleanup endpoint for page refresh."""
+    cleanup_old_files()
+    return jsonify({"status": "success", "message": "Cleanup completed"})
+
+
 @app.route("/status", methods=["GET"])
 def status_route():
     with verification_lock:
@@ -833,14 +900,19 @@ def stop_verification_route():
             and bulk_verification_thread
             and bulk_verification_thread.is_alive()
         ):
-
             app_logger.info(
                 f"API /stop_verification: Received request to stop verification (ID: {run_id_to_be_stopped})."
             )
+            # Immediately stop the verification
             current_verification_state["stop_requested"] = True
-            current_verification_state["status"] = "stopping"
-            message_response = "Požadavek na zastavení odeslán. Čekání na dokončení aktuální dávky a uložení výsledků."
-            final_status_response = "stopping"
+            current_verification_state["status"] = "stopped"
+            current_verification_state["is_thread_active"] = False
+            
+            # Save any available results immediately
+            save_verification_results(run_id_to_be_stopped)
+            message_response = "Verifikace byla zastavena. Částečné výsledky jsou k dispozici ke stažení."
+            final_status_response = "stopped"
+                
         elif current_verification_state["status"] == "verifying":
             app_logger.warning(
                 f"API /stop_verification: Status is 'verifying' for ID {run_id_to_be_stopped}, but thread is not running or not marked active. Setting status to 'stopped'."
@@ -848,7 +920,7 @@ def stop_verification_route():
             current_verification_state["status"] = "stopped"
             current_verification_state["stop_requested"] = True
             save_verification_results(run_id_to_be_stopped)
-            message_response = "Verifikace byla označena jako zastavená (vlákno pravděpodobně již neběželo)."
+            message_response = "Verifikace byla označena jako zastavená. Částečné výsledky jsou k dispozici ke stažení."
             final_status_response = "stopped"
             current_verification_state["is_thread_active"] = False
         else:
@@ -859,17 +931,52 @@ def stop_verification_route():
                 message_response = f"Verifikace je ve stavu '{final_status_response}', nelze přímo zastavit."
 
         filepath_to_return_val = current_verification_state.get("result_filepath")
+        if filepath_to_return_val and Path(filepath_to_return_val).exists():
+            message_response += " Klikněte na tlačítko 'Stáhnout výsledky' pro stažení částečných výsledků."
+            
     return jsonify(
         {
             "status": final_status_response,
             "message": message_response,
             "filepath": filepath_to_return_val,
+            "has_results": bool(filepath_to_return_val and Path(filepath_to_return_val).exists())
         }
     )
 
 
-@app.route("/download", methods=["GET"])
+@app.route("/download_results", methods=["GET"])
 def download_results_route():
+    """Download the latest verification results."""
+    with verification_lock:
+        filepath = current_verification_state.get("result_filepath")
+        if not filepath or not Path(filepath).exists():
+            app_logger.warning("API /download_results: No results file available for download.")
+            return jsonify({"error": "Žádné výsledky nejsou k dispozici ke stažení"}), 404
+
+        results_folder_abs_path = Path(app.config["RESULTS_FOLDER"]).resolve()
+        requested_file_basename = Path(filepath).name
+        requested_file_abs_path = (results_folder_abs_path / requested_file_basename).resolve()
+
+        if not requested_file_abs_path.is_file() or requested_file_abs_path.parent != results_folder_abs_path:
+            app_logger.warning(
+                f"API /download_results: Invalid or non-existent file: '{filepath}' (Resolved: '{requested_file_abs_path}')"
+            )
+            return jsonify({"error": "Soubor nenalezen nebo neplatná cesta"}), 404
+
+        app_logger.info(
+            f"API /download_results: Providing file '{requested_file_abs_path}' for download as '{requested_file_basename}'."
+        )
+        return send_file(
+            requested_file_abs_path,
+            as_attachment=True,
+            download_name=requested_file_basename,
+            mimetype='text/csv'
+        )
+
+
+@app.route("/download", methods=["GET"])
+def download_results_legacy_route():
+    """Legacy download endpoint that accepts filepath parameter."""
     filepath_param_val = request.args.get("filepath")
     if not filepath_param_val:
         app_logger.warning("API /download: Missing 'filepath' query parameter.")
@@ -897,17 +1004,26 @@ def download_results_route():
         requested_file_abs_path,
         as_attachment=True,
         download_name=requested_file_basename_str,
+        mimetype='text/csv'
     )
 
 
 if __name__ == "__main__":
     host_val = os.environ.get("FLASK_RUN_HOST", "0.0.0.0")
     port_val = int(os.environ.get("FLASK_RUN_PORT", 5001))
-    debug_mode_val = os.environ.get("FLASK_DEBUG", "1") == "1"
+    is_debug_mode = os.environ.get("FLASK_DEBUG", "1") == "1"
     app_logger.info(
-        f"Starting Flask app on {host_val}:{port_val} with debug_mode={debug_mode_val}"
+        f"Starting Flask app on {host_val}:{port_val} with debug_mode={is_debug_mode}"
     )
-    try:
-        app.run(debug=debug_mode_val, host=host_val, port=port_val, threaded=True)
-    finally:
-        loop.close()
+    
+    # Register cleanup only on program shutdown
+    import atexit
+    atexit.register(cleanup_old_files)
+    
+    app.run(
+        debug=is_debug_mode,
+        host=host_val,
+        port=port_val,
+        threaded=True,
+        use_reloader=is_debug_mode
+    )

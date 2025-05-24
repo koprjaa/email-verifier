@@ -110,6 +110,23 @@
             width: auto;
             max-width: 400px;
         }
+        .status-badge {
+            font-size: 0.9em;
+            padding: 0.5em 1em;
+        }
+        .log-entry {
+            padding: 0.5em;
+            margin: 0.2em 0;
+            border-radius: 4px;
+        }
+        .log-entry.success { background-color: #d4edda; }
+        .log-entry.warning { background-color: #fff3cd; }
+        .log-entry.error { background-color: #f8d7da; }
+        .log-entry.info { background-color: #e2e3e5; }
+        #downloadButton {
+            display: none;
+            margin-top: 1em;
+        }
     </style>
 </head>
 <body>
@@ -256,6 +273,7 @@
                                 <button type="button" class="btn btn-danger btn-lg" id="stopVerificationButton" style="display: none;">
                                     <i class="fas fa-stop-circle me-2" aria-hidden="true"></i>Zastavit a uložit
                                 </button>
+                                <a href="/download_results" class="btn btn-success btn-lg" id="downloadButton">Stáhnout výsledky</a>
                             </div>
                         </div>
 
@@ -818,13 +836,12 @@
 
                     if (!response.ok) {
                         console.warn("Chyba při získávání stavu, server možná odpověděl chybou, ale pokračujeme v pollingu.", response.status);
-                        // Nepřerušovat polling hned, backend mohl mít dočasný problém
-                        // Pokud by to trvalo, frontend by měl mít vlastní timeout na polling
                         return;
                     }
                     
                     updateBulkVerificationUI(data);
 
+                    // Zastavit polling pokud je verifikace dokončena, zastavena nebo došlo k chybě
                     if (data.status === 'completed' || data.status === 'stopped' || data.status === 'error') {
                         clearInterval(currentBulkVerificationInterval);
                         currentBulkVerificationInterval = null;
@@ -836,28 +853,26 @@
                             downloadResultsArea.style.display = 'block';
                             downloadLink.href = `/download?filepath=${encodeURIComponent(data.filepath)}`;
                         } else if (data.status === 'stopped' && isVerificationStoppedManually && data.filepath) {
-                            // Pokud bylo zastaveno manuálně a je soubor, také zobrazit link
                             downloadResultsArea.style.display = 'block';
                             downloadLink.href = `/download?filepath=${encodeURIComponent(data.filepath)}`;
                         }
 
-
                         if (data.status === 'completed') {
-                             displayGlobalAlert("Verifikace úspěšně dokončena!", "success");
+                            displayGlobalAlert("Verifikace úspěšně dokončena!", "success");
                         } else if (data.status === 'stopped') {
-                             displayGlobalAlert("Verifikace byla zastavena.", "warning");
+                            displayGlobalAlert("Verifikace byla zastavena.", "warning");
                         } else if (data.status === 'error') {
-                             displayGlobalAlert(`Došlo k chybě při verifikaci: ${data.error_message || 'Neznámá chyba'}`, "danger");
+                            displayGlobalAlert(`Došlo k chybě při verifikaci: ${data.error_message || 'Neznámá chyba'}`, "danger");
                         }
                     }
                 } catch (error) {
                     console.error('Chyba při získávání stavu (fetch selhal):', error);
-                    // Zde by se mohl polling přerušit po několika neúspěšných pokusech
-                    // displayGlobalAlert("Nelze se spojit se serverem pro získání stavu.", "danger");
-                    // clearInterval(currentBulkVerificationInterval);
-                    // currentBulkVerificationInterval = null;
-                    // startVerificationButton.style.display = 'inline-block';
-                    // stopVerificationButton.style.display = 'none';
+                    // Po několika neúspěšných pokusech zastavit polling
+                    clearInterval(currentBulkVerificationInterval);
+                    currentBulkVerificationInterval = null;
+                    startVerificationButton.style.display = 'inline-block';
+                    stopVerificationButton.style.display = 'none';
+                    displayGlobalAlert("Nelze se spojit se serverem pro získání stavu.", "danger");
                 }
             }, 2000); // Kontrola každé 2 sekundy
         }
