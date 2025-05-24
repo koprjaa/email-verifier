@@ -1,0 +1,24 @@
+{
+    "timeout": 30,
+    "max_workers": 3,
+    "catchall_test": true,
+    "connect_port": 25,
+    "retry_attempts": 3,
+    "retry_delay": 5,
+    "rate_limit_delay": 2,
+    "check_disposable": true,
+    "check_catchall": true,
+    "batch_size": 100,
+    "max_concurrent_domains": 10,
+    "sender_emails": {
+        "gmail.com": "jan.novak@gmail.com",
+        "seznam.cz": "jan.novak@seznam.cz",
+        "email.cz": "jan.novakr@email.cz",
+        "centrum.cz": "jan.novak@centrum.cz",
+        "atlas.cz": "jan.novak@atlas.cz",
+        "volny.cz": "jan.novak@volny.cz",
+        "tiscali.cz": "jan.novak@tiscali.cz",
+        "post.cz": "jan.novak@post.cz",
+        "default": "jan.novak@seznam.cz"
+    }
+} 

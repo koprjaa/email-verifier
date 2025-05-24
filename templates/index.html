@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verifier</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa; /* Světlejší pozadí pro celou stránku */
+        }
+        .navbar-brand i {
+            vertical-align: middle;
+        }
+        .card {
+            border: none; /* Odstranění výchozího rámečku karty */
+        }
+        .drag-area {
+            border: 2px dashed #0d6efd;
+            height: 200px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #fff;
+        }
+        .drag-area:hover, .drag-area.active {
+            border-color: #0a58ca;
+            background-color: #e9ecef; /* Mírné ztmavení při hoveru/aktivitě */
+        }
+        .progress {
+            height: 25px;
+            font-size: 0.85rem; /* Menší text v progress baru */
+        }
+        .progress-bar {
+            transition: width 0.5s ease-in-out !important; /* Důležité pro plynulost */
+        }
+        .stats-card {
+            transition: all 0.3s ease;
+            text-align: center;
+            padding: 1.5rem;
+            border-radius: 8px;
+            background-color: #fff;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075); /* Jemný stín */
+        }
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        .stats-value {
+            font-size: 2rem; /* Větší hodnota statistiky */
+            font-weight: bold;
+            margin-bottom: 0.25rem;
+        }
+        .stats-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .csv-format-info { /* Upravený název */
+            font-family: monospace;
+            background-color: #e9ecef; /* Světlejší pozadí */
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        .log-display-area { /* Sjednocený styl pro logy */
+            margin-top: 1rem;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            background-color: #fff; /* Bílé pozadí logu */
+            padding: 1rem;
+            border-radius: 5px;
+            border: 1px solid #dee2e6; /* Jemný rámeček */
+            font-size: 0.85rem;
+        }
+        .log-display-area .step-item {
+            margin-bottom: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 3px;
+            background-color: #f8f9fa; /* Světlejší pozadí pro jednotlivé kroky */
+        }
+        .log-display-area .step-item:hover {
+            background-color: #e9ecef;
+        }
+        .log-display-area .step-success { border-left: 4px solid #198754; }
+        .log-display-area .step-error   { border-left: 4px solid #dc3545; }
+        .log-display-area .step-warning { border-left: 4px solid #ffc107; }
+        .log-display-area .step-info    { border-left: 4px solid #0dcaf0; }
+
+        .status-message-area { /* Pro stavové zprávy hromadné verifikace */
+            padding: 1rem;
+            border-radius: 5px;
+            margin-bottom: 1.5rem;
+        }
+        .button-container { /* Pro centrování tlačítek Start/Stop */
+            text-align: center;
+            margin-top: 1.5rem;
+        }
+        #globalAlertsContainer { /* Kontejner pro globální notifikace */
+            position: fixed;
+            top: 1rem;
+            right: 1rem;
+            z-index: 2050; /* Nad ostatními prvky */
+            width: auto;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-envelope-open-text fa-lg me-2" aria-hidden="true"></i>
+                Email Verifier
+            </a>
+        </div>
+    </nav>
+
+    <!-- Kontejner pro globální alerty -->
+    <div id="globalAlertsContainer"></div>
+
+    <div class="container my-5">
+        <!-- Sekce pro verifikaci jednotlivého emailu -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-lg-8 col-md-10">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-4">Verifikace jednotlivého emailu</h5>
+                        <form id="singleEmailForm" class="mb-3">
+                            <div class="input-group">
+                                <input type="email" class="form-control form-control-lg" id="singleEmailInput" placeholder="Zadejte email k ověření" required>
+                                <button class="btn btn-primary btn-lg" type="submit" id="singleEmailSubmitButton">
+                                    <i class="fas fa-search me-2" aria-hidden="true"></i>Ověřit
+                                </button>
+                            </div>
+                        </form>
+                        <div id="singleEmailResultArea" class="mt-3" style="display: none;">
+                            <!-- Výsledky jednotlivého emailu se generují v JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sekce pro hromadnou verifikaci -->
+        <div class="row justify-content-center">
+            <div class="col-lg-8 col-md-10">
+                <div class="card shadow-sm">
+                    <div class="card-body p-4">
+                        <h5 class="card-title mb-4">Hromadná verifikace emailů</h5>
+
+                        <!-- Oblast pro nahrání souboru -->
+                        <div id="bulkUploadArea">
+                            <div class="alert alert-secondary mb-4">
+                                <h6 class="alert-heading mb-2"><i class="fas fa-info-circle me-1" aria-hidden="true"></i> Formát CSV souboru:</h6>
+                                <p class="mb-2 small">Soubor musí být ve formátu CSV (oddělený čárkou nebo středníkem). Aplikace se pokusí detekovat kódování (UTF-8, CP1250 atd.).</p>
+                                <div class="csv-format-info">
+                                    <strong>Příklad podporovaných názvů sloupce pro emaily:</strong><br>
+                                    <code>email, Email, EMAIL, e-mail, E-mail, E-MAIL</code>
+                                </div>
+                            </div>
+
+                            <div class="drag-area mb-3" id="dropZone">
+                                <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-primary" aria-hidden="true"></i>
+                                <h6 class="mb-2">Přetáhněte CSV soubor sem</h6>
+                                <p class="text-muted mb-0 small">nebo</p>
+                                <input type="file" id="csvFileInput" class="d-none" accept=".csv">
+                                <button type="button" class="btn btn-outline-primary mt-2" id="browseCsvButton">
+                                    Vybrat soubor
+                                </button>
+                            </div>
+                            <div id="uploadProgressArea" class="mt-3" style="display: none;">
+                                <div class="progress">
+                                    <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                         role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                        <span id="uploadProgressText">Nahrávám...</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Oblast pro výběr sloupce -->
+                        <div id="columnSelectionArea" class="mt-3" style="display: none;">
+                            <h6 class="mb-3">Vyberte sloupec obsahující emailové adresy:</h6>
+                            <div id="columnListContainer" class="row g-2 mb-3">
+                                <!-- Sloupce budou vloženy sem pomocí JS -->
+                            </div>
+                            <button type="button" class="btn btn-primary" id="confirmColumnButton">Potvrdit výběr sloupce</button>
+                        </div>
+
+                        <!-- Oblast pro zobrazení statistik a ovládání hromadné verifikace -->
+                        <div id="bulkVerificationArea" class="mt-3" style="display: none;">
+                            <div id="bulkStatusMessage" class="status-message-area alert alert-info">
+                                <!-- Stavová zpráva bude vložena sem -->
+                            </div>
+
+                            <h6 class="mb-2">Průběh verifikace:</h6>
+                            <div class="progress mb-1">
+                                <div id="bulkProgressBar" class="progress-bar bg-success" role="progressbar" style="width: 0%;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                                    <span id="bulkProgressLabel">0 / 0</span>
+                                </div>
+                            </div>
+                            <div class="text-end small text-muted mb-3"><span id="bulkProgressPercent">0%</span></div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3 col-6">
+                                    <div class="stats-card bg-light">
+                                        <div class="stats-label">Validní</div>
+                                        <div id="validCount" class="stats-value text-success">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="stats-card bg-light">
+                                        <div class="stats-label">Nevalidní</div>
+                                        <div id="invalidCount" class="stats-value text-danger">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="stats-card bg-light">
+                                        <div class="stats-label">Catch-all</div>
+                                        <div id="catchallCount" class="stats-value text-warning">0</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <div class="stats-card bg-light">
+                                        <div class="stats-label">Celkem zpracováno</div>
+                                        <div id="processedCount" class="stats-value text-primary">0</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="catchallDomainsDisplayArea" class="mb-3" style="display: none;">
+                                <h6 class="mb-2">Detekované Catch-all domény:</h6>
+                                <div id="catchallDomainsList" class="small text-muted" style="max-height: 100px; overflow-y: auto; padding: 0.5rem; background-color: #f8f9fa; border-radius: 5px;">
+                                    <!-- Seznam catch-all domén -->
+                                </div>
+                            </div>
+
+                            <div id="verificationLogContainer" style="display: none;">
+                                <h6 class="mb-2">Log verifikace (poslední kroky):</h6>
+                                <div id="bulkVerificationLog" class="log-display-area">
+                                    <!-- Logovací zprávy budou vloženy sem -->
+                                </div>
+                            </div>
+
+                            <div class="button-container">
+                                <button type="button" class="btn btn-primary btn-lg" id="startVerificationButton">
+                                    <i class="fas fa-play me-2" aria-hidden="true"></i>Spustit ověření
+                                </button>
+                                <button type="button" class="btn btn-danger btn-lg" id="stopVerificationButton" style="display: none;">
+                                    <i class="fas fa-stop-circle me-2" aria-hidden="true"></i>Zastavit a uložit
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Oblast pro stažení výsledků -->
+                        <div id="downloadResultsArea" class="mt-4" style="display: none;">
+                            <h5 class="mb-3 text-center">Výsledky verifikace</h5>
+                            <div class="text-center">
+                                <a id="downloadLink" href="#" class="btn btn-success btn-lg">
+                                    <i class="fas fa-download me-2" aria-hidden="true"></i>
+                                    Stáhnout výsledky (CSV)
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center text-muted py-4 mt-auto">
+        <small>© <span id="currentYear"></span> Email Verifier</small>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // === DOM Elements ===
+        let singleEmailForm, singleEmailInput, singleEmailSubmitButton, singleEmailResultArea;
+        let dropZone, csvFileInput, browseCsvButton, uploadProgressArea, uploadProgressBar, uploadProgressText;
+        let columnSelectionArea, columnListContainer, confirmColumnButton;
+        let bulkVerificationArea, bulkStatusMessage, bulkProgressBar, bulkProgressLabel, bulkProgressPercent;
+        let validCountEl, invalidCountEl, catchallCountEl, processedCountEl;
+        let catchallDomainsDisplayArea, catchallDomainsListEl;
+        let verificationLogContainer, bulkVerificationLogEl;
+        let startVerificationButton, stopVerificationButton;
+        let downloadResultsArea, downloadLink;
+        let globalAlertsContainer;
+
+        // === State Variables ===
+        let currentBulkVerificationInterval = null;
+        let isVerificationStoppedManually = false;
+
+        // === Initialization ===
+        document.addEventListener('DOMContentLoaded', () => {
+            // Single Email Verification Elements
+            singleEmailForm = document.getElementById('singleEmailForm');
+            singleEmailInput = document.getElementById('singleEmailInput');
+            singleEmailSubmitButton = document.getElementById('singleEmailSubmitButton');
+            singleEmailResultArea = document.getElementById('singleEmailResultArea');
+
+            // Bulk Verification - Upload Elements
+            dropZone = document.getElementById('dropZone');
+            csvFileInput = document.getElementById('csvFileInput');
+            browseCsvButton = document.getElementById('browseCsvButton');
+            uploadProgressArea = document.getElementById('uploadProgressArea');
+            uploadProgressBar = document.getElementById('uploadProgressBar');
+            uploadProgressText = document.getElementById('uploadProgressText');
+
+            // Bulk Verification - Column Selection Elements
+            columnSelectionArea = document.getElementById('columnSelectionArea');
+            columnListContainer = document.getElementById('columnListContainer');
+            confirmColumnButton = document.getElementById('confirmColumnButton');
+
+            // Bulk Verification - Main Area Elements
+            bulkVerificationArea = document.getElementById('bulkVerificationArea');
+            bulkStatusMessage = document.getElementById('bulkStatusMessage');
+            bulkProgressBar = document.getElementById('bulkProgressBar');
+            bulkProgressLabel = document.getElementById('bulkProgressLabel');
+            bulkProgressPercent = document.getElementById('bulkProgressPercent');
+            validCountEl = document.getElementById('validCount');
+            invalidCountEl = document.getElementById('invalidCount');
+            catchallCountEl = document.getElementById('catchallCount');
+            processedCountEl = document.getElementById('processedCount');
+            catchallDomainsDisplayArea = document.getElementById('catchallDomainsDisplayArea');
+            catchallDomainsListEl = document.getElementById('catchallDomainsList');
+            verificationLogContainer = document.getElementById('verificationLogContainer');
+            bulkVerificationLogEl = document.getElementById('bulkVerificationLog');
+            startVerificationButton = document.getElementById('startVerificationButton');
+            stopVerificationButton = document.getElementById('stopVerificationButton');
+            
+            // Download Area
+            downloadResultsArea = document.getElementById('downloadResultsArea');
+            downloadLink = document.getElementById('downloadLink');
+
+            // Global Alerts
+            globalAlertsContainer = document.getElementById('globalAlertsContainer');
+            
+            // Footer Year
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+
+            // --- Event Listeners ---
+            if (singleEmailForm) singleEmailForm.addEventListener('submit', handleSingleEmailVerification);
+            
+            if (dropZone) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, preventDefaults, false);
+                    document.body.addEventListener(eventName, preventDefaults, false); // Prevent browser default for whole page
+                });
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropZone.classList.add('active'), false);
+                });
+                ['dragleave', 'drop'].forEach(eventName => {
+                    dropZone.addEventListener(eventName, () => dropZone.classList.remove('active'), false);
+                });
+                dropZone.addEventListener('drop', handleDrop, false);
+            }
+
+            if (browseCsvButton) browseCsvButton.addEventListener('click', () => csvFileInput.click());
+            if (csvFileInput) csvFileInput.addEventListener('change', handleFileSelect);
+            if (confirmColumnButton) confirmColumnButton.addEventListener('click', handleColumnConfirmation);
+            if (startVerificationButton) startVerificationButton.addEventListener('click', () => triggerStartVerification(true));
+            if (stopVerificationButton) stopVerificationButton.addEventListener('click', handleStopVerification);
+        });
+
+        // === Helper Functions ===
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function displayGlobalAlert(message, type = 'danger', duration = 5000) {
+            if (!globalAlertsContainer) return;
+            const alertId = `alert-${Date.now()}`;
+            const alertDiv = document.createElement('div');
+            alertDiv.id = alertId;
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show shadow-sm`;
+            alertDiv.role = 'alert';
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            `;
+            globalAlertsContainer.appendChild(alertDiv);
+
+            if (duration) {
+                setTimeout(() => {
+                    const activeAlert = document.getElementById(alertId);
+                    if (activeAlert) {
+                        bootstrap.Alert.getInstance(activeAlert)?.close();
+                    }
+                }, duration);
+            }
+        }
+
+        function setButtonLoadingState(button, isLoading, originalText = "Ověřit") {
+            if (isLoading) {
+                button.disabled = true;
+                button.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Načítám...`;
+            } else {
+                button.disabled = false;
+                button.innerHTML = originalText;
+            }
+        }
+        
+        // === Single Email Verification ===
+        async function handleSingleEmailVerification(e) {
+            e.preventDefault();
+            const email = singleEmailInput.value.trim();
+            if (!email) {
+                displayGlobalAlert("Prosím, zadejte emailovou adresu.");
+                return;
+            }
+
+            setButtonLoadingState(singleEmailSubmitButton, true, `<i class="fas fa-search me-2" aria-hidden="true"></i>Ověřit`);
+            singleEmailResultArea.style.display = 'block';
+            singleEmailResultArea.innerHTML = `
+                <div class="d-flex align-items-center text-muted">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    Probíhá ověřování emailu: <strong>${email}</strong>...
+                </div>
+                <div id="singleVerificationStepsLog" class="log-display-area mt-2" style="max-height: 200px;"></div>`;
+            
+            const singleStepsLog = document.getElementById('singleVerificationStepsLog');
+
+            try {
+                const response = await fetch('/verify_single', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: email })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Chyba serveru: ${response.status}`);
+                }
+                
+                displaySingleEmailResult(data, email, singleStepsLog);
+
+            } catch (error) {
+                console.error('Chyba při verifikaci jednotlivého emailu:', error);
+                singleEmailResultArea.innerHTML = `<div class="alert alert-danger" role="alert">Chyba při verifikaci: ${error.message}</div>`;
+                displayGlobalAlert(`Chyba při verifikaci: ${error.message}`);
+            } finally {
+                setButtonLoadingState(singleEmailSubmitButton, false, `<i class="fas fa-search me-2" aria-hidden="true"></i>Ověřit`);
+            }
+        }
+
+        function displaySingleEmailResult(data, email, stepsLogContainer) {
+            let alertClass = 'alert-info';
+            let statusText = 'Neznámý stav';
+            let iconClass = 'fas fa-question-circle';
+            let additionalInfo = '';
+
+            if (data.is_valid === true) {
+                if (data.is_catchall || data.smtp_code === 'accept_all') {
+                    alertClass = 'alert-warning';
+                    statusText = 'Pravděpodobně validní (Catch-all doména)';
+                    iconClass = 'fas fa-exclamation-triangle';
+                    additionalInfo = `<p class="small mb-0 mt-2"><strong>Poznámka:</strong> Doména <code>${data.email.split('@')[1]}</code> přijímá všechny emaily. Existence této konkrétní schránky není 100% zaručena.</p>`;
+                } else {
+                    alertClass = 'alert-success';
+                    statusText = 'Validní';
+                    iconClass = 'fas fa-check-circle';
+                }
+            } else if (data.is_valid === false) {
+                alertClass = 'alert-danger';
+                statusText = 'Nevalidní';
+                iconClass = 'fas fa-times-circle';
+                if (data.status_code === 'syntax_error') statusText = 'Neplatný formát';
+                if (data.status_code === 'disposable') statusText = 'Jednorázová doména';
+
+            } else { // is_valid is null (unknown, timeout, blocked)
+                alertClass = 'alert-secondary';
+                statusText = 'Nelze ověřit';
+                iconClass = 'fas fa-shield-alt';
+                if (data.status_code === 'timeout') statusText = 'Nelze ověřit (Timeout)';
+                if (data.status_code === 'dns_error') statusText = 'Nelze ověřit (Chyba DNS)';
+                if (data.blocked) { // Speciální případ z backendu
+                     statusText = 'Nelze ověřit (Blokováno)';
+                     additionalInfo = `<p class="small mb-0 mt-2"><strong>Poznámka:</strong> ${data.blocked_message || 'Verifikace byla blokována.'}</p>`;
+                }
+            }
+
+            singleEmailResultArea.innerHTML = `
+                <div class="alert ${alertClass} mb-0">
+                    <h6 class="alert-heading"><i class="${iconClass} me-2" aria-hidden="true"></i>Výsledek pro: ${email}</h6>
+                    <p class="mb-1"><strong>Status:</strong> ${statusText}</p>
+                    <p class="mb-1"><strong>SMTP kód:</strong> <code>${data.smtp_code_internal || data.status_code || 'N/A'}</code></p>
+                    <p class="mb-1"><strong>Zpráva:</strong> ${data.message || 'N/A'}</p>
+                    ${data.mx_record ? `<p class="mb-1"><strong>MX server:</strong> ${data.mx_record} (${data.server_ip || 'N/A'})</p>` : ''}
+                    ${additionalInfo}
+                </div>
+                <div id="singleVerificationStepsLog" class="log-display-area mt-2" style="max-height: 200px;"></div>
+            `;
+            
+            // Musíme znovu získat referenci, protože jsme přepsali innerHTML
+            const newStepsLogContainer = document.getElementById('singleVerificationStepsLog');
+            if (newStepsLogContainer && data.verification_steps && data.verification_steps.length > 0) {
+                data.verification_steps.forEach(step => addLogStep(step, newStepsLogContainer));
+                newStepsLogContainer.scrollTop = newStepsLogContainer.scrollHeight;
+            }
+        }
+        
+        function addLogStep(step, logContainer) {
+            if (!logContainer) return;
+            const stepDiv = document.createElement('div');
+            stepDiv.className = `step-item step-${step.status || 'info'}`; // default na info
+            
+            const time = step.timestamp ? new Date(step.timestamp).toLocaleTimeString('cs-CZ', { hour12: false }) : '';
+            const action = step.action || step.message || ''; // Použít action nebo message
+            const details = step.details || '';
+            const code = step.code ? ` (Kód: ${step.code})` : '';
+
+            stepDiv.innerHTML = `
+                ${time ? `<small class="text-muted me-2">[${time}]</small>` : ''}
+                <strong>${action}</strong>${code}
+                ${details ? `<div class="ms-3 ps-2 text-muted small border-start border-2">${details}</div>` : ''}
+            `;
+            logContainer.appendChild(stepDiv);
+        }
+
+
+        // === Bulk Email Verification - File Upload ===
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        }
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
+            }
+        }
+
+        async function handleFileUpload(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                displayGlobalAlert('Prosím, vyberte soubor ve formátu CSV.');
+                csvFileInput.value = ''; // Reset inputu
+                return;
+            }
+
+            uploadProgressArea.style.display = 'block';
+            uploadProgressBar.style.width = '0%';
+            uploadProgressText.textContent = 'Nahrávám soubor...';
+            
+            // Skrýt ostatní sekce pro hromadnou verifikaci
+            columnSelectionArea.style.display = 'none';
+            bulkVerificationArea.style.display = 'none';
+            downloadResultsArea.style.display = 'none';
+
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                // Simulace průběhu nahrávání (reálné nahrávání je rychlé na localhost)
+                let currentProgress = 0;
+                const progressInterval = setInterval(() => {
+                    currentProgress += 10;
+                    if (currentProgress <= 100) {
+                        uploadProgressBar.style.width = `${currentProgress}%`;
+                        uploadProgressText.textContent = `Nahrávám... ${currentProgress}%`;
+                    } else {
+                        clearInterval(progressInterval);
+                    }
+                }, 100);
+
+
+                const response = await fetch('/load_csv', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                clearInterval(progressInterval); // Zastavit simulaci
+                uploadProgressBar.style.width = `100%`;
+                uploadProgressText.textContent = `Soubor nahrán, zpracovávám...`;
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Chyba serveru: ${response.status}`);
+                }
+
+                if (data.status === 'select_column') {
+                    uploadProgressArea.style.display = 'none'; // Skrýt progress bar
+                    displayColumnSelection(data.columns, data.suggested_email_column);
+                } else {
+                    throw new Error(data.error || "Neočekávaná odpověď serveru po nahrání CSV.");
+                }
+
+            } catch (error) {
+                console.error('Chyba při nahrávání CSV:', error);
+                displayGlobalAlert(`Chyba při nahrávání CSV: ${error.message}`);
+                uploadProgressArea.style.display = 'none';
+                csvFileInput.value = ''; // Reset inputu
+            }
+        }
+        
+        // === Bulk Email Verification - Column Selection ===
+        function displayColumnSelection(columns, suggestedColumn) {
+            columnListContainer.innerHTML = ''; // Vyčistit předchozí
+            columns.forEach((column, index) => {
+                const colDiv = document.createElement('div');
+                colDiv.className = 'col-md-4'; // Pro 3 sloupce na řádek na MD a větších
+                const radioId = `column_radio_${index}`;
+                colDiv.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="emailColumnSelect" 
+                               value="${column}" id="${radioId}" ${column === suggestedColumn ? 'checked' : ''}>
+                        <label class="form-check-label" for="${radioId}">
+                            ${column}
+                        </label>
+                    </div>
+                `;
+                columnListContainer.appendChild(colDiv);
+            });
+            columnSelectionArea.style.display = 'block';
+        }
+
+        async function handleColumnConfirmation() {
+            const selectedRadio = document.querySelector('input[name="emailColumnSelect"]:checked');
+            if (!selectedRadio) {
+                displayGlobalAlert("Prosím, vyberte sloupec s emailovými adresami.");
+                return;
+            }
+            const selectedColumn = selectedRadio.value;
+
+            columnSelectionArea.style.display = 'none'; // Skrýt výběr sloupce
+            // Zobrazit nějaký indikátor načítání pro tuto fázi
+            displayGlobalAlert("Zpracovávám výběr sloupce...", "info", 2000);
+
+
+            try {
+                const response = await fetch('/select_column', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ column: selectedColumn })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Chyba serveru: ${response.status}`);
+                }
+
+                if (data.status === 'ready') {
+                    prepareBulkVerificationUI(data.total_emails);
+                } else {
+                     throw new Error(data.error || "Nepodařilo se připravit emaily k verifikaci.");
+                }
+            } catch (error) {
+                console.error('Chyba při potvrzení sloupce:', error);
+                displayGlobalAlert(`Chyba při potvrzení sloupce: ${error.message}`);
+                // Možná znovu zobrazit upload area nebo column selection area
+                document.getElementById('bulkUploadArea').style.display = 'block'; 
+            }
+        }
+
+        // === Bulk Email Verification - Running Verification ===
+        function prepareBulkVerificationUI(totalEmails) {
+            document.getElementById('bulkUploadArea').style.display = 'none';
+            columnSelectionArea.style.display = 'none';
+            bulkVerificationArea.style.display = 'block';
+            downloadResultsArea.style.display = 'none'; // Skrýt předchozí výsledky
+
+            bulkStatusMessage.className = 'status-message-area alert alert-info';
+            bulkStatusMessage.innerHTML = `<i class="fas fa-info-circle me-1" aria-hidden="true"></i> Připraveno k ověření <strong>${totalEmails}</strong> emailů.`;
+            
+            // Reset statistik a progress baru
+            bulkProgressBar.style.width = '0%';
+            bulkProgressBar.setAttribute('aria-valuenow', '0');
+            bulkProgressLabel.textContent = `0 / ${totalEmails}`;
+            bulkProgressPercent.textContent = '0%';
+            validCountEl.textContent = '0';
+            invalidCountEl.textContent = '0';
+            catchallCountEl.textContent = '0';
+            processedCountEl.textContent = '0';
+            catchallDomainsListEl.innerHTML = '<em class="text-muted">Žádné</em>';
+            catchallDomainsDisplayArea.style.display = 'none';
+            bulkVerificationLogEl.innerHTML = '';
+            verificationLogContainer.style.display = 'none';
+
+
+            startVerificationButton.style.display = 'inline-block';
+            stopVerificationButton.style.display = 'none';
+            isVerificationStoppedManually = false;
+        }
+
+        async function triggerStartVerification(confirm = false) {
+            if (!confirm) { // Pokud byste chtěli mezikrok s potvrzením
+                // Zde by mohla být logika pro modální okno nebo další potvrzení
+                // Pro jednoduchost nyní rovnou spouštíme
+            }
+            
+            startVerificationButton.style.display = 'none';
+            stopVerificationButton.style.display = 'inline-block';
+            bulkStatusMessage.className = 'status-message-area alert alert-primary';
+            bulkStatusMessage.innerHTML = `<div class="spinner-border spinner-border-sm me-2" role="status"></div> Spouštím verifikaci...`;
+            verificationLogContainer.style.display = 'block'; // Zobrazit logovací kontejner
+            isVerificationStoppedManually = false;
+
+
+            try {
+                const response = await fetch('/start_verification?confirm=true'); // GET s confirm=true
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Chyba serveru: ${response.status}`);
+                }
+
+                if (data.status === 'verifying') {
+                    displayGlobalAlert(data.message || "Verifikace byla spuštěna.", "success");
+                    startBulkProgressTracking();
+                } else {
+                    throw new Error(data.error || "Nepodařilo se spustit verifikaci.");
+                }
+
+            } catch (error) {
+                console.error('Chyba při spouštění verifikace:', error);
+                displayGlobalAlert(`Chyba při spouštění verifikace: ${error.message}`);
+                bulkStatusMessage.className = 'status-message-area alert alert-danger';
+                bulkStatusMessage.innerHTML = `<i class="fas fa-times-circle me-1" aria-hidden="true"></i> Chyba: ${error.message}`;
+                startVerificationButton.style.display = 'inline-block';
+                stopVerificationButton.style.display = 'none';
+            }
+        }
+        
+        function startBulkProgressTracking() {
+            if (currentBulkVerificationInterval) {
+                clearInterval(currentBulkVerificationInterval);
+            }
+
+            currentBulkVerificationInterval = setInterval(async () => {
+                try {
+                    const response = await fetch('/status');
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        console.warn("Chyba při získávání stavu, server možná odpověděl chybou, ale pokračujeme v pollingu.", response.status);
+                        // Nepřerušovat polling hned, backend mohl mít dočasný problém
+                        // Pokud by to trvalo, frontend by měl mít vlastní timeout na polling
+                        return;
+                    }
+                    
+                    updateBulkVerificationUI(data);
+
+                    if (data.status === 'completed' || data.status === 'stopped' || data.status === 'error') {
+                        clearInterval(currentBulkVerificationInterval);
+                        currentBulkVerificationInterval = null;
+                        
+                        startVerificationButton.style.display = 'inline-block';
+                        stopVerificationButton.style.display = 'none';
+
+                        if (data.filepath && (data.status === 'completed' || (data.status === 'stopped' && !isVerificationStoppedManually))) {
+                            downloadResultsArea.style.display = 'block';
+                            downloadLink.href = `/download?filepath=${encodeURIComponent(data.filepath)}`;
+                        } else if (data.status === 'stopped' && isVerificationStoppedManually && data.filepath) {
+                            // Pokud bylo zastaveno manuálně a je soubor, také zobrazit link
+                            downloadResultsArea.style.display = 'block';
+                            downloadLink.href = `/download?filepath=${encodeURIComponent(data.filepath)}`;
+                        }
+
+
+                        if (data.status === 'completed') {
+                             displayGlobalAlert("Verifikace úspěšně dokončena!", "success");
+                        } else if (data.status === 'stopped') {
+                             displayGlobalAlert("Verifikace byla zastavena.", "warning");
+                        } else if (data.status === 'error') {
+                             displayGlobalAlert(`Došlo k chybě při verifikaci: ${data.error_message || 'Neznámá chyba'}`, "danger");
+                        }
+                    }
+                } catch (error) {
+                    console.error('Chyba při získávání stavu (fetch selhal):', error);
+                    // Zde by se mohl polling přerušit po několika neúspěšných pokusech
+                    // displayGlobalAlert("Nelze se spojit se serverem pro získání stavu.", "danger");
+                    // clearInterval(currentBulkVerificationInterval);
+                    // currentBulkVerificationInterval = null;
+                    // startVerificationButton.style.display = 'inline-block';
+                    // stopVerificationButton.style.display = 'none';
+                }
+            }, 2000); // Kontrola každé 2 sekundy
+        }
+
+        function updateBulkVerificationUI(data) {
+            const totalEmails = data.total_emails || 0;
+            const processed = data.processed_emails || 0;
+            const progress = totalEmails > 0 ? Math.round((processed / totalEmails) * 100) : 0;
+
+            bulkProgressBar.style.width = `${progress}%`;
+            bulkProgressBar.setAttribute('aria-valuenow', progress);
+            bulkProgressLabel.textContent = `${processed} / ${totalEmails}`;
+            bulkProgressPercent.textContent = `${progress}%`;
+
+            validCountEl.textContent = data.valid_emails || 0;
+            invalidCountEl.textContent = data.invalid_emails || 0;
+            // Změna zde: frontend očekává `catchall_emails` nebo podobně, backend posílá `probable_emails`
+            // nebo `accept_all_details.count`. Sjednotíme na `probable_emails`
+            catchallCountEl.textContent = data.probable_emails || (data.accept_all_details ? data.accept_all_details.count : 0) || 0;
+            processedCountEl.textContent = processed;
+
+            let statusMsgText = '';
+            let statusAlertClass = 'alert-info';
+
+            switch (data.status) {
+                case 'idle':
+                    statusMsgText = `<i class="fas fa-info-circle me-1" aria-hidden="true"></i> Připraveno.`;
+                    statusAlertClass = 'alert-info';
+                    break;
+                case 'loading': // Pokud by byl takový stav z backendu
+                    statusMsgText = `<div class="spinner-border spinner-border-sm me-2" role="status"></div> Načítání dat...`;
+                    statusAlertClass = 'alert-warning';
+                    break;
+                case 'verifying':
+                    statusMsgText = `<div class="spinner-border spinner-border-sm me-2" role="status"></div> Probíhá verifikace... (Dávka: ${data.current_batch || 0}/${data.total_batches || 0})`;
+                    statusAlertClass = 'alert-primary';
+                    break;
+                case 'completed':
+                    statusMsgText = `<i class="fas fa-check-circle me-1" aria-hidden="true"></i> Verifikace dokončena.`;
+                    statusAlertClass = 'alert-success';
+                    break;
+                case 'stopped':
+                    statusMsgText = `<i class="fas fa-stop-circle me-1" aria-hidden="true"></i> Verifikace zastavena.`;
+                    statusAlertClass = 'alert-warning';
+                    break;
+                case 'error':
+                    statusMsgText = `<i class="fas fa-times-circle me-1" aria-hidden="true"></i> Chyba: ${data.error_message || 'Neznámá chyba'}`;
+                    statusAlertClass = 'alert-danger';
+                    break;
+                default:
+                    statusMsgText = `Neznámý stav: ${data.status}`;
+            }
+            bulkStatusMessage.className = `status-message-area alert ${statusAlertClass}`;
+            bulkStatusMessage.innerHTML = statusMsgText;
+
+            // Aktualizace seznamu catch-all domén
+            const catchallDomains = data.catchall_domains || (data.accept_all_details ? data.accept_all_details.domains.map(d => `${d.domain} (${d.count})`) : []);
+            if (catchallDomains.length > 0) {
+                catchallDomainsDisplayArea.style.display = 'block';
+                catchallDomainsListEl.innerHTML = catchallDomains.map(domainInfo => 
+                    `<div>${typeof domainInfo === 'string' ? domainInfo : `${domainInfo.domain} (${domainInfo.count})`}</div>`
+                ).join('');
+            } else {
+                catchallDomainsDisplayArea.style.display = 'none';
+            }
+            
+            // Aktualizace logu verifikace
+            // Backend by měl posílat pole strukturovaných logovacích zpráv
+            if (data.verification_steps && data.verification_steps.length > 0) {
+                // Předpokládáme, že `data.verification_steps` jsou nové kroky od poslední aktualizace
+                // nebo že backend posílá jen relevantní delta. Pro jednoduchost zde přidáme všechny.
+                // Ideálně by frontend měl mít ID poslední zpracované log zprávy.
+                // Pokud `verification_steps` jsou textové:
+                if (typeof data.verification_steps[0] === 'string') {
+                    data.verification_steps.forEach(stepText => {
+                         // Zkusíme rozparsovat, pokud je to formát z původního logu
+                         const parts = stepText.match(/(\d{2}:\d{2}:\d{2},\d{3})\s-\s(EmailVerifier|MainThread|Thread-\d+)\s-\s(INFO|WARNING|ERROR|DEBUG)\s-\s(.+)/);
+                         if (parts) {
+                             addLogStep({
+                                 timestamp: new Date().toISOString().split('T')[0] + 'T' + parts[1].replace(',', '.'), // Přibližný formát
+                                 status: parts[3].toLowerCase(),
+                                 action: parts[4].split(':')[0].trim(),
+                                 details: parts[4].includes(':') ? parts[4].substring(parts[4].indexOf(':') + 1).trim() : ''
+                             }, bulkVerificationLogEl);
+                         } else {
+                             addLogStep({ message: stepText, status: 'info' }, bulkVerificationLogEl); // Obecný log
+                         }
+                    });
+                } else { // Pokud jsou strukturované
+                     data.verification_steps.forEach(step => addLogStep(step, bulkVerificationLogEl));
+                }
+                bulkVerificationLogEl.scrollTop = bulkVerificationLogEl.scrollHeight;
+            }
+        }
+
+        async function handleStopVerification() {
+            if (currentBulkVerificationInterval) { // Pokud běží polling
+                stopVerificationButton.disabled = true;
+                stopVerificationButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Zastavuji...`;
+                isVerificationStoppedManually = true;
+
+                try {
+                    const response = await fetch('/stop_verification', { method: 'POST' });
+                    const data = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(data.error || `Chyba serveru: ${response.status}`);
+                    }
+                    displayGlobalAlert(data.message || "Pokus o zastavení verifikace byl odeslán.", "info");
+                    // UI se aktualizuje přes polling /status
+                    // Není třeba explicitně měnit tlačítka zde, /status to zařídí
+
+                } catch (error) {
+                    console.error('Chyba při zastavování verifikace:', error);
+                    displayGlobalAlert(`Chyba při zastavování verifikace: ${error.message}`);
+                    // V případě chyby by se tlačítka měla obnovit, pokud /status neukáže 'stopped'
+                    stopVerificationButton.disabled = false;
+                    stopVerificationButton.innerHTML = `<i class="fas fa-stop-circle me-2" aria-hidden="true"></i>Zastavit a uložit`;
+
+                }
+            } else {
+                displayGlobalAlert("Verifikace aktuálně neběží.", "warning");
+            }
+        }
+
+    </script>
+</body>
+</html>
