@@ -98,8 +98,10 @@
             border-radius: 5px;
             margin-bottom: 1.5rem;
         }
-        .button-container { /* Pro centrování tlačítek Start/Stop */
-            text-align: center;
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 0.5rem;
             margin-top: 1.5rem;
         }
         #globalAlertsContainer { /* Kontejner pro globální notifikace */
@@ -118,6 +120,7 @@
             padding: 0.5em;
             margin: 0.2em 0;
             border-radius: 4px;
+            font-size: 0.9em;
         }
         .log-entry.success { background-color: #d4edda; }
         .log-entry.warning { background-color: #fff3cd; }
@@ -125,7 +128,7 @@
         .log-entry.info { background-color: #e2e3e5; }
         #downloadButton {
             display: none;
-            margin-top: 1em;
+            margin-left: 0.5rem;
         }
     </style>
 </head>
@@ -259,21 +262,16 @@
                                 </div>
                             </div>
 
-                            <div id="verificationLogContainer" style="display: none;">
-                                <h6 class="mb-2">Log verifikace (poslední kroky):</h6>
-                                <div id="bulkVerificationLog" class="log-display-area">
-                                    <!-- Logovací zprávy budou vloženy sem -->
-                                </div>
-                            </div>
-
                             <div class="button-container">
-                                <button type="button" class="btn btn-primary btn-lg" id="startVerificationButton">
-                                    <i class="fas fa-play me-2" aria-hidden="true"></i>Spustit ověření
+                                <button type="button" class="btn btn-primary" id="startVerificationButton">
+                                    <i class="fas fa-play me-2"></i>Spustit ověření
                                 </button>
-                                <button type="button" class="btn btn-danger btn-lg" id="stopVerificationButton" style="display: none;">
-                                    <i class="fas fa-stop-circle me-2" aria-hidden="true"></i>Zastavit a uložit
+                                <button type="button" class="btn btn-warning" id="stopVerificationButton" style="display: none;">
+                                    <i class="fas fa-stop me-2"></i>Zastavit a uložit
                                 </button>
-                                <a href="/download_results" class="btn btn-success btn-lg" id="downloadButton">Stáhnout výsledky</a>
+                                <a href="/download_results" class="btn btn-success" id="downloadButton" style="display: none;">
+                                    <i class="fas fa-download me-2"></i>Stáhnout výsledky
+                                </a>
                             </div>
                         </div>
 
@@ -306,7 +304,6 @@
         let bulkVerificationArea, bulkStatusMessage, bulkProgressBar, bulkProgressLabel, bulkProgressPercent;
         let validCountEl, invalidCountEl, catchallCountEl, processedCountEl;
         let catchallDomainsDisplayArea, catchallDomainsListEl;
-        let verificationLogContainer, bulkVerificationLogEl;
         let startVerificationButton, stopVerificationButton;
         let downloadResultsArea, downloadLink;
         let globalAlertsContainer;
@@ -348,8 +345,6 @@
             processedCountEl = document.getElementById('processedCount');
             catchallDomainsDisplayArea = document.getElementById('catchallDomainsDisplayArea');
             catchallDomainsListEl = document.getElementById('catchallDomainsList');
-            verificationLogContainer = document.getElementById('verificationLogContainer');
-            bulkVerificationLogEl = document.getElementById('bulkVerificationLog');
             startVerificationButton = document.getElementById('startVerificationButton');
             stopVerificationButton = document.getElementById('stopVerificationButton');
             
@@ -776,8 +771,6 @@
             processedCountEl.textContent = '0';
             catchallDomainsListEl.innerHTML = '<em class="text-muted">Žádné</em>';
             catchallDomainsDisplayArea.style.display = 'none';
-            bulkVerificationLogEl.innerHTML = '';
-            verificationLogContainer.style.display = 'none';
 
 
             startVerificationButton.style.display = 'inline-block';
@@ -795,8 +788,6 @@
             stopVerificationButton.style.display = 'inline-block';
             bulkStatusMessage.className = 'status-message-area alert alert-primary';
             bulkStatusMessage.innerHTML = `<div class="spinner-border spinner-border-sm me-2" role="status"></div> Spouštím verifikaci...`;
-            verificationLogContainer.style.display = 'block'; // Zobrazit logovací kontejner
-            isVerificationStoppedManually = false;
 
 
             try {
@@ -889,9 +880,7 @@
 
             validCountEl.textContent = data.valid_emails || 0;
             invalidCountEl.textContent = data.invalid_emails || 0;
-            // Změna zde: frontend očekává `catchall_emails` nebo podobně, backend posílá `probable_emails`
-            // nebo `accept_all_details.count`. Sjednotíme na `probable_emails`
-            catchallCountEl.textContent = data.probable_emails || (data.accept_all_details ? data.accept_all_details.count : 0) || 0;
+            catchallCountEl.textContent = data.probable_emails || 0;
             processedCountEl.textContent = processed;
 
             let statusMsgText = '';
@@ -902,7 +891,7 @@
                     statusMsgText = `<i class="fas fa-info-circle me-1" aria-hidden="true"></i> Připraveno.`;
                     statusAlertClass = 'alert-info';
                     break;
-                case 'loading': // Pokud by byl takový stav z backendu
+                case 'loading':
                     statusMsgText = `<div class="spinner-border spinner-border-sm me-2" role="status"></div> Načítání dat...`;
                     statusAlertClass = 'alert-warning';
                     break;
@@ -929,7 +918,7 @@
             bulkStatusMessage.innerHTML = statusMsgText;
 
             // Aktualizace seznamu catch-all domén
-            const catchallDomains = data.catchall_domains || (data.accept_all_details ? data.accept_all_details.domains.map(d => `${d.domain} (${d.count})`) : []);
+            const catchallDomains = data.catchall_domains || [];
             if (catchallDomains.length > 0) {
                 catchallDomainsDisplayArea.style.display = 'block';
                 catchallDomainsListEl.innerHTML = catchallDomains.map(domainInfo => 
@@ -938,33 +927,13 @@
             } else {
                 catchallDomainsDisplayArea.style.display = 'none';
             }
-            
-            // Aktualizace logu verifikace
-            // Backend by měl posílat pole strukturovaných logovacích zpráv
-            if (data.verification_steps && data.verification_steps.length > 0) {
-                // Předpokládáme, že `data.verification_steps` jsou nové kroky od poslední aktualizace
-                // nebo že backend posílá jen relevantní delta. Pro jednoduchost zde přidáme všechny.
-                // Ideálně by frontend měl mít ID poslední zpracované log zprávy.
-                // Pokud `verification_steps` jsou textové:
-                if (typeof data.verification_steps[0] === 'string') {
-                    data.verification_steps.forEach(stepText => {
-                         // Zkusíme rozparsovat, pokud je to formát z původního logu
-                         const parts = stepText.match(/(\d{2}:\d{2}:\d{2},\d{3})\s-\s(EmailVerifier|MainThread|Thread-\d+)\s-\s(INFO|WARNING|ERROR|DEBUG)\s-\s(.+)/);
-                         if (parts) {
-                             addLogStep({
-                                 timestamp: new Date().toISOString().split('T')[0] + 'T' + parts[1].replace(',', '.'), // Přibližný formát
-                                 status: parts[3].toLowerCase(),
-                                 action: parts[4].split(':')[0].trim(),
-                                 details: parts[4].includes(':') ? parts[4].substring(parts[4].indexOf(':') + 1).trim() : ''
-                             }, bulkVerificationLogEl);
-                         } else {
-                             addLogStep({ message: stepText, status: 'info' }, bulkVerificationLogEl); // Obecný log
-                         }
-                    });
-                } else { // Pokud jsou strukturované
-                     data.verification_steps.forEach(step => addLogStep(step, bulkVerificationLogEl));
-                }
-                bulkVerificationLogEl.scrollTop = bulkVerificationLogEl.scrollHeight;
+
+            // Zobrazení tlačítka pro stažení výsledků
+            const downloadButton = document.getElementById('downloadButton');
+            if (data.has_results && (data.status === 'completed' || data.status === 'stopped')) {
+                downloadButton.style.display = 'inline-block';
+            } else {
+                downloadButton.style.display = 'none';
             }
         }
 

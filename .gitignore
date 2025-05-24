@@ -26,6 +26,7 @@ uploads/
 results/
 *.log
 config.json
+data/disposable_domains.txt
 
 # Environment variables
 .env
@@ -34,5 +35,20 @@ config.json
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Cache
+.cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs
+logs/
+*.log.*
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
 
 dnspython/ 

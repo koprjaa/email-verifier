@@ -8,12 +8,16 @@ Webová aplikace pro verifikaci emailových adres pomocí SMTP a DNS kontrol. Ap
 - Webové rozhraní pro nahrávání a zpracování souborů
 - REST API pro programové využití
 - Paralelní zpracování pro rychlou verifikaci
-- Detekce catch-all domén
+- Detekce catch-all domén s podporou pro Microsoft domény
 - Detekce jednorázových emailových adres
-- Rate limiting pro ochranu SMTP serverů
+- Rate limiting a ochrana proti blokování
 - Detailní logování a reportování
 - Asynchronní zpracování pro lepší výkon
 - Podpora pro export výsledků ve formátech CSV a JSON
+- Automatické opakování při dočasných chybách
+- Inteligentní správa odesílacích adres pro citlivé domény
+- Podpora pro Microsoft 365/Outlook.com domény
+- Optimalizované zpracování chyb a výjimek
 
 ## Technické požadavky
 
@@ -59,8 +63,9 @@ python app.py
 
 ### REST API
 
-Aplikace poskytuje REST API endpoint pro verifikaci emailů:
+Aplikace poskytuje REST API endpointy:
 
+#### Verifikace emailů
 ```
 POST /api/verify
 Content-Type: application/json
@@ -70,18 +75,19 @@ Content-Type: application/json
 }
 ```
 
-Odpověď:
-```json
-{
-    "results": [
-        {
-            "email": "email1@domain.com",
-            "status": "valid",
-            "error": null,
-            "domain_type": "regular"
-        }
-    ]
-}
+#### Získání stavu verifikace
+```
+GET /api/status
+```
+
+#### Zastavení verifikace
+```
+POST /api/stop_verification
+```
+
+#### Stažení výsledků
+```
+GET /api/download_results
 ```
 
 ## Konfigurace
@@ -98,6 +104,7 @@ Konfigurační soubor `config.json` umožňuje nastavit:
 - `check_catchall`: kontrola catch-all domén
 - `batch_size`: velikost dávky pro zpracování
 - `max_concurrent_domains`: maximální počet souběžných domén
+- `sender_emails_by_domain`: konfigurace odesílacích adres pro různé domény
 
 ## Výstup
 
@@ -107,12 +114,15 @@ Program generuje dva typy výstupů:
    - Status verifikace
    - Detekovaná chyba (pokud existuje)
    - Typ domény (catch-all, jednorázová, atd.)
+   - SMTP kód a odpověď
+   - DNS záznamy
+   - Čas verifikace
 
 2. JSON soubor s detailními informacemi včetně:
    - Všechny informace z CSV
-   - DNS záznamy
-   - SMTP odpovědi
+   - Detailní SMTP komunikace
    - Časové údaje
+   - Verifikační kroky
 
 ## Logy
 
@@ -129,6 +139,8 @@ YYYY-MM-DD HH:MM:SS - LEVEL - Message
 - Ochrana proti DoS útokům
 - Bezpečné zpracování SMTP komunikace
 - Omezení počtu požadavků na API
+- Inteligentní správa odesílacích adres
+- Ochrana proti blokování IP adres
 
 ## Výkon
 
@@ -137,6 +149,8 @@ YYYY-MM-DD HH:MM:SS - LEVEL - Message
 - Optimalizované DNS dotazy
 - Efektivní správa paměti
 - Dávkové zpracování pro velké soubory
+- Cachování DNS a catch-all výsledků
+- Optimalizované opakování při chybách
 
 ## Licence
 

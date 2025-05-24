@@ -34,6 +34,21 @@ SMTP_CODES_SUCCESS = (250, 251, 252)
 SMTP_CODES_TEMP_FAIL = (421, 450, 451, 452)
 SMTP_CODES_PERM_FAIL = (500, 501, 502, 503, 504, 550, 551, 552, 553, 554)
 
+TEMPORARY_ERROR_CODES = {
+    421,  # Service not available
+    450,  # Requested mail action not taken
+    451,  # Requested action aborted
+    452,  # Requested action not taken
+    454,  # Temporary authentication failure
+    458,  # Unable to queue
+    459,  # Server error
+    471,  # Error processing
+    472,  # Message too big
+    552,  # Exceeded storage allocation
+    553,  # Mailbox name not allowed
+    554,  # Transaction failed
+}
+
 KNOWN_FREEMAIL_DOMAINS = {
     "gmail.com",
     "googlemail.com",
@@ -60,6 +75,36 @@ KNOWN_FREEMAIL_DOMAINS = {
 }
 CATCHALL_TEST_PORTS = [25, 587]
 
+MICROSOFT_DOMAINS = {
+    "outlook.com",
+    "hotmail.com",
+    "live.com",
+    "msn.com",
+    "office365.com",
+    "microsoft.com"
+}
+
+MICROSOFT_MX_PATTERNS = [
+    "*.mail.protection.outlook.com",
+    "*.outlook.com",
+    "*.hotmail.com"
+]
+
+REPUTATION_SENSITIVE_DOMAINS = {
+    "centrum.cz",
+    "post.cz",
+    "seznam.cz",
+    "email.cz"
+}
+
+REPUTATION_ERROR_PATTERNS = [
+    "poor reputation",
+    "reputation",
+    "spam",
+    "blocked",
+    "blacklisted",
+    "rejected"
+]
 
 class EmailVerifier:
     def __init__(
@@ -319,11 +364,35 @@ class EmailVerifier:
             return True
         return False
 
+    def _is_reputation_error(self, code: int, message: str) -> bool:
+        """Check if the error is related to IP reputation."""
+        if code == 554:
+            return True
+        message_lower = message.lower()
+        return any(pattern in message_lower for pattern in REPUTATION_ERROR_PATTERNS)
+
     def _get_sender_email(self, recipient_domain: str) -> str:
+        """Get the most appropriate sender email for the recipient domain."""
         if self.sender_email_override:
             return self.sender_email_override
+        
+        # For reputation-sensitive domains, try to use a sender from the same domain
+        if recipient_domain in REPUTATION_SENSITIVE_DOMAINS:
+            # First try to find a sender from the same domain
+            for domain, sender in self.sender_emails_by_domain.items():
+                if domain == recipient_domain:
+                    return sender
+                
+            # If no sender from same domain, try to find a sender from a trusted domain
+            trusted_domains = ["gmail.com", "outlook.com", "yahoo.com"]
+            for domain in trusted_domains:
+                if domain in self.sender_emails_by_domain:
+                    return self.sender_emails_by_domain[domain]
+        
+        # Use domain-specific sender if available
         if recipient_domain in self.sender_emails_by_domain:
             return self.sender_emails_by_domain[recipient_domain]
+        
         return self.default_sender_email
 
     async def _perform_smtp_check(
@@ -376,6 +445,32 @@ class EmailVerifier:
             self._add_verification_step(
                 "info", "MAIL FROM", f"Resp: {code} {msg_str}", code
             )
+            
+            # Handle reputation-based rejections
+            if self._is_reputation_error(code, msg_str):
+                self._add_verification_step(
+                    "warning",
+                    "MAIL FROM",
+                    f"Reputation-based rejection detected. Will retry with different sender if available.",
+                )
+                # Try to find alternative sender
+                alternative_sender = None
+                for test_domain, test_sender in self.sender_emails_by_domain.items():
+                    if test_domain != domain and test_sender != sender:
+                        alternative_sender = test_sender
+                        break
+                
+                if alternative_sender:
+                    self._add_verification_step(
+                        "info", "MAIL FROM", f"Retrying with alternative sender: {alternative_sender}"
+                    )
+                    code, msg_bytes = await smtp_client.mail(alternative_sender)
+                    current_smtp_code = code
+                    msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
+                    self._add_verification_step(
+                        "info", "MAIL FROM", f"Resp: {code} {msg_str}", code
+                    )
+                
             if code not in SMTP_CODES_SUCCESS:
                 if code in SMTP_CODES_TEMP_FAIL:
                     raise RateLimitException(
@@ -462,6 +557,12 @@ class EmailVerifier:
             current_smtp_code,
         )
 
+    def _is_microsoft_domain(self, domain: str, mx_host: str) -> bool:
+        """Check if domain or MX host is Microsoft-related."""
+        if domain in MICROSOFT_DOMAINS:
+            return True
+        return any(mx_host.endswith(pattern.replace("*", "")) for pattern in MICROSOFT_MX_PATTERNS)
+
     async def _is_catch_all_domain(
         self, domain: str, mx_hosts_priority: List[Tuple[int, str]]
     ) -> bool:
@@ -491,6 +592,7 @@ class EmailVerifier:
             for i in range(2)
         ]
         successful_tests = 0
+        inconclusive_tests = 0
         mx_hosts = [host for _, host in mx_hosts_priority]
 
         for test_email in test_emails:
@@ -498,50 +600,62 @@ class EmailVerifier:
             for mx_host in mx_hosts:
                 if accepted:
                     break
-                for port in CATCHALL_TEST_PORTS:
+                # Only use port 25 for catch-all tests
+                try:
+                    smtp_client = aiosmtplib.SMTP(
+                        hostname=mx_host, port=25, timeout=self.smtp_timeout
+                    )
+                    await smtp_client.connect(timeout=self.smtp_timeout)
+                    
                     try:
-                        smtp_client = aiosmtplib.SMTP(
-                            hostname=mx_host, port=port, timeout=self.smtp_timeout
-                        )
-                        await smtp_client.connect(timeout=self.smtp_timeout)
-                        
-                        try:
-                            code, msg_bytes = await smtp_client.ehlo()
-                        except aiosmtplib.SMTPException:
-                            code, msg_bytes = await smtp_client.helo()
-                        
-                        msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
-                        if code not in SMTP_CODES_SUCCESS and code != 220:
-                            continue
+                        code, msg_bytes = await smtp_client.ehlo()
+                    except aiosmtplib.SMTPException:
+                        code, msg_bytes = await smtp_client.helo()
+                    
+                    msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
+                    if code not in SMTP_CODES_SUCCESS and code != 220:
+                        continue
 
-                        sender = self._get_sender_email(domain)
-                        code, msg_bytes = await smtp_client.mail(sender)
-                        msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
-                        if code not in SMTP_CODES_SUCCESS:
-                            continue
+                    sender = self._get_sender_email(domain)
+                    code, msg_bytes = await smtp_client.mail(sender)
+                    msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
+                    if code not in SMTP_CODES_SUCCESS:
+                        continue
 
-                        code, msg_bytes = await smtp_client.rcpt(test_email)
-                        msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
-                        
-                        if code in SMTP_CODES_SUCCESS:
+                    code, msg_bytes = await smtp_client.rcpt(test_email)
+                    msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
+                    
+                    # Special handling for Microsoft domains
+                    if self._is_microsoft_domain(domain, mx_host):
+                        if code == 550 and "Access denied" in msg_str:
                             self._add_verification_step(
                                 "warning",
-                                "Catch-all Test (Attempt)",
-                                f"Test email '{test_email}' accepted on {mx_host}:{port}.",
+                                "Catch-all Test (Microsoft)",
+                                f"Microsoft domain detected - Access denied response treated as inconclusive.",
                             )
-                            successful_tests += 1
+                            inconclusive_tests += 1
                             accepted = True
                             break
-                    except Exception as e:
-                        self.logger.debug(
-                            f"Unexpected error in catch-all sub-test: {e}"
+                    
+                    if code in SMTP_CODES_SUCCESS:
+                        self._add_verification_step(
+                            "warning",
+                            "Catch-all Test (Attempt)",
+                            f"Test email '{test_email}' accepted on {mx_host}:25.",
                         )
-                    finally:
-                        if smtp_client and smtp_client.is_connected:
-                            try:
-                                await smtp_client.quit()
-                            except (aiosmtplib.SMTPException, OSError):
-                                pass
+                        successful_tests += 1
+                        accepted = True
+                        break
+                except Exception as e:
+                    self.logger.debug(
+                        f"Unexpected error in catch-all sub-test: {e}"
+                    )
+                finally:
+                    if smtp_client and smtp_client.is_connected:
+                        try:
+                            await smtp_client.quit()
+                        except (aiosmtplib.SMTPException, OSError):
+                            pass
             if not accepted:
                 self._add_verification_step(
                     "info",
@@ -549,14 +663,44 @@ class EmailVerifier:
                     f"Test email '{test_email}' not accepted.",
                 )
 
-        is_catchall = successful_tests > 0
-        self._add_verification_step(
-            "warning" if is_catchall else "info",
-            "Catch-all Test (Result)",
-            f"Domain '{domain}' {'is' if is_catchall else 'is not'} likely catch-all. Successful: {successful_tests}/{len(test_emails)}.",
-        )
+        # Determine catch-all status based on results
+        is_catchall = False
+        if successful_tests > 0:
+            is_catchall = True
+        elif inconclusive_tests > 0:
+            # For Microsoft domains with inconclusive results, mark as probable catch-all
+            is_catchall = True
+            self._add_verification_step(
+                "warning",
+                "Catch-all Test (Result)",
+                f"Domain '{domain}' is likely catch-all (Microsoft domain with inconclusive results).",
+            )
+        else:
+            self._add_verification_step(
+                "info",
+                "Catch-all Test (Result)",
+                f"Domain '{domain}' is not catch-all. Successful: {successful_tests}/{len(test_emails)}.",
+            )
+
         self.is_catchall_domain_cache[domain] = is_catchall
         return is_catchall
+
+    def _is_temporary_error(self, code: int, message: str) -> bool:
+        """Check if the error is temporary and should be retried."""
+        if code in TEMPORARY_ERROR_CODES:
+            return True
+        message_lower = message.lower()
+        return any(pattern in message_lower for pattern in [
+            "temporary",
+            "try again",
+            "later",
+            "busy",
+            "overloaded",
+            "rate limit",
+            "throttled",
+            "quota",
+            "limit exceeded"
+        ])
 
     async def verify_single_email(self, email: str, attempt: int = 1) -> Dict[str, Any]:
         self._reset_steps_for_single_email()
@@ -677,11 +821,31 @@ class EmailVerifier:
                 return res
             except (TimeoutException, NoConnectionException) as e:
                 self.logger.warning(f"Temp error for {email} on {mx_host}: {e.message}")
+                if self._is_temporary_error(e.code if hasattr(e, 'code') else 0, e.message):
+                    if attempt < self.retry_attempts:
+                        delay = self.retry_delay_base * (2**attempt)
+                        self._add_verification_step(
+                            "warning",
+                            "Temporary Error Retry",
+                            f"Attempt {attempt}/{self.retry_attempts}. Waiting {delay:.1f}s for {email}.",
+                        )
+                        await asyncio.sleep(delay)
+                        return await self.verify_single_email(email, attempt + 1)
                 continue
             except EmailVerifierException as e:
                 self.logger.error(
                     f"Verifier error for {email} on {mx_host}: {e.message}"
                 )
+                if self._is_temporary_error(e.code if hasattr(e, 'code') else 0, e.message):
+                    if attempt < self.retry_attempts:
+                        delay = self.retry_delay_base * (2**attempt)
+                        self._add_verification_step(
+                            "warning",
+                            "Temporary Error Retry",
+                            f"Attempt {attempt}/{self.retry_attempts}. Waiting {delay:.1f}s for {email}.",
+                        )
+                        await asyncio.sleep(delay)
+                        return await self.verify_single_email(email, attempt + 1)
                 continue
             except Exception as e:
                 self.logger.error(

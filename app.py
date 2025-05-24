@@ -116,6 +116,9 @@ def reset_verification_state():
             "stop_requested": False,
             "verification_run_id": None,
             "is_thread_active": False,
+            "detected_encoding": None,
+            "detected_delimiter": None,
+            "app_batch_size_for_ui": app_level_config.get("ui_batch_size", 20),
         }
         app_logger.info("Global verification state has been reset to 'idle'.")
 
@@ -500,28 +503,33 @@ def run_bulk_verification_in_thread():
         ui_app_batch_size = current_verification_state.get("app_batch_size_for_ui", 20)
 
         for i in range(0, total_emails_for_this_run, ui_app_batch_size):
+            # Critical check at the start of each batch
             with verification_lock:
-                if (
-                    current_verification_state.get("stop_requested")
-                    or current_verification_state.get("verification_run_id")
-                    != run_id_for_thread
-                ):
+                stop_requested = current_verification_state.get("stop_requested", False)
+                current_run_id = current_verification_state.get("verification_run_id")
+                
+                if stop_requested or current_run_id != run_id_for_thread:
                     app_logger.info(
-                        f"Thread (ID: {run_id_for_thread}): Stop requested or new run started. Terminating current processing."
+                        f"Thread (ID: {run_id_for_thread}): Stopping verification. "
+                        f"stop_requested={stop_requested}, "
+                        f"current_run_id={current_run_id}, "
+                        f"thread_run_id={run_id_for_thread}"
                     )
-                    current_verification_state["status"] = "stopped"
-                    current_verification_state["is_thread_active"] = False
-                    save_verification_results(run_id_for_thread)
-                    return
+                    
+                    if current_run_id == run_id_for_thread:
+                        current_verification_state["status"] = "stopped"
+                        save_verification_results(run_id_for_thread, is_final_save=True)
+                    
+                    break
+                
                 current_verification_state["last_activity_time"] = time.time()
-                current_verification_state["current_batch_num"] = (
-                    i // ui_app_batch_size
-                ) + 1
+                current_verification_state["current_batch_num"] = (i // ui_app_batch_size) + 1
 
             batch_to_process_list = emails_for_this_run[i : i + ui_app_batch_size]
             app_logger.info(
                 f"Thread (ID: {run_id_for_thread}): Processing batch {current_verification_state['current_batch_num']}/{current_verification_state['total_batches']} ({len(batch_to_process_list)} emails)."
             )
+            
             batch_results_list = []
             try:
                 batch_results_list = loop.run_until_complete(
@@ -547,15 +555,14 @@ def run_bulk_verification_in_thread():
                     for eml in batch_to_process_list
                 ]
 
+            # Check again before saving batch results
             with verification_lock:
-                if (
-                    current_verification_state.get("verification_run_id")
-                    != run_id_for_thread
-                ):
+                if current_verification_state.get("verification_run_id") != run_id_for_thread or current_verification_state.get("stop_requested", False):
                     app_logger.info(
-                        f"Thread (ID: {run_id_for_thread}): New run started while processing batch. Discarding results for this old run's batch."
+                        f"Thread (ID: {run_id_for_thread}): Skipping batch results save - run superseded or stop requested"
                     )
                     break
+
                 for result_item in batch_results_list:
                     email_addr = result_item["email"]
                     current_verification_state["results"][email_addr] = result_item
@@ -597,109 +604,147 @@ def run_bulk_verification_in_thread():
                             "verification_log"
                         ] = current_verification_state["verification_log"][-50:]
 
+                # Save results after each batch
+                save_verification_results(run_id_for_thread, is_final_save=False)
+
+        # Final state update after loop completion
         with verification_lock:
             if current_verification_state.get("verification_run_id") == run_id_for_thread:
                 if current_verification_state["status"] == "verifying":
-                    current_verification_state["status"] = "completed"
-                    app_logger.info(
-                        f"Thread (ID: {run_id_for_thread}): Bulk verification process completed."
-                    )
-                elif current_verification_state["status"] == "stopping":
-                    current_verification_state["status"] = "stopped"
-                    app_logger.info(
-                        f"Thread (ID: {run_id_for_thread}): Bulk verification process was stopped during execution."
-                    )
-                save_verification_results(run_id_for_thread)
+                    if current_verification_state["processed_emails"] >= total_emails_for_this_run:
+                        current_verification_state["status"] = "completed"
+                        app_logger.info(
+                            f"Thread (ID: {run_id_for_thread}): Bulk verification process completed successfully."
+                        )
+                    else:
+                        current_verification_state["status"] = "stopped"
+                        app_logger.info(
+                            f"Thread (ID: {run_id_for_thread}): Bulk verification process was stopped during execution."
+                        )
+                save_verification_results(run_id_for_thread, is_final_save=True)
             else:
                 app_logger.info(
                     f"Thread (ID: {run_id_for_thread}): Run was superseded by a new one. Results for this old run will not be saved centrally by this thread."
                 )
 
-            if current_verification_state.get(
-                "verification_run_id"
-            ) == run_id_for_thread or not current_verification_state.get(
-                "is_thread_active"
-            ):
-                current_verification_state["is_thread_active"] = False
-            app_logger.info(f"Thread (ID: {run_id_for_thread}): Terminating execution.")
     finally:
+        # Final thread cleanup
+        with verification_lock:
+            if (current_verification_state.get("verification_run_id") == run_id_for_thread or 
+                not current_verification_state.get("is_thread_active")):
+                current_verification_state["is_thread_active"] = False
+                app_logger.info(f"Thread (ID: {run_id_for_thread}): Thread cleanup completed.")
         loop.close()
 
 
-def save_verification_results(run_id_to_save: int):
-    if current_verification_state.get("verification_run_id") != run_id_to_save:
-        app_logger.warning(
-            f"Attempting to save results for a non-current run (Save ID: {run_id_to_save}, Current ID: {current_verification_state.get('verification_run_id')}). Save operation skipped."
-        )
-        return
-    if not current_verification_state.get("results"):
-        app_logger.info(f"No results available to save for run ID: {run_id_to_save}.")
-        return
-
-    timestamp_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_id_filename_part = str(run_id_to_save) if run_id_to_save else timestamp_str
-    result_filename_str = f"verification_results_{run_id_filename_part}.csv"
-    result_filepath_obj = Path(app.config["RESULTS_FOLDER"]) / result_filename_str
+def save_verification_results(run_id_to_save: int, is_final_save: bool = False):
+    """Save verification results to CSV file.
+    
+    Args:
+        run_id_to_save: ID of the verification run to save
+        is_final_save: If True, this is the final save of the run
+    """
     try:
-        with open(
-            result_filepath_obj, "w", newline="", encoding="utf-8-sig"
-        ) as f_csv_out:
-            fieldnames_list = [
-                "Email",
-                "Status",
-                "Status Kod Verifikatoru",
-                "SMTP Odpoved Kod",
-                "Zprava",
-                "Je Catchall",
-                "MX Zaznam",
-            ]
-            writer_obj = csv.DictWriter(f_csv_out, fieldnames=fieldnames_list)
-            writer_obj.writeheader()
-            for email_key, result_data_val in current_verification_state.get(
-                "results", {}
-            ).items():
-                status_display_str = "Neznámý"
-                is_catchall_display_str = "Ne"
-                if result_data_val.get("is_valid") is True:
-                    if result_data_val.get("is_catchall"):
-                        status_display_str = "Pravděpodobně validní (Catch-all)"
-                        is_catchall_display_str = "Ano"
-                    else:
-                        status_display_str = "Validní"
-                elif result_data_val.get("is_valid") is False:
-                    status_display_str = "Nevalidní"
-                elif result_data_val.get("is_valid") is None:
-                    status_display_str = "Neznámý (chyba/timeout)"
+        with verification_lock:
+            if current_verification_state["verification_run_id"] != run_id_to_save:
+                app_logger.warning(f"Run ID mismatch during save: {run_id_to_save} vs {current_verification_state['verification_run_id']}")
+                return
 
-                writer_obj.writerow(
-                    {
-                        "Email": email_key,
-                        "Status": status_display_str,
-                        "Status Kod Verifikatoru": result_data_val.get(
-                            "status_code", "N/A"
-                        ),
-                        "SMTP Odpoved Kod": result_data_val.get(
-                            "smtp_code_internal", "N/A"
-                        ),
-                        "Zprava": result_data_val.get("message", "N/A"),
-                        "Je Catchall": is_catchall_display_str,
-                        "MX Zaznam": result_data_val.get("mx_record", "N/A"),
-                    }
-                )
-        current_verification_state["result_filepath"] = str(result_filepath_obj)
-        app_logger.info(
-            f"Verification results for run ID {run_id_to_save} saved to '{result_filepath_obj}'."
-        )
-    except Exception as e_save:
-        app_logger.error(
-            f"Error saving verification results for run ID {run_id_to_save} to CSV: {e_save}",
-            exc_info=True,
-        )
-        current_verification_state[
-            "error_message"
-        ] = f"Chyba při ukládání výsledků: {str(e_save)}"
-        if current_verification_state["status"] not in ["error", "stopped"]:
-            current_verification_state["status"] = "error"
+            if not current_verification_state["results"]:
+                app_logger.warning("No results to save")
+                return
+
+            # Use existing filepath if available, otherwise create new one
+            if not current_verification_state["result_filepath"]:
+                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+                result_filepath = Path(app.config["RESULTS_FOLDER"]) / f"verification_results_{timestamp}.csv"
+                current_verification_state["result_filepath"] = str(result_filepath)
+            else:
+                result_filepath = Path(current_verification_state["result_filepath"])
+
+            # Prepare data for CSV
+            csv_data = []
+            for email, result in current_verification_state["results"].items():
+                # Determine status based on is_valid and is_catchall
+                status = "unknown"
+                if result.get("is_valid") is True:
+                    status = "valid" if not result.get("is_catchall") else "catchall"
+                elif result.get("is_valid") is False:
+                    status = "invalid"
+
+                # Get domain type
+                domain_type = "unknown"
+                if result.get("domain_type"):
+                    domain_type = result.get("domain_type")
+                elif result.get("is_disposable"):
+                    domain_type = "disposable"
+
+                # Get SMTP response with code
+                smtp_response = ""
+                if result.get("smtp_response"):
+                    smtp_response = result.get("smtp_response")
+                if result.get("smtp_code"):
+                    code = result.get("smtp_code")
+                    if smtp_response:
+                        smtp_response = f"{code}: {smtp_response}"
+                    else:
+                        smtp_response = f"Code: {code}"
+                elif result.get("smtp_code_internal"):
+                    code = result.get("smtp_code_internal")
+                    if smtp_response:
+                        smtp_response = f"{code}: {smtp_response}"
+                    else:
+                        smtp_response = f"Code: {code}"
+
+                # Get DNS records
+                dns_records = ""
+                if result.get("mx_records"):
+                    dns_records = ", ".join(result.get("mx_records"))
+                elif result.get("mx_record"):
+                    dns_records = result.get("mx_record")
+
+                # Get error message
+                error_msg = ""
+                if result.get("error"):
+                    error_msg = result.get("error")
+                elif result.get("message"):
+                    error_msg = result.get("message")
+                elif result.get("status_code"):
+                    error_msg = f"Status: {result.get('status_code')}"
+
+                # Get verification time
+                verification_time = ""
+                if result.get("verification_time"):
+                    verification_time = str(result.get("verification_time"))
+
+                row = {
+                    "email": email,
+                    "status": status,
+                    "error": error_msg,
+                    "domain_type": domain_type,
+                    "smtp_response": smtp_response,
+                    "dns_records": dns_records,
+                    "verification_time": verification_time
+                }
+                csv_data.append(row)
+
+            # Determine if we need to write headers
+            write_headers = not result_filepath.exists() or is_final_save
+
+            # Save to CSV with UTF-8-SIG encoding for Excel compatibility
+            mode = 'w' if write_headers else 'a'
+            with open(result_filepath, mode, newline="", encoding="utf-8-sig") as f:
+                writer = csv.DictWriter(f, fieldnames=csv_data[0].keys())
+                if write_headers:
+                    writer.writeheader()
+                writer.writerows(csv_data)
+
+            app_logger.info(f"Results saved to {result_filepath} ({'final save' if is_final_save else 'incremental save'})")
+            add_verification_log("success", "save_results", f"Results saved to {result_filepath}")
+
+    except Exception as e:
+        app_logger.error(f"Error saving verification results: {e}", exc_info=True)
+        add_verification_log("error", "save_results", str(e))
 
 
 @app.route("/start_verification", methods=["GET"])
@@ -724,12 +769,16 @@ def start_verification_route():
                 400,
             )
 
+        # Signal old thread to stop if it's still running
         if bulk_verification_thread and bulk_verification_thread.is_alive():
             app_logger.warning(
                 "API /start_verification: Old verification thread is still active. Signaling it to stop."
             )
             current_verification_state["stop_requested"] = True
+            # Wait briefly for the old thread to notice the stop signal
+            time.sleep(0.5)
 
+        # Generate new run ID and reset state
         new_run_id_val = int(time.time() * 1000)
         current_verification_state.update(
             {
@@ -753,7 +802,7 @@ def start_verification_route():
                 "last_activity_time": time.time(),
                 "result_filepath": None,
                 "accept_all_domains_summary": {},
-                "stop_requested": False,
+                "stop_requested": False,  # Reset stop flag for new run
                 "verification_run_id": new_run_id_val,
                 "is_thread_active": False,
             }
@@ -787,225 +836,191 @@ def start_verification_route():
     )
 
 
-def cleanup_old_files():
-    """Clean up old files from uploads and results directories."""
+def add_verification_log(status: str, action: str, details: str = None):
+    """Add a log entry to the verification log."""
+    with verification_lock:
+        log_entry = {
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "status": status,
+            "action": action,
+            "details": details
+        }
+        current_verification_state["verification_log"].append(log_entry)
+        # Keep only last 1000 log entries
+        if len(current_verification_state["verification_log"]) > 1000:
+            current_verification_state["verification_log"] = current_verification_state["verification_log"][-1000:]
+
+
+def cleanup_old_files(clear_current_state_files_only: bool = False):
+    """Clean up old files from the upload and results folders."""
     try:
-        # Clean up uploads directory
-        uploads_dir = Path(app.config["UPLOAD_FOLDER"])
-        if uploads_dir.exists():
-            for file in uploads_dir.glob("*"):
-                if file.is_file():
-                    try:
-                        file.unlink()
-                        app_logger.debug(f"Cleaned up old upload file: {file}")
-                    except Exception as e:
-                        app_logger.warning(f"Failed to delete upload file {file}: {e}")
+        with verification_lock:
+            current_files = set()
+            if current_verification_state["uploaded_filepath"]:
+                current_files.add(Path(current_verification_state["uploaded_filepath"]))
+            if current_verification_state["result_filepath"]:
+                current_files.add(Path(current_verification_state["result_filepath"]))
 
-        # Clean up results directory
-        results_dir = Path(app.config["RESULTS_FOLDER"])
-        if results_dir.exists():
-            for file in results_dir.glob("*"):
-                if file.is_file():
+            # Clean up uploads folder
+            uploads_dir = Path(app.config["UPLOAD_FOLDER"])
+            for file_path in uploads_dir.glob("*"):
+                if clear_current_state_files_only:
+                    if file_path not in current_files:
+                        try:
+                            file_path.unlink()
+                            app_logger.info(f"Deleted old upload file: {file_path}")
+                        except Exception as e:
+                            app_logger.error(f"Error deleting file {file_path}: {e}")
+                else:
                     try:
-                        file.unlink()
-                        app_logger.debug(f"Cleaned up old result file: {file}")
+                        file_path.unlink()
+                        app_logger.info(f"Deleted upload file: {file_path}")
                     except Exception as e:
-                        app_logger.warning(f"Failed to delete result file {file}: {e}")
+                        app_logger.error(f"Error deleting file {file_path}: {e}")
 
-        app_logger.info("Cleanup of old files completed successfully")
+            # Clean up results folder
+            results_dir = Path(app.config["RESULTS_FOLDER"])
+            for file_path in results_dir.glob("*"):
+                if clear_current_state_files_only:
+                    if file_path not in current_files:
+                        try:
+                            file_path.unlink()
+                            app_logger.info(f"Deleted old result file: {file_path}")
+                        except Exception as e:
+                            app_logger.error(f"Error deleting file {file_path}: {e}")
+                else:
+                    try:
+                        file_path.unlink()
+                        app_logger.info(f"Deleted result file: {file_path}")
+                    except Exception as e:
+                        app_logger.error(f"Error deleting file {file_path}: {e}")
+
     except Exception as e:
-        app_logger.error(f"Error during cleanup of old files: {e}")
+        app_logger.error(f"Error during cleanup: {e}", exc_info=True)
 
 
 @app.route("/cleanup", methods=["POST"])
 def cleanup_route():
-    """Explicit cleanup endpoint for page refresh."""
-    cleanup_old_files()
-    return jsonify({"status": "success", "message": "Cleanup completed"})
+    """Clean up old files and reset verification state."""
+    try:
+        cleanup_old_files(clear_current_state_files_only=False)
+        reset_verification_state()
+        return jsonify({"status": "success", "message": "Cleanup completed"})
+    except Exception as e:
+        app_logger.error(f"Error during cleanup: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/status", methods=["GET"])
 def status_route():
-    with verification_lock:
-        if (
-            current_verification_state.get("is_thread_active")
-            and bulk_verification_thread
-            and not bulk_verification_thread.is_alive()
-            and current_verification_state["status"] == "verifying"
-        ):
-
-            current_run_id_status = current_verification_state.get(
-                "verification_run_id"
-            )
-            app_logger.warning(
-                f"API /status: Verification thread (ID: {current_run_id_status}, Name: {bulk_verification_thread.name if bulk_verification_thread else 'N/A'}) is no longer alive, but status is 'verifying'. Updating status."
-            )
-
-            if (
-                current_verification_state["processed_emails"]
-                >= current_verification_state["total_emails"]
-                and current_verification_state["total_emails"] > 0
-            ):
-                current_verification_state["status"] = "completed"
-                app_logger.info(
-                    f"API /status: Status updated to 'completed' for run ID: {current_run_id_status} as all emails processed."
-                )
-                if not current_verification_state.get("result_filepath"):
-                    save_verification_results(current_run_id_status)
-            else:
-                current_verification_state["status"] = "error"
-                current_verification_state[
-                    "error_message"
-                ] = "Proces verifikace byl neočekávaně ukončen."
-                app_logger.error(
-                    f"API /status: Status updated to 'error' for run ID: {current_run_id_status}."
-                )
-            current_verification_state["is_thread_active"] = False
-
-        status_payload_dict = {
-            k: v
-            for k, v in current_verification_state.items()
-            if k not in ["emails_to_verify", "results"]
-        }
-        accept_all_summary_dict = current_verification_state.get(
-            "accept_all_domains_summary", {}
-        )
-        status_payload_dict["accept_all_details"] = {
-            "count": sum(accept_all_summary_dict.values()),
-            "domains": [
-                {"domain": d, "count": c}
-                for d, c in sorted(
-                    accept_all_summary_dict.items(),
-                    key=lambda item: item[1],
-                    reverse=True,
-                )[:10]
-            ],
-        }
-        status_payload_dict["verification_log_batch"] = current_verification_state.get(
-            "verification_log", []
-        )[-20:]
-    return jsonify(status_payload_dict)
+    """Get the current status of the verification process."""
+    try:
+        with verification_lock:
+            # Get the last N log entries
+            log_batch = current_verification_state["verification_log"][-current_verification_state["app_batch_size_for_ui"]:]
+            
+            return jsonify({
+                "status": current_verification_state["status"],
+                "error_message": current_verification_state["error_message"],
+                "total_emails": current_verification_state["total_emails"],
+                "processed_emails": current_verification_state["processed_emails"],
+                "valid_emails": current_verification_state["valid_emails"],
+                "invalid_emails": current_verification_state["invalid_emails"],
+                "probable_emails": current_verification_state["probable_emails"],
+                "unknown_emails": current_verification_state["unknown_emails"],
+                "current_batch": current_verification_state["current_batch_num"],
+                "total_batches": current_verification_state["total_batches"],
+                "start_time": current_verification_state["start_time"],
+                "last_activity_time": current_verification_state["last_activity_time"],
+                "result_filepath": current_verification_state["result_filepath"],
+                "has_results": bool(current_verification_state["result_filepath"]),
+                "verification_log_batch": log_batch
+            })
+    except Exception as e:
+        app_logger.error(f"Error getting status: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/stop_verification", methods=["POST"])
 def stop_verification_route():
-    message_response = "Žádná aktivní verifikace k zastavení."
-    final_status_response = current_verification_state.get("status", "idle")
-
-    with verification_lock:
-        run_id_to_be_stopped = current_verification_state.get("verification_run_id")
-        if (
-            current_verification_state["status"] == "verifying"
-            and current_verification_state.get("is_thread_active", False)
-            and bulk_verification_thread
-            and bulk_verification_thread.is_alive()
-        ):
-            app_logger.info(
-                f"API /stop_verification: Received request to stop verification (ID: {run_id_to_be_stopped})."
-            )
-            # Immediately stop the verification
-            current_verification_state["stop_requested"] = True
-            current_verification_state["status"] = "stopped"
-            current_verification_state["is_thread_active"] = False
+    """Stop the current verification process and save results."""
+    try:
+        with verification_lock:
+            final_status = current_verification_state.get("status", "idle")
+            run_id_at_stop = current_verification_state.get("verification_run_id")
             
-            # Save any available results immediately
-            save_verification_results(run_id_to_be_stopped)
-            message_response = "Verifikace byla zastavena. Částečné výsledky jsou k dispozici ke stažení."
-            final_status_response = "stopped"
-                
-        elif current_verification_state["status"] == "verifying":
-            app_logger.warning(
-                f"API /stop_verification: Status is 'verifying' for ID {run_id_to_be_stopped}, but thread is not running or not marked active. Setting status to 'stopped'."
-            )
-            current_verification_state["status"] = "stopped"
-            current_verification_state["stop_requested"] = True
-            save_verification_results(run_id_to_be_stopped)
-            message_response = "Verifikace byla označena jako zastavená. Částečné výsledky jsou k dispozici ke stažení."
-            final_status_response = "stopped"
-            current_verification_state["is_thread_active"] = False
-        else:
-            app_logger.info(
-                f"API /stop_verification: No running verification found to stop (current status: {current_verification_state['status']})."
-            )
-            if final_status_response not in ["idle", "error", "completed", "stopped"]:
-                message_response = f"Verifikace je ve stavu '{final_status_response}', nelze přímo zastavit."
+            if final_status not in ["verifying", "running"]:
+                return jsonify({
+                    "status": final_status,
+                    "message": "No verification process is currently running",
+                    "has_results": bool(current_verification_state["result_filepath"])
+                })
 
-        filepath_to_return_val = current_verification_state.get("result_filepath")
-        if filepath_to_return_val and Path(filepath_to_return_val).exists():
-            message_response += " Klikněte na tlačítko 'Stáhnout výsledky' pro stažení částečných výsledků."
-            
-    return jsonify(
-        {
-            "status": final_status_response,
-            "message": message_response,
-            "filepath": filepath_to_return_val,
-            "has_results": bool(filepath_to_return_val and Path(filepath_to_return_val).exists())
-        }
-    )
+            # Set stop flags
+            current_verification_state["stop_requested"] = True
+            current_verification_state["status"] = "stopping"
+            add_verification_log("info", "stop_requested", "Verification stop requested")
+
+        # Wait for the thread to finish (with timeout)
+        if bulk_verification_thread and bulk_verification_thread.is_alive():
+            bulk_verification_thread.join(timeout=5.0)
+
+        with verification_lock:
+            if current_verification_state["verification_run_id"] == run_id_at_stop:
+                save_verification_results(run_id_at_stop, is_final_save=True)
+                current_verification_state["status"] = "stopped"
+                add_verification_log("info", "verification_stopped", "Verification process stopped")
+
+            return jsonify({
+                "status": current_verification_state["status"],
+                "message": "Verification process stopped",
+                "filepath": current_verification_state["result_filepath"],
+                "has_results": bool(current_verification_state["result_filepath"])
+            })
+
+    except Exception as e:
+        app_logger.error(f"Error stopping verification: {e}", exc_info=True)
+        return jsonify({
+            "status": "error",
+            "message": f"Error stopping verification: {str(e)}",
+            "has_results": bool(current_verification_state["result_filepath"])
+        }), 500
 
 
 @app.route("/download_results", methods=["GET"])
 def download_results_route():
-    """Download the latest verification results."""
-    with verification_lock:
-        filepath = current_verification_state.get("result_filepath")
-        if not filepath or not Path(filepath).exists():
-            app_logger.warning("API /download_results: No results file available for download.")
-            return jsonify({"error": "Žádné výsledky nejsou k dispozici ke stažení"}), 404
+    """Download the latest verification results file."""
+    try:
+        with verification_lock:
+            if not current_verification_state["result_filepath"]:
+                return jsonify({"error": "No results file available"}), 404
 
-        results_folder_abs_path = Path(app.config["RESULTS_FOLDER"]).resolve()
-        requested_file_basename = Path(filepath).name
-        requested_file_abs_path = (results_folder_abs_path / requested_file_basename).resolve()
+            result_path = Path(current_verification_state["result_filepath"])
+            if not result_path.exists():
+                return jsonify({"error": "Results file not found"}), 404
 
-        if not requested_file_abs_path.is_file() or requested_file_abs_path.parent != results_folder_abs_path:
-            app_logger.warning(
-                f"API /download_results: Invalid or non-existent file: '{filepath}' (Resolved: '{requested_file_abs_path}')"
+            # Security check - ensure file is in RESULTS_FOLDER
+            results_folder = Path(app.config["RESULTS_FOLDER"]).resolve()
+            result_path = result_path.resolve()
+            
+            if not str(result_path).startswith(str(results_folder)):
+                app_logger.error(f"Security check failed: {result_path} is not in {results_folder}")
+                return jsonify({"error": "Invalid file path"}), 403
+
+            # Get the filename from the path
+            filename = result_path.name
+            
+            app_logger.info(f"Sending file for download: {result_path}")
+            return send_file(
+                result_path,
+                mimetype="text/csv",
+                as_attachment=True,
+                download_name=filename
             )
-            return jsonify({"error": "Soubor nenalezen nebo neplatná cesta"}), 404
 
-        app_logger.info(
-            f"API /download_results: Providing file '{requested_file_abs_path}' for download as '{requested_file_basename}'."
-        )
-        return send_file(
-            requested_file_abs_path,
-            as_attachment=True,
-            download_name=requested_file_basename,
-            mimetype='text/csv'
-        )
-
-
-@app.route("/download", methods=["GET"])
-def download_results_legacy_route():
-    """Legacy download endpoint that accepts filepath parameter."""
-    filepath_param_val = request.args.get("filepath")
-    if not filepath_param_val:
-        app_logger.warning("API /download: Missing 'filepath' query parameter.")
-        return jsonify({"error": "Chybí parametr filepath"}), 400
-
-    results_folder_abs_path = Path(app.config["RESULTS_FOLDER"]).resolve()
-    requested_file_basename_str = Path(filepath_param_val).name
-    requested_file_abs_path = (
-        results_folder_abs_path / requested_file_basename_str
-    ).resolve()
-
-    if (
-        not requested_file_abs_path.is_file()
-        or requested_file_abs_path.parent != results_folder_abs_path
-    ):
-        app_logger.warning(
-            f"API /download: Attempt to download invalid or non-existent file: '{filepath_param_val}' (Resolved: '{requested_file_abs_path}')"
-        )
-        return jsonify({"error": "Soubor nenalezen nebo neplatná cesta"}), 404
-
-    app_logger.info(
-        f"API /download: Providing file '{requested_file_abs_path}' for download as '{requested_file_basename_str}'."
-    )
-    return send_file(
-        requested_file_abs_path,
-        as_attachment=True,
-        download_name=requested_file_basename_str,
-        mimetype='text/csv'
-    )
+    except Exception as e:
+        app_logger.error(f"Error downloading results: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
@@ -1016,9 +1031,9 @@ if __name__ == "__main__":
         f"Starting Flask app on {host_val}:{port_val} with debug_mode={is_debug_mode}"
     )
     
-    # Register cleanup only on program shutdown
+    # Register cleanup on application exit
     import atexit
-    atexit.register(cleanup_old_files)
+    atexit.register(lambda: cleanup_old_files(clear_current_state_files_only=True))
     
     app.run(
         debug=is_debug_mode,
