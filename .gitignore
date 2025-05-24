@@ -24,7 +24,10 @@ ENV/
 # Project specific
 uploads/
 results/
+logs/
+custom_logs/
 *.log
+*.log.*
 config.json
 data/disposable_domains.txt
 
@@ -36,19 +39,16 @@ data/disposable_domains.txt
 .DS_Store
 Thumbs.db
 
-# Cache
+# Cache and coverage
 .cache/
 .pytest_cache/
 .coverage
 htmlcov/
-
-# Logs
-logs/
-*.log.*
 
 # Temporary files
 *.tmp
 *.temp
 *.bak
 
+# Project specific
 dnspython/ 
