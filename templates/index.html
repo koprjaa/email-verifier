@@ -178,19 +178,21 @@
                         <!-- Oblast pro nahrání souboru -->
                         <div id="bulkUploadArea">
                             <div class="alert alert-secondary mb-4">
-                                <h6 class="alert-heading mb-2"><i class="fas fa-info-circle me-1" aria-hidden="true"></i> Formát CSV souboru:</h6>
-                                <p class="mb-2 small">Soubor musí být ve formátu CSV (oddělený čárkou nebo středníkem). Aplikace se pokusí detekovat kódování (UTF-8, CP1250 atd.).</p>
+                                <h6 class="alert-heading mb-2"><i class="fas fa-info-circle me-1" aria-hidden="true"></i> Podporované formáty souborů:</h6>
+                                <p class="mb-2 small">Aplikace podporuje CSV a TXT soubory s emaily. Automaticky detekuje kódování (UTF-8, CP1250 atd.).</p>
                                 <div class="csv-format-info">
-                                    <strong>Příklad podporovaných názvů sloupce pro emaily:</strong><br>
-                                    <code>email, Email, EMAIL, e-mail, E-mail, E-MAIL</code>
+                                    <strong>CSV soubory:</strong> Příklad názvů sloupce pro emaily:<br>
+                                    <code>email, Email, EMAIL, e-mail, E-mail, E-MAIL</code><br><br>
+                                    <strong>TXT soubory:</strong> Emaily mohou být:<br>
+                                    <code>• Jeden email na řádek<br>• Oddělené čárkami, středníky, tabulátory<br>• Smíšené v textu</code>
                                 </div>
                             </div>
 
                             <div class="drag-area mb-3" id="dropZone">
                                 <i class="fas fa-cloud-upload-alt fa-3x mb-3 text-primary" aria-hidden="true"></i>
-                                <h6 class="mb-2">Přetáhněte CSV soubor sem</h6>
+                                <h6 class="mb-2">Přetáhněte CSV nebo TXT soubor sem</h6>
                                 <p class="text-muted mb-0 small">nebo</p>
-                                <input type="file" id="csvFileInput" class="d-none" accept=".csv">
+                                <input type="file" id="csvFileInput" class="d-none" accept=".csv,.txt">
                                 <button type="button" class="btn btn-outline-primary mt-2" id="browseCsvButton">
                                     Vybrat soubor
                                 </button>
@@ -566,9 +568,9 @@
                 return;
             }
 
-            if (!file.name.toLowerCase().endsWith('.csv')) {
+            if (!file.name.toLowerCase().endsWith('.csv') && !file.name.toLowerCase().endsWith('.txt')) {
                 console.error("Invalid file type:", file.name);
-                alert('Povoleny jsou pouze CSV soubory.');
+                alert('Povoleny jsou pouze CSV a TXT soubory.');
                 return;
             }
 
@@ -626,7 +628,9 @@
                 const timeoutId = setTimeout(() => controller.abort(), 60000); // 60 second timeout
 
                 console.log("Sending file to server...");
-                const response = await fetch('/load_csv', {
+                // Určení správného endpointu podle typu souboru
+                const endpoint = file.name.toLowerCase().endsWith('.txt') ? '/load_txt' : '/load_csv';
+                const response = await fetch(endpoint, {
                     method: 'POST',
                     body: formData,
                     signal: controller.signal
@@ -647,20 +651,30 @@
                 const data = await response.json();
                 console.log("Server response data:", data);
 
+                // Update progress to 100% only after successful processing
+                uploadProgressBar.style.width = '100%';
+                uploadProgressText.textContent = '100%';
+
                 if (data.status === 'select_column' && Array.isArray(data.columns)) {
+                    // CSV soubor - zobrazit výběr sloupce
                     console.log("Columns detected:", data.columns);
                     console.log("Suggested email column:", data.suggested_email_column);
                     
-                    // Update progress to 100% only after successful processing
-                    uploadProgressBar.style.width = '100%';
-                    uploadProgressText.textContent = '100%';
-                    
-                    // Show column selection
                     uploadProgressArea.style.display = 'none';
                     columnSelectionArea.style.display = 'block';
                     
                     // Populate column selection
                     displayColumnSelection(data.columns, data.suggested_email_column);
+                } else if (data.status === 'ready' && data.total_emails) {
+                    // TXT soubor - přímo připraveno k verifikaci
+                    console.log("TXT file processed:", data.total_emails, "emails found");
+                    console.log("Sample emails:", data.sample_emails);
+                    
+                    uploadProgressArea.style.display = 'none';
+                    columnSelectionArea.style.display = 'none';
+                    
+                    // Pro TXT soubory musíme ještě zavolat /select_column pro dokončení procesu
+                    handleTxtFileProcessing();
                 } else {
                     console.error("Unexpected server response:", data);
                     throw new Error('Neočekávaná odpověď ze serveru');
@@ -724,7 +738,6 @@
             // Zobrazit nějaký indikátor načítání pro tuto fázi
             displayGlobalAlert("Zpracovávám výběr sloupce...", "info", 2000);
 
-
             try {
                 const response = await fetch('/select_column', {
                     method: 'POST',
@@ -746,6 +759,34 @@
                 console.error('Chyba při potvrzení sloupce:', error);
                 displayGlobalAlert(`Chyba při potvrzení sloupce: ${error.message}`);
                 // Možná znovu zobrazit upload area nebo column selection area
+                document.getElementById('bulkUploadArea').style.display = 'block'; 
+            }
+        }
+
+        // Funkce pro přímé zpracování TXT souborů (bez výběru sloupce)
+        async function handleTxtFileProcessing() {
+            displayGlobalAlert("Zpracovávám TXT soubor...", "info", 2000);
+            
+            try {
+                const response = await fetch('/select_column', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({}) // Prázdné tělo pro TXT soubory
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || `Chyba serveru: ${response.status}`);
+                }
+
+                if (data.status === 'ready') {
+                    prepareBulkVerificationUI(data.total_emails);
+                } else {
+                     throw new Error(data.error || "Nepodařilo se připravit emaily k verifikaci.");
+                }
+            } catch (error) {
+                console.error('Chyba při zpracování TXT souboru:', error);
+                displayGlobalAlert(`Chyba při zpracování TXT souboru: ${error.message}`);
                 document.getElementById('bulkUploadArea').style.display = 'block'; 
             }
         }

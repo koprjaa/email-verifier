@@ -1,63 +1,3 @@
-"""
-Flask aplikace pro verifikaci emailových adres.
-
-Tato aplikace poskytuje REST API pro verifikaci jednotlivých emailových adres
-a pro hromadnou verifikaci emailů z CSV souborů. Aplikace využívá asynchronní
-verifikaci emailů a poskytuje detailní logování a sledování průběhu verifikace.
-
-Hlavní funkce:
-    - Verifikace jednotlivých emailových adres
-    - Hromadná verifikace emailů z CSV souborů
-    - Detekce kódování a oddělovačů v CSV souborech
-    - Asynchronní zpracování velkého množství emailů
-    - Detailní logování a sledování průběhu verifikace
-    - Export výsledků do CSV souboru
-
-Konfigurace:
-    Aplikace načítá konfiguraci z následujících zdrojů:
-    - Soubor config.json v kořenovém adresáři
-    - Proměnné prostředí (FLASK_RUN_HOST, FLASK_RUN_PORT, FLASK_DEBUG)
-    - Výchozí hodnoty pro případ chybějící konfigurace
-
-Složky:
-    - uploads/: Pro dočasné ukládání nahraných CSV souborů
-    - results/: Pro ukládání výsledků verifikace
-    - data/: Pro ukládání konfiguračních souborů (např. seznam disposable domén)
-
-Attributes:
-    app (Flask): Instance Flask aplikace
-    app_logger (logging.Logger): Logger pro aplikaci s nastaveným formátováním a úrovní logování
-    email_verifier_instance (EmailVerifier): Instance verifikátoru emailů s načtenou konfigurací
-    current_verification_state (dict): Aktuální stav verifikace obsahující:
-        - status: Aktuální stav verifikace (idle, loading_csv, verifying, completed, error)
-        - error_message: Popis chyby, pokud nastala
-        - uploaded_filepath: Cesta k nahranému CSV souboru
-        - selected_column: Název vybraného sloupce s emaily
-        - emails_to_verify: Seznam emailů k verifikaci
-        - total_emails: Celkový počet emailů k verifikaci
-        - processed_emails: Počet zpracovaných emailů
-        - valid_emails: Počet validních emailů
-        - invalid_emails: Počet nevalidních emailů
-        - probable_emails: Počet pravděpodobně validních emailů (catch-all domény)
-        - unknown_emails: Počet emailů s neznámým stavem
-        - current_batch_num: Číslo aktuální dávky
-        - total_batches: Celkový počet dávek
-        - results: Slovník s výsledky verifikace
-        - verification_log: Seznam záznamů o průběhu verifikace
-        - start_time: Čas začátku verifikace
-        - last_activity_time: Čas poslední aktivity
-        - result_filepath: Cesta k souboru s výsledky
-        - accept_all_domains_summary: Souhrn catch-all domén
-        - stop_requested: Příznak požadavku na zastavení
-        - verification_run_id: ID běhu verifikace
-        - is_thread_active: Příznak aktivního vlákna
-        - detected_encoding: Detekované kódování CSV
-        - detected_delimiter: Detekovaný oddělovač sloupců
-        - app_batch_size_for_ui: Velikost dávky pro UI
-    verification_lock (threading.RLock): Zámek pro synchronizaci přístupu ke stavu verifikace
-    bulk_verification_thread (threading.Thread): Vlákno pro hromadnou verifikaci emailů
-"""
-
 import asyncio  # Pro asynchronní operace
 import csv  # Pro práci s CSV soubory
 import json  # Pro práci s JSON daty
@@ -654,6 +594,194 @@ def load_csv_route():
         return jsonify({"error": f"Neočekávaná chyba serveru: {str(e)}"}), 500
 
 
+@app.route("/load_txt", methods=["POST"])
+def load_txt_route():
+    """
+    Route pro nahrání a zpracování TXT souboru s emaily.
+    
+    TXT soubor může obsahovat emaily v různých formátech:
+    - Jeden email na řádek
+    - Emaily oddělené čárkami, středníky nebo jinými oddělovači
+    - Emaily v různých kódováních
+    
+    Očekává multipart/form-data s klíčem 'file' obsahujícím TXT soubor.
+    Provede následující kroky:
+    1. Kontrola existence a typu souboru
+    2. Uložení souboru do uploads složky
+    3. Detekce kódování souboru (utf-8-sig, utf-8, cp1250, iso-8859-2, windows-1250)
+    4. Načtení obsahu souboru
+    5. Parsování emailů z obsahu
+    
+    Returns:
+        tuple: (JSON response, HTTP status code)
+            - Při úspěchu: JSON obsahující:
+                - status: "ready"
+                - total_emails: počet nalezených emailů
+                - sample_emails: ukázka prvních 5 emailů
+            - Při chybě: chybovou zprávu a status 400/500
+    """
+    app_logger.info("=" * 50)
+    app_logger.info("API /load_txt: Starting TXT upload process")
+    app_logger.info(f"API /load_txt: Request content type: {request.content_type}")
+    app_logger.info(f"API /load_txt: Request files: {request.files}")
+
+    try:
+        with verification_lock:
+            app_logger.info(f"API /load_txt: Current verification state: {current_verification_state['status']}")
+            if current_verification_state["status"] not in ["idle", "error", "completed", "stopped"]:
+                app_logger.warning(f"API /load_txt: Attempt to load TXT while in state '{current_verification_state['status']}'.")
+                return jsonify({"error": "Jiná operace již probíhá."}), 400
+            reset_verification_state()
+            current_verification_state["status"] = "loading_txt"
+            current_verification_state["last_activity_time"] = time.time()
+            app_logger.info("API /load_txt: Reset verification state and set status to 'loading_txt'")
+
+        if "file" not in request.files:
+            with verification_lock:
+                current_verification_state["status"] = "error"
+            app_logger.warning("API /load_txt: No file part in the request.")
+            return jsonify({"error": "Soubor nebyl poskytnut"}), 400
+
+        file = request.files["file"]
+        app_logger.info(f"API /load_txt: Received file: {file.filename}")
+        app_logger.info(f"API /load_txt: File content type: {file.content_type}")
+
+        if file.filename == "":
+            with verification_lock:
+                current_verification_state["status"] = "error"
+            app_logger.warning("API /load_txt: No file selected.")
+            return jsonify({"error": "Nebyl vybrán žádný soubor"}), 400
+
+        # Kontrola přípony souboru
+        if not file.filename.lower().endswith('.txt'):
+            with verification_lock:
+                current_verification_state["status"] = "error"
+            app_logger.warning(f"API /load_txt: Invalid file type: {file.filename}")
+            return jsonify({"error": "Povoleny jsou pouze TXT soubory"}), 400
+
+        # Uložení souboru
+        filename = secure_filename(file.filename)
+        uploaded_filepath = Path("uploads") / filename
+        uploaded_filepath.parent.mkdir(exist_ok=True)
+        
+        file.save(str(uploaded_filepath))
+        app_logger.info(f"API /load_txt: File saved to: {uploaded_filepath}")
+
+        # Kontrola velikosti souboru
+        file_size = uploaded_filepath.stat().st_size
+        if file_size == 0:
+            with verification_lock:
+                current_verification_state["status"] = "error"
+            os.remove(uploaded_filepath)
+            app_logger.warning("API /load_txt: Empty file uploaded.")
+            return jsonify({"error": "Soubor je prázdný"}), 400
+
+        app_logger.info(f"API /load_txt: File size: {file_size} bytes")
+
+        # Seznam kódování k vyzkoušení
+        encodings_to_try = ["utf-8-sig", "utf-8", "cp1250", "iso-8859-2", "windows-1250"]
+        detected_encoding = None
+        file_content = None
+
+        for enc in encodings_to_try:
+            try:
+                app_logger.debug(f"API /load_txt: Trying encoding '{enc}'...")
+                with open(uploaded_filepath, "r", encoding=enc) as f:
+                    file_content = f.read()
+                    detected_encoding = enc
+                    app_logger.info(f"API /load_txt: Successfully read TXT with encoding '{enc}'")
+                    break
+            except UnicodeDecodeError:
+                app_logger.debug(f"API /load_txt: Failed to read with encoding '{enc}'")
+                continue
+
+        if not file_content:
+            with verification_lock:
+                current_verification_state["status"] = "error"
+            os.remove(uploaded_filepath)
+            app_logger.error("API /load_txt: Could not read file with any supported encoding.")
+            return jsonify({"error": "Nepodařilo se načíst soubor s podporovaným kódováním"}), 400
+
+        # Parsování emailů z obsahu
+        import re
+        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        
+        # Rozdělení obsahu na řádky a hledání emailů
+        lines = file_content.splitlines()
+        emails_found = []
+        
+        for line_num, line in enumerate(lines, 1):
+            line = line.strip()
+            if not line:  # Přeskočit prázdné řádky
+                continue
+                
+            # Pokud řádek obsahuje více emailů oddělených čárkami, středníky atd.
+            if any(sep in line for sep in [',', ';', '|', '\t']):
+                # Rozdělit podle různých oddělovačů
+                for sep in [',', ';', '|', '\t']:
+                    if sep in line:
+                        parts = line.split(sep)
+                        for part in parts:
+                            part = part.strip()
+                            if re.match(email_pattern, part):
+                                emails_found.append(part)
+                        break
+            else:
+                # Jeden email na řádek nebo email v textu
+                matches = re.findall(email_pattern, line)
+                emails_found.extend(matches)
+
+        # Odstranění duplicit a prázdných hodnot
+        unique_emails = list(dict.fromkeys([email.strip() for email in emails_found if email.strip()]))
+        
+        if not unique_emails:
+            with verification_lock:
+                current_verification_state["status"] = "error"
+            os.remove(uploaded_filepath)
+            app_logger.warning("API /load_txt: No valid emails found in file.")
+            return jsonify({"error": "V souboru nebyly nalezeny žádné platné emailové adresy"}), 400
+
+        app_logger.info(f"API /load_txt: Found {len(unique_emails)} unique emails")
+
+        # Uložení informací o souboru do stavu
+        with verification_lock:
+            current_verification_state["uploaded_filepath"] = str(uploaded_filepath)
+            current_verification_state["detected_encoding"] = detected_encoding
+            current_verification_state["file_type"] = "txt"
+            current_verification_state["emails_list"] = unique_emails
+            current_verification_state["status"] = "ready"
+            current_verification_state["last_activity_time"] = time.time()
+
+        # Příprava odpovědi
+        sample_emails = unique_emails[:5]  # Prvních 5 emailů jako ukázka
+        
+        response_data = {
+            "status": "ready",
+            "total_emails": len(unique_emails),
+            "sample_emails": sample_emails,
+            "file_info": {
+                "filename": filename,
+                "encoding": detected_encoding,
+                "size_bytes": file_size
+            }
+        }
+        
+        app_logger.info(f"API /load_txt: Sending response: {response_data}")
+        app_logger.info("=" * 50)
+        return jsonify(response_data)
+
+    except Exception as e:
+        app_logger.error(f"API /load_txt: Error processing TXT file: {str(e)}", exc_info=True)
+        if "uploaded_filepath" in locals() and uploaded_filepath.exists():
+            os.remove(uploaded_filepath)
+            app_logger.info(f"API /load_txt: Removed failed upload file: {uploaded_filepath}")
+        with verification_lock:
+            current_verification_state["status"] = "error"
+            current_verification_state["error_message"] = str(e)
+        app_logger.info("=" * 50)
+        return jsonify({"error": f"Chyba při zpracování TXT: {str(e)}"}), 500
+
+
 @app.route("/select_column", methods=["POST"])
 def select_column_route():
     """
@@ -681,108 +809,119 @@ def select_column_route():
         - V sloupci nebyly nalezeny žádné emaily
     """
     with verification_lock:
-        # Kontrola, zda je aplikace ve správném stavu pro výběr sloupce
-        if current_verification_state["status"] != "selecting_column":
+        # Kontrola, zda je aplikace ve správném stavu pro výběr sloupce nebo je připravena TXT
+        if current_verification_state["status"] not in ["selecting_column", "ready"]:
             app_logger.warning(
                 f"API /select_column: Invalid state '{current_verification_state['status']}' for column selection."
             )
             return jsonify({"error": "Neplatný stav pro výběr sloupce."}), 400
         current_verification_state["last_activity_time"] = time.time()
 
-    data = request.json  # Získání JSON dat
-    selected_column = data.get("column")  # Získání názvu vybraného sloupce
-    if not selected_column:
-        app_logger.warning("API /select_column: No column selected in request.")
-        return jsonify({"error": "Nebyl vybrán žádný sloupec"}), 400
-
-    # Získání cesty k souboru a detekovaného kódování/oddělovače ze stavu
+    # Získání cesty k souboru a typu souboru ze stavu
     uploaded_filepath_str = current_verification_state.get("uploaded_filepath")
-    detected_encoding = current_verification_state.get(
-        "detected_encoding", "utf-8"
-    )  # Výchozí UTF-8
-    detected_delimiter = current_verification_state.get(
-        "detected_delimiter", ";"
-    )  # Výchozí středník
+    file_type = current_verification_state.get("file_type", "csv")
+    
+    if not uploaded_filepath_str or not Path(uploaded_filepath_str).exists():
+        app_logger.error("API /select_column: Uploaded file path not found or file does not exist.")
+        return jsonify({"error": "Nejprve nahrajte soubor"}), 400
 
-    if (
-        not uploaded_filepath_str or not Path(uploaded_filepath_str).exists()
-    ):  # Kontrola existence souboru
-        with verification_lock:
-            current_verification_state["status"] = "error"
-        app_logger.error(
-            "API /select_column: Uploaded CSV file path not found or file does not exist."
-        )
-        return jsonify({"error": "Nejprve nahrajte CSV soubor"}), 400
+    # Pro TXT soubory jsou emaily již zpracovány
+    if file_type == "txt":
+        emails_list = current_verification_state.get("emails_list", [])
+        if not emails_list:
+            app_logger.error("API /select_column: No emails found in TXT file.")
+            return jsonify({"error": "V TXT souboru nebyly nalezeny žádné emaily"}), 400
+        
+        unique_emails_list = emails_list
+        app_logger.info(f"API /select_column: Using {len(unique_emails_list)} emails from TXT file")
+    
+    else:  # CSV soubor
+        data = request.json
+        selected_column = data.get("column")
+        if not selected_column:
+            app_logger.warning("API /select_column: No column selected in request.")
+            return jsonify({"error": "Nebyl vybrán žádný sloupec"}), 400
 
-    try:
-        emails_to_verify_list = []
-        # Otevření CSV souboru s detekovaným kódováním a oddělovačem
-        with open(uploaded_filepath_str, "r", encoding=detected_encoding) as f_csv:
-            reader = csv.DictReader(
-                f_csv, delimiter=detected_delimiter
-            )  # Použití DictReader pro snadný přístup ke sloupcům
-            if (
-                selected_column not in reader.fieldnames
-            ):  # Kontrola, zda vybraný sloupec existuje
+        detected_encoding = current_verification_state.get("detected_encoding", "utf-8")
+        detected_delimiter = current_verification_state.get("detected_delimiter", ";")
+
+        try:
+            emails_to_verify_list = []
+            # Otevření CSV souboru s detekovaným kódováním a oddělovačem
+            with open(uploaded_filepath_str, "r", encoding=detected_encoding) as f_csv:
+                reader = csv.DictReader(
+                    f_csv, delimiter=detected_delimiter
+                )  # Použití DictReader pro snadný přístup ke sloupcům
+                if (
+                    selected_column not in reader.fieldnames
+                ):  # Kontrola, zda vybraný sloupec existuje
+                    with verification_lock:
+                        current_verification_state["status"] = "error"
+                    app_logger.error(
+                        f"API /select_column: Selected column '{selected_column}' not found. Available: {reader.fieldnames}"
+                    )
+                    return (
+                        jsonify(
+                            {"error": f"Sloupec '{selected_column}' nebyl v CSV nalezen."}
+                        ),
+                        400,
+                    )
+                for row in reader:  # Iterace přes řádky CSV
+                    email_value = row.get(
+                        selected_column, ""
+                    ).strip()  # Získání hodnoty z vybraného sloupce
+                    if email_value:  # Pokud hodnota není prázdná
+                        emails_to_verify_list.append(email_value)
+
+            # Odstranění duplicitních emailů (zachování pořadí)
+            unique_emails_list = list(dict.fromkeys(emails_to_verify_list))
+            app_logger.info(
+                f"API /select_column: Column '{selected_column}' selected. Found {len(emails_to_verify_list)} emails, {len(unique_emails_list)} unique."
+            )
+
+            if not unique_emails_list:  # Pokud nebyly nalezeny žádné emaily
                 with verification_lock:
                     current_verification_state["status"] = "error"
-                app_logger.error(
-                    f"API /select_column: Selected column '{selected_column}' not found. Available: {reader.fieldnames}"
+                app_logger.warning(
+                    f"API /select_column: No email addresses found in column '{selected_column}'."
                 )
                 return (
                     jsonify(
-                        {"error": f"Sloupec '{selected_column}' nebyl v CSV nalezen."}
+                        {
+                            "error": f"Ve sloupci '{selected_column}' nebyly nalezeny žádné platné emailové adresy."
+                        }
                     ),
                     400,
                 )
-            for row in reader:  # Iterace přes řádky CSV
-                email_value = row.get(
-                    selected_column, ""
-                ).strip()  # Získání hodnoty z vybraného sloupce
-                if email_value:  # Pokud hodnota není prázdná
-                    emails_to_verify_list.append(email_value)
 
-        # Odstranění duplicitních emailů (zachování pořadí)
-        unique_emails_list = list(dict.fromkeys(emails_to_verify_list))
-        app_logger.info(
-            f"API /select_column: Column '{selected_column}' selected. Found {len(emails_to_verify_list)} emails, {len(unique_emails_list)} unique."
-        )
-
-        if not unique_emails_list:  # Pokud nebyly nalezeny žádné emaily
+        except Exception as e:  # Zachycení chyb při extrakci emailů z CSV
             with verification_lock:
                 current_verification_state["status"] = "error"
-            app_logger.warning(
-                f"API /select_column: No email addresses found in column '{selected_column}'."
+                current_verification_state["error_message"] = str(e)
+            app_logger.error(
+                f"API /select_column: Error extracting emails from column '{selected_column}': {e}",
+                exc_info=True,
             )
-            return (
-                jsonify(
-                    {
-                        "error": f"Ve sloupci '{selected_column}' nebyly nalezeny žádné platné emailové adresy."
-                    }
-                ),
-                400,
-            )
+            return jsonify({"error": f"Chyba při extrakci emailů z CSV: {str(e)}"}), 500
 
-        # Aktualizace stavu verifikace s načtenými emaily
-        with verification_lock:
-            current_verification_state["selected_column"] = selected_column
-            current_verification_state["emails_to_verify"] = unique_emails_list
-            current_verification_state["total_emails"] = len(unique_emails_list)
-            current_verification_state[
-                "status"
-            ] = "ready_to_verify"  # Stav připraveno k verifikaci
-            current_verification_state["last_activity_time"] = time.time()
-        return jsonify({"status": "ready", "total_emails": len(unique_emails_list)})
-
-    except Exception as e:  # Zachycení chyb při extrakci emailů
+    # Kontrola, zda byly nalezeny nějaké emaily (pro oba typy souborů)
+    if not unique_emails_list:
         with verification_lock:
             current_verification_state["status"] = "error"
-            current_verification_state["error_message"] = str(e)
-        app_logger.error(
-            f"API /select_column: Error extracting emails from column '{selected_column}': {e}",
-            exc_info=True,
-        )
-        return jsonify({"error": f"Chyba při extrakci emailů z CSV: {str(e)}"}), 500
+        app_logger.warning("API /select_column: No email addresses found.")
+        return jsonify({"error": "Nebyly nalezeny žádné platné emailové adresy."}), 400
+
+    # Aktualizace stavu verifikace s načtenými emaily
+    with verification_lock:
+        if file_type == "csv":
+            current_verification_state["selected_column"] = selected_column
+        current_verification_state["emails_to_verify"] = unique_emails_list
+        current_verification_state["total_emails"] = len(unique_emails_list)
+        current_verification_state["status"] = "ready_to_verify"
+        current_verification_state["last_activity_time"] = time.time()
+    
+    app_logger.info(f"API /select_column: Prepared {len(unique_emails_list)} emails for verification")
+    return jsonify({"status": "ready", "total_emails": len(unique_emails_list)})
 
 
 def run_bulk_verification_in_thread():

@@ -23,5 +23,5 @@ asyncio==3.4.3
 aiohttp==3.9.3
 
 # Data processing
-pandas==2.2.1
-numpy==1.26.4 
+pandas>=2.2.2
+numpy>=1.26.4 
