@@ -436,7 +436,7 @@ class EmailVerifier:
         """
         server_ip_for_log = await self._resolve_host_ip_for_log(
             mx_host
-        )  # Získá IP adresu serveru pro log
+        )  # Get server IP address for logging
         self._add_verification_step(
             "info",
             f"SMTP Connect (Port {port})",
@@ -444,15 +444,15 @@ class EmailVerifier:
         )
 
         smtp_client = None
-        current_smtp_code = None  # Poslední obdržený SMTP kód
+        current_smtp_code = None  # Last received SMTP code
         try:
-            async with self.max_concurrent_domains_semaphore:  # Omezení souběžných připojení
-                smtp_client = aiosmtplib.SMTP(  # Vytvoření SMTP klienta
+            async with self.max_concurrent_domains_semaphore:  # Limit concurrent connections
+                smtp_client = aiosmtplib.SMTP(  # Create SMTP client
                     hostname=mx_host, port=port, timeout=self.smtp_timeout
                 )
                 await smtp_client.connect(
                     timeout=self.smtp_timeout
-                )  # Připojení k serveru
+                )  # Connect to server
             self._add_verification_step(
                 "success",
                 f"SMTP Connect (Port {port})",
@@ -460,33 +460,33 @@ class EmailVerifier:
             )
 
             try:
-                code, msg_bytes = await smtp_client.ehlo()  # Pokus o EHLO
+                code, msg_bytes = await smtp_client.ehlo()  # Attempt EHLO
             except aiosmtplib.SMTPException:
                 (
                     code,
                     msg_bytes,
-                ) = await smtp_client.helo()  # Pokud EHLO selže, zkusí HELO
+                ) = await smtp_client.helo()  # If EHLO fails, try HELO
 
             current_smtp_code = code
             msg_str = (
                 msg_bytes
                 if isinstance(msg_bytes, str)
                 else msg_bytes.decode(errors="ignore")
-            )  # Dekóduje zprávu
+            )  # Decode message
             self._add_verification_step(
                 "info", "EHLO/HELO", f"Resp: {code} {msg_str}", code
             )
-            # Kód 220 (připraveno) je také úspěšný pro EHLO/HELO
+            # Code 220 (ready) is also successful for EHLO/HELO
             if code not in SMTP_CODES_SUCCESS and code != 220:
-                raise UnexpectedResponseException(  # Pokud EHLO/HELO selže
+                raise UnexpectedResponseException(  # If EHLO/HELO fails
                     f"EHLO/HELO failed: {code} {msg_str}",
                     status_code="ehlo_failed",
                     verification_steps=self.verification_steps,
                 )
 
-            sender = self._get_sender_email(domain)  # Získá vhodného odesílatele
+            sender = self._get_sender_email(domain)  # Get appropriate sender
             self._add_verification_step("info", "MAIL FROM", f"Sender: {sender}")
-            code, msg_bytes = await smtp_client.mail(sender)  # Odešle MAIL FROM
+            code, msg_bytes = await smtp_client.mail(sender)  # Send MAIL FROM
             current_smtp_code = code
             msg_str = (
                 msg_bytes
@@ -497,21 +497,21 @@ class EmailVerifier:
                 "info", "MAIL FROM", f"Resp: {code} {msg_str}", code
             )
 
-            # Pokud je detekována chyba reputace
+            # If reputation error is detected
             if self._is_reputation_error(code, msg_str):
                 self._add_verification_step(
                     "warning",
                     "MAIL FROM",
                     f"Reputation-based rejection detected. Will retry with different sender if available.",
                 )
-                # Pokusí se najít alternativního odesílatele
+                # Try to find alternative sender
                 alternative_sender = None
                 for test_domain, test_sender in self.sender_emails_by_domain.items():
                     if test_domain != domain and test_sender != sender:
                         alternative_sender = test_sender
                         break
 
-                if alternative_sender:  # Pokud je nalezen alternativní odesílatel
+                if alternative_sender:  # If alternative sender is found
                     self._add_verification_step(
                         "info",
                         "MAIL FROM",
@@ -519,7 +519,7 @@ class EmailVerifier:
                     )
                     code, msg_bytes = await smtp_client.mail(
                         alternative_sender
-                    )  # Opakuje MAIL FROM
+                    )  # Retry MAIL FROM
                     current_smtp_code = code
                     msg_str = (
                         msg_bytes
@@ -530,21 +530,21 @@ class EmailVerifier:
                         "info", "MAIL FROM", f"Resp: {code} {msg_str}", code
                     )
 
-            if code not in SMTP_CODES_SUCCESS:  # Pokud MAIL FROM selže
-                if code in SMTP_CODES_TEMP_FAIL:  # Dočasná chyba
+            if code not in SMTP_CODES_SUCCESS:  # If MAIL FROM fails
+                if code in SMTP_CODES_TEMP_FAIL:  # Temporary error
                     raise RateLimitException(
                         f"MAIL FROM temp error: {code} {msg_str}",
                         status_code="mail_from_temp_fail",
                         verification_steps=self.verification_steps,
                     )
-                raise UnexpectedResponseException(  # Trvalá chyba
+                raise UnexpectedResponseException(  # Permanent error
                     f"MAIL FROM perm error: {code} {msg_str}",
                     status_code="mail_from_perm_fail",
                     verification_steps=self.verification_steps,
                 )
 
             self._add_verification_step("info", "RCPT TO", f"Recipient: {email}")
-            code, msg_bytes = await smtp_client.rcpt(email)  # Odešle RCPT TO
+            code, msg_bytes = await smtp_client.rcpt(email)  # Send RCPT TO
             current_smtp_code = code
             msg_str = (
                 msg_bytes
@@ -556,25 +556,25 @@ class EmailVerifier:
             )
 
             try:
-                await smtp_client.rset()  # Resetuje SMTP transakci
+                await smtp_client.rset()  # Reset SMTP transaction
             except (aiosmtplib.SMTPException, OSError):
-                pass  # Ignoruje chyby při RSET
+                pass  # Ignore errors during RSET
 
-            if code in SMTP_CODES_SUCCESS:  # Pokud RCPT TO uspěje, email je platný
+            if code in SMTP_CODES_SUCCESS:  # If RCPT TO succeeds, email is valid
                 return True, "valid", msg_str, code
-            if code in SMTP_CODES_TEMP_FAIL:  # Dočasná chyba u RCPT TO
+            if code in SMTP_CODES_TEMP_FAIL:  # Temporary error on RCPT TO
                 raise RateLimitException(
                     f"RCPT TO temp error: {code} {msg_str}",
                     status_code="rcpt_to_temp_fail",
                     verification_steps=self.verification_steps,
                 )
-            # Jinak je schránka neplatná (trvalá chyba)
+            # Otherwise mailbox is invalid (permanent error)
             return False, "invalid_mailbox", msg_str, code
 
         except (
             asyncio.TimeoutError,
             aiosmtplib.SMTPTimeoutError,
-        ) as e:  # Chyba časového limitu
+        ) as e:  # Timeout error
             self._add_verification_step(
                 "error",
                 f"SMTP Timeout (Port {port})",
@@ -585,11 +585,11 @@ class EmailVerifier:
                 status_code="smtp_timeout",
                 verification_steps=self.verification_steps,
             ) from e
-        except (  # Chyby připojení
+        except (  # Connection errors
             aiosmtplib.SMTPConnectError,
             ConnectionRefusedError,
-            socket.gaierror,  # Chyba překladu adresy
-            OSError,  # Obecná chyba OS (např. síť nedostupná)
+            socket.gaierror,  # Address translation error
+            OSError,  # General OS error (e.g., network unavailable)
         ) as e:
             self._add_verification_step(
                 "error",
@@ -604,9 +604,9 @@ class EmailVerifier:
         except (
             RateLimitException,
             UnexpectedResponseException,
-        ):  # Propaguje specifické výjimky
+        ):  # Propagate specific exceptions
             raise
-        except aiosmtplib.SMTPException as e:  # Obecná SMTP chyba
+        except aiosmtplib.SMTPException as e:  # General SMTP error
             self._add_verification_step(
                 "error",
                 f"SMTP Error (Port {port})",
@@ -614,13 +614,13 @@ class EmailVerifier:
             )
             return False, "unknown_smtp_error", f"{e.code} {e.message}", e.code
         finally:
-            if smtp_client and smtp_client.is_connected:  # Pokud je klient připojen
+            if smtp_client and smtp_client.is_connected:  # If client is connected
                 try:
-                    await smtp_client.quit()  # Ukončí SMTP spojení
+                    await smtp_client.quit()  # Close SMTP connection
                 except (aiosmtplib.SMTPException, OSError):
-                    pass  # Ignoruje chyby při QUIT
+                    pass  # Ignore errors during QUIT
 
-        # Pokud se kód dostane sem, došlo k neočekávanému průběhu
+        # If code reaches here, unexpected flow occurred
         return (
             False,
             "unknown_flow_error",
@@ -630,11 +630,11 @@ class EmailVerifier:
 
     def _is_microsoft_domain(self, domain: str, mx_host: str) -> bool:
         """
-        Zkontroluje, zda doména nebo MX hostitel souvisí se servery Microsoftu.
+        Checks whether the domain or MX host is related to Microsoft servers.
         """
-        if domain in MICROSOFT_DOMAINS:  # Přímá shoda domény
+        if domain in MICROSOFT_DOMAINS:  # Direct domain match
             return True
-        # Zkontroluje, zda MX hostitel odpovídá vzorům Microsoftu
+        # Check if MX host matches Microsoft patterns
         return any(
             mx_host.endswith(pattern.replace("*", ""))
             for pattern in MICROSOFT_MX_PATTERNS
@@ -644,57 +644,57 @@ class EmailVerifier:
         self, domain: str, mx_hosts_priority: List[Tuple[int, str]]
     ) -> bool:
         """
-        Testuje, zda je doména "catch-all" (přijímá emaily na neexistující adresy).
-        :param domain: Doména k testování.
-        :param mx_hosts_priority: Seznam MX hostitelů a jejich priorit.
-        :return: True, pokud je doména pravděpodobně catch-all, jinak False.
+        Tests whether the domain is "catch-all" (accepts emails to non-existent addresses).
+        :param domain: Domain to test.
+        :param mx_hosts_priority: List of MX hosts and their priorities.
+        :return: True if the domain is likely catch-all, otherwise False.
         """
-        if not self.catchall_test_enabled:  # Pokud je testování vypnuto
+        if not self.catchall_test_enabled:  # Skip if catch-all test is disabled
             self._add_verification_step("info", "Catch-all Test", "Skipped (config).")
             return False
         if (
             domain in KNOWN_FREEMAIL_DOMAINS
-        ):  # Freemailové domény se netestují jako catch-all
+        ):  # Freemail domains are not tested as catch-all
             self._add_verification_step(
                 "info", "Catch-all Test", f"Skipped ('{domain}' is known freemail)."
             )
             return False
-        if domain in self.is_catchall_domain_cache:  # Zkontroluje cache
+        if domain in self.is_catchall_domain_cache:  # Check cache
             cached = self.is_catchall_domain_cache[domain]
             self._add_verification_step(
                 "info",
                 "Catch-all Test (Cache)",
                 f"Result for '{domain}' from cache: {cached}",
             )
-            return cached if cached is not None else False  # Vrátí výsledek z cache
+            return cached if cached is not None else False  # Return cached result
 
         self._add_verification_step(
             "info", "Catch-all Test", f"Starting test for '{domain}'."
         )
-        ts = int(time.time())  # Aktuální časové razítko
-        # Vygeneruje unikátní testovací emailové adresy
+        ts = int(time.time())  # Current timestamp
+        # Generate unique test email addresses
         test_emails = [
             f"catchall-probe-{ts}-{random.getrandbits(16)}-{i}@{domain}"
-            for i in range(2)  # Použije 2 testovací emaily pro větší spolehlivost
+            for i in range(2)  # Use 2 test emails for greater reliability
         ]
         successful_tests = (
-            0  # Počet úspěšných testů (kdy server přijal neexistující email)
+            0  # Number of successful tests (when server accepted non-existent email)
         )
         inconclusive_tests = (
-            0  # Počet nejednoznačných testů (např. u Microsoft serverů)
+            0  # Number of inconclusive tests (e.g., on Microsoft servers)
         )
-        mx_hosts = [host for _, host in mx_hosts_priority]  # Seznam MX hostitelů
+        mx_hosts = [host for _, host in mx_hosts_priority]  # List of MX hosts
 
         for test_email in test_emails:
-            accepted = False  # Zda byl testovací email přijat
+            accepted = False  # Whether test email was accepted
             for mx_host in mx_hosts:
                 if (
                     accepted
-                ):  # Pokud byl email již přijat jiným MX, není třeba pokračovat
+                ):  # If email was already accepted by another MX, no need to continue
                     break
-                smtp_client = None  # Explicitní inicializace
+                smtp_client = None  # Explicit initialization
                 try:
-                    smtp_client = aiosmtplib.SMTP(  # Vytvoření SMTP klienta
+                    smtp_client = aiosmtplib.SMTP(  # Create SMTP client
                         hostname=mx_host,
                         port=25,
                         timeout=self.smtp_timeout,  # Testuje na portu 25
@@ -712,9 +712,9 @@ class EmailVerifier:
                         else msg_bytes.decode(errors="ignore")
                     )
                     if code not in SMTP_CODES_SUCCESS and code != 220:
-                        continue  # Přeskočí na další MX, pokud EHLO/HELO selže
+                        continue  # Skip to next MX if EHLO/HELO fails
 
-                    sender = self._get_sender_email(domain)  # Získá odesílatele
+                    sender = self._get_sender_email(domain)  # Get sender
                     code, msg_bytes = await smtp_client.mail(sender)
                     msg_str = (
                         msg_bytes
@@ -722,20 +722,20 @@ class EmailVerifier:
                         else msg_bytes.decode(errors="ignore")
                     )
                     if code not in SMTP_CODES_SUCCESS:
-                        continue  # Přeskočí na další MX, pokud MAIL FROM selže
+                        continue  # Skip to next MX if MAIL FROM fails
 
                     code, msg_bytes = await smtp_client.rcpt(
                         test_email
-                    )  # Odešle RCPT TO s testovacím emailem
+                    )  # Send RCPT TO with test email
                     msg_str = (
                         msg_bytes
                         if isinstance(msg_bytes, str)
                         else msg_bytes.decode(errors="ignore")
                     )
 
-                    # Speciální zacházení pro Microsoft domény
+                    # Special handling for Microsoft domains
                     if self._is_microsoft_domain(domain, mx_host):
-                        # Odpověď "Access denied" od Microsoftu je často nejednoznačná
+                        # "Access denied" response from Microsoft is often ambiguous
                         if code == 550 and "Access denied" in msg_str:
                             self._add_verification_step(
                                 "warning",
@@ -743,12 +743,12 @@ class EmailVerifier:
                                 f"Microsoft domain detected - Access denied response treated as inconclusive.",
                             )
                             inconclusive_tests += 1
-                            accepted = True  # Považuje za přijaté pro účely ukončení testu na tomto MX
-                            break  # Ukončí test pro tento email na tomto MX
+                            accepted = True  # Consider accepted for purposes of ending test on this MX
+                            break  # End test for this email on this MX
 
                     if (
                         code in SMTP_CODES_SUCCESS
-                    ):  # Pokud server přijal testovací email
+                    ):  # If server accepted test email
                         self._add_verification_step(
                             "warning",
                             "Catch-all Test (Attempt)",
@@ -756,8 +756,8 @@ class EmailVerifier:
                         )
                         successful_tests += 1
                         accepted = True
-                        break  # Ukončí test pro tento email na tomto MX
-                except Exception as e:  # Ignoruje chyby při testování catch-all, aby neovlivnily hlavní ověření
+                        break  # End test for this email on this MX
+                except Exception as e:  # Ignore errors during catch-all testing to avoid affecting main verification
                     self.logger.debug(f"Unexpected error in catch-all sub-test: {e}")
                 finally:
                     if smtp_client and smtp_client.is_connected:
@@ -765,46 +765,46 @@ class EmailVerifier:
                             await smtp_client.quit()
                         except (aiosmtplib.SMTPException, OSError):
                             pass
-            if not accepted:  # Pokud email nebyl přijat žádným MX serverem
+            if not accepted:  # If email was not accepted by any MX server
                 self._add_verification_step(
                     "info",
                     "Catch-all Test (Attempt)",
                     f"Test email '{test_email}' not accepted.",
                 )
 
-        # Vyhodnocení výsledků testu catch-all
+        # Evaluate catch-all test results
         is_catchall = False
-        if successful_tests > 0:  # Pokud alespoň jeden testovací email byl přijat
+        if successful_tests > 0:  # If at least one test email was accepted
             is_catchall = True
         elif (
             inconclusive_tests > 0
-        ):  # Pokud byly testy nejednoznačné (typicky Microsoft)
-            # Pro Microsoft domény s nejednoznačnými výsledky označí jako pravděpodobný catch-all
+        ):  # If tests were inconclusive (typically Microsoft)
+            # For Microsoft domains with inconclusive results, mark as likely catch-all
             is_catchall = True
             self._add_verification_step(
                 "warning",
                 "Catch-all Test (Result)",
                 f"Domain '{domain}' is likely catch-all (Microsoft domain with inconclusive results).",
             )
-        else:  # Pokud žádný testovací email nebyl přijat
+        else:  # If no test email was accepted
             self._add_verification_step(
                 "info",
                 "Catch-all Test (Result)",
                 f"Domain '{domain}' is not catch-all. Successful: {successful_tests}/{len(test_emails)}.",
             )
 
-        self.is_catchall_domain_cache[domain] = is_catchall  # Uloží výsledek do cache
+        self.is_catchall_domain_cache[domain] = is_catchall  # Store result in cache
         return is_catchall
 
     def _is_temporary_error(self, code: int, message: str) -> bool:
         """
-        Zkontroluje, zda SMTP chyba (kód a zpráva) indikuje dočasný problém,
-        který by mohl být vyřešen opakováním pokusu.
+        Checks whether SMTP error (code and message) indicates a temporary problem
+        that could be resolved by retrying.
         """
-        if code in TEMPORARY_ERROR_CODES:  # Kontrola podle SMTP kódu
+        if code in TEMPORARY_ERROR_CODES:  # Check by SMTP code
             return True
-        message_lower = message.lower()  # Převede zprávu na malá písmena
-        # Hledá klíčová slova indikující dočasnou chybu
+        message_lower = message.lower()  # Convert message to lowercase
+        # Search for keywords indicating temporary error
         return any(
             pattern in message_lower
             for pattern in [
@@ -822,45 +822,45 @@ class EmailVerifier:
 
     async def verify_single_email(self, email: str, attempt: int = 1) -> Dict[str, Any]:
         """
-        Ověří platnost jedné emailové adresy.
-        :param email: Emailová adresa k ověření.
-        :param attempt: Číslo aktuálního pokusu (pro opakování při chybách).
-        :return: Slovník s výsledky ověření.
+        Verifies the validity of a single email address.
+        :param email: Email address to verify.
+        :param attempt: Current attempt number (for retries on errors).
+        :return: Dictionary with verification results.
         """
-        self._reset_steps_for_single_email()  # Resetuje kroky pro tento email
+        self._reset_steps_for_single_email()  # Reset steps for this email
         self._add_verification_step(
             "info", "Verification start", f"Email: {email}, Attempt: {attempt}"
         )
-        # Výchozí struktura výsledku
+        # Default result structure
         res = {
             "email": email,
-            "is_valid": False,  # Zda je email platný
-            "status_code": "unknown_error",  # Stavový kód výsledku (např. "valid", "invalid_mailbox")
-            "message": "Unknown error",  # Popisná zpráva výsledku
-            "is_catchall": False,  # Zda je doména catch-all
-            "mx_record": None,  # Použitý MX záznam
-            "smtp_code_internal": None,  # Interní SMTP kód z odpovědi serveru
-            "verification_steps": self.verification_steps,  # Seznam kroků ověření
+            "is_valid": False,  # Whether email is valid
+            "status_code": "unknown_error",  # Result status code (e.g., "valid", "invalid_mailbox")
+            "message": "Unknown error",  # Descriptive result message
+            "is_catchall": False,  # Whether domain is catch-all
+            "mx_record": None,  # MX record used
+            "smtp_code_internal": None,  # Internal SMTP code from server response
+            "verification_steps": self.verification_steps,  # List of verification steps
         }
         try:
-            # Kontrola syntaxe emailu pomocí externí knihovny
+            # Email syntax check using external library
             val_res = validate_email(
                 email, check_deliverability=False
-            )  # check_deliverability=False, protože to děláme sami
-            domain = val_res.domain.lower()  # Získá doménu z emailu
+            )  # check_deliverability=False because we do it ourselves
+            domain = val_res.domain.lower()  # Get domain from email
             self._add_verification_step(
                 "success", "Syntax check", f"Email '{email}' syntax valid."
             )
-        except EmailNotValidError as e:  # Chyba syntaxe
+        except EmailNotValidError as e:  # Syntax error
             self._add_verification_step(
                 "error", "Syntax check", f"Invalid email format '{email}': {e}"
             )
             res.update(
                 {"is_valid": False, "status_code": "syntax_error", "message": str(e)}
             )
-            return res  # Ukončí ověření
+            return res  # End verification
 
-        # Kontrola jednorázové domény
+        # Disposable domain check
         if self._is_disposable_domain(domain):
             res.update(
                 {
@@ -869,16 +869,16 @@ class EmailVerifier:
                     "message": "Domain is disposable.",
                 }
             )
-            return res  # Ukončí ověření
+            return res  # End verification
 
         mx_records: List[Tuple[int, str]] = []
         try:
-            mx_records = await self._resolve_mx_records(domain)  # Získá MX záznamy
+            mx_records = await self._resolve_mx_records(domain)  # Get MX records
             if mx_records:
                 res["mx_record"] = mx_records[0][
                     1
-                ]  # Uloží první (nejvyšší prioritu) MX záznam
-        except DNSError as e:  # Chyba při získávání MX záznamů
+                ]  # Store first (highest priority) MX record
+        except DNSError as e:  # Error getting MX records
             res.update(
                 {
                     "is_valid": False,
@@ -887,7 +887,7 @@ class EmailVerifier:
                 }
             )
             return res
-        except Exception as e:  # Neočekávaná chyba při DNS dotazu
+        except Exception as e:  # Unexpected error during DNS query
             self._add_verification_step(
                 "error", "DNS MX query", f"Unexpected error: {str(e)}"
             )
@@ -900,19 +900,19 @@ class EmailVerifier:
             )
             return res
 
-        # Test na catch-all doménu
+        # Catch-all domain test
         is_catchall = await self._is_catch_all_domain(domain, mx_records)
         res["is_catchall"] = is_catchall
 
-        # Iteruje přes MX záznamy (seřazené podle priority) a pokusí se o SMTP ověření
+        # Iterate over MX records (sorted by priority) and attempt SMTP verification
         for _, mx_host in mx_records:
-            res["mx_record"] = mx_host  # Aktualizuje MX záznam na aktuálně testovaný
+            res["mx_record"] = mx_host  # Update MX record to currently tested one
             try:
-                # Provede SMTP kontrolu
+                # Perform SMTP check
                 smtp_valid, status, msg, code = await self._perform_smtp_check(
                     email, domain, mx_host, self.default_connect_port
                 )
-                if smtp_valid:  # Pokud je email platný podle SMTP
+                if smtp_valid:  # If email is valid according to SMTP
                     res.update(
                         {
                             "is_valid": True,
@@ -921,8 +921,8 @@ class EmailVerifier:
                             "smtp_code_internal": code,
                         }
                     )
-                    return res  # Ukončí ověření, email je platný
-                # Pokud je schránka neplatná nebo došlo k trvalé chybě
+                    return res  # End verification, email is valid
+                # If mailbox is invalid or permanent error occurred
                 if status == "invalid_mailbox" or "fail" in status or "error" in status:
                     res.update(
                         {
@@ -932,43 +932,43 @@ class EmailVerifier:
                             "smtp_code_internal": code,
                         }
                     )
-                    return res  # Ukončí ověření, email je neplatný
-            except RateLimitException as e:  # Zachytí RateLimitException (dočasná chyba)
+                    return res  # End verification, email is invalid
+            except RateLimitException as e:  # Catch RateLimitException (temporary error)
                 self.logger.warning(
                     f"Rate limit for {email} on {mx_host}:{self.default_connect_port} - {e.message}"
                 )
-                if attempt < self.retry_attempts:  # Pokud je možné opakování
+                if attempt < self.retry_attempts:  # If retry is possible
                     delay = self.retry_delay_base * (
                         2**attempt
-                    )  # Exponenciální prodleva
+                    )  # Exponential delay
                     self._add_verification_step(
                         "warning",
                         "Rate Limit Retry",
                         f"Attempt {attempt}/{self.retry_attempts}. Waiting {delay:.1f}s for {email}.",
                     )
-                    await asyncio.sleep(delay)  # Počká před opakováním
+                    await asyncio.sleep(delay)  # Wait before retry
                     return await self.verify_single_email(
                         email, attempt + 1
-                    )  # Rekurzivní volání pro opakování
-                # Pokud byly vyčerpány pokusy o opakování
+                    )  # Recursive call for retry
+                # If retry attempts are exhausted
                 res.update(
                     {
-                        "is_valid": None,  # Stav je neznámý (ani platný, ani neplatný)
+                        "is_valid": None,  # Status is unknown (neither valid nor invalid)
                         "status_code": e.status_code or "rate_limited",
                         "message": e.message,
                     }
                 )
-                return res  # Ukončí ověření
+                return res  # End verification
             except (
                 TimeoutException,
                 NoConnectionException,
-            ) as e:  # Zachytí Timeout nebo NoConnection (může být dočasné)
+            ) as e:  # Catch Timeout or NoConnection (may be temporary)
                 self.logger.warning(f"Temp error for {email} on {mx_host}: {e.message}")
-                # Zkontroluje, zda je chyba skutečně dočasná
+                # Check if error is actually temporary
                 if self._is_temporary_error(
                     e.code if hasattr(e, "code") else 0, e.message
                 ):
-                    if attempt < self.retry_attempts:  # Pokud je možné opakování
+                    if attempt < self.retry_attempts:  # If retry is possible
                         delay = self.retry_delay_base * (2**attempt)
                         self._add_verification_step(
                             "warning",
@@ -977,13 +977,13 @@ class EmailVerifier:
                         )
                         await asyncio.sleep(delay)
                         return await self.verify_single_email(email, attempt + 1)
-                # Pokud chyba není dočasná nebo byly vyčerpány pokusy, pokračuje na další MX
+                # If error is not temporary or attempts exhausted, continue to next MX
                 continue
-            except EmailVerifierException as e:  # Zachytí ostatní vlastní výjimky
+            except EmailVerifierException as e:  # Catch other custom exceptions
                 self.logger.error(
                     f"Verifier error for {email} on {mx_host}: {e.message}"
                 )
-                # Zkontroluje, zda je chyba dočasná (např. UnexpectedResponse, která může být dočasná)
+                # Check if error is temporary (e.g., UnexpectedResponse, which may be temporary)
                 if self._is_temporary_error(
                     e.code if hasattr(e, "code") else 0, e.message
                 ):
@@ -996,27 +996,27 @@ class EmailVerifier:
                         )
                         await asyncio.sleep(delay)
                         return await self.verify_single_email(email, attempt + 1)
-                # Pokud chyba není dočasná nebo byly vyčerpány pokusy, pokračuje na další MX
+                # If error is not temporary or attempts exhausted, continue to next MX
                 continue
-            except Exception as e:  # Zachytí neočekávané chyby během SMTP komunikace
+            except Exception as e:  # Catch unexpected errors during SMTP communication
                 self.logger.error(
                     f"Unexpected SMTP error for {email} on {mx_host}: {e}",
-                    exc_info=True,  # Zapíše traceback do logu
+                    exc_info=True,  # Write traceback to log
                 )
-                continue  # Pokračuje na další MX server
+                continue  # Continue to next MX server
 
-        # Pokud se nepodařilo ověřit na žádném MX serveru (všechny selhaly nebo vrátily dočasnou chybu)
+        # If verification failed on all MX servers (all failed or returned temporary error)
         self._add_verification_step(
             "error", "SMTP Verification", "Failed to verify on any MX."
         )
         res.update(
             {
-                "is_valid": None,  # Stav je neznámý
-                "status_code": "unreachable_all_mx"  # Stavový kód, pokud existovaly MX záznamy
+                "is_valid": None,  # Status is unknown
+                "status_code": "unreachable_all_mx"  # Status code if MX records existed
                 if mx_records
                 else (
                     res["status_code"] or "dns_error_mx"
-                ),  # Jinak použije předchozí stav (např. z DNS chyby)
+                ),  # Otherwise use previous status (e.g., from DNS error)
                 "message": "Cannot connect to any MX or all returned temp error."
                 if mx_records
                 else (res["message"] or "MX records error"),
@@ -1028,32 +1028,32 @@ class EmailVerifier:
         self, email_list: List[str]
     ) -> List[Dict[str, Any]]:
         """
-        Ověří seznam emailových adres souběžně.
-        :param email_list: Seznam emailových adres k ověření.
-        :return: Seznam slovníků s výsledky ověření pro každý email.
+        Verifies a list of email addresses concurrently.
+        :param email_list: List of email addresses to verify.
+        :return: List of dictionaries with verification results for each email.
         """
-        # Vytvoří úlohy (tasks) pro souběžné ověření každého emailu
+        # Create tasks for concurrent verification of each email
         tasks = [self.verify_single_email(email) for email in email_list]
-        # Spustí úlohy souběžně a počká na jejich dokončení
-        # return_exceptions=True zajistí, že výjimky budou vráceny jako výsledky, neukončí gather
+        # Run tasks concurrently and wait for completion
+        # return_exceptions=True ensures exceptions are returned as results, does not stop gather
         results_or_exceptions = await asyncio.gather(*tasks, return_exceptions=True)
 
         final_results = []
         for i, item in enumerate(results_or_exceptions):
-            email = email_list[i]  # Původní email pro tento výsledek
-            if isinstance(item, Exception):  # Pokud úloha skončila výjimkou
+            email = email_list[i]  # Original email for this result
+            if isinstance(item, Exception):  # If task ended with exception
                 self.logger.error(
                     f"Unexpected exception during batch for '{email}': {item}",
-                    exc_info=True,  # Zapíše traceback do logu
+                    exc_info=True,  # Write traceback to log
                 )
-                # Získá kroky ověření z výjimky, pokud je to možné
+                # Get verification steps from exception if possible
                 steps = (
                     item.verification_steps
                     if isinstance(item, EmailVerifierException)
                     and item.verification_steps
                     else []
                 )
-                # Vytvoří chybový výsledek
+                # Create error result
                 final_results.append(
                     {
                         "email": email,
@@ -1066,6 +1066,6 @@ class EmailVerifier:
                         "verification_steps": steps,
                     }
                 )
-            else:  # Pokud úloha vrátila normální výsledek (slovník)
+            else:  # If task returned normal result (dictionary)
                 final_results.append(item)
         return final_results
