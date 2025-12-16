@@ -1,6 +1,4 @@
-"""
-Modul pro verifikaci emailových adres
-"""
+"""Email verification module."""
 from .email_verifier import EmailVerifier
 from .exceptions import (
     EmailVerifierException,

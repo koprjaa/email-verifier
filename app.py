@@ -1,13 +1,13 @@
-import asyncio  # Pro asynchronní operace
-import csv  # Pro práci s CSV soubory
-import json  # Pro práci s JSON daty
-import logging  # Pro logování
-import os  # Pro interakci s operačním systémem (cesty, proměnné prostředí)
-import threading  # Pro práci s vlákny (hromadná verifikace na pozadí)
-import time  # Pro práci s časem (měření doby, časová razítka)
-from datetime import datetime  # Pro práci s datem a časem
-from pathlib import Path  # Pro objektově orientovanou práci s cestami k souborům
-from typing import Dict, Any, List  # Pro typové hinty
+import asyncio
+import csv
+import json
+import logging
+import os
+import threading
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, Any, List
 
 from flask import (
     Flask,
@@ -15,43 +15,35 @@ from flask import (
     render_template,
     request,
     send_file,
-)  # Základní komponenty Flasku
-from flask_cors import CORS  # Pro povolení Cross-Origin Resource Sharing (CORS)
-from werkzeug.utils import secure_filename  # Pro bezpečné názvy souborů
-import pandas as pd  # Knihovna pro práci s daty (zde nepoužitá, ale importovaná)
+)
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
+import pandas as pd
 
-from verifier.email_verifier import EmailVerifier  # Vlastní třída pro verifikaci emailů
+from verifier.email_verifier import EmailVerifier
 from verifier.exceptions import (
     VerificationError,
-)  # Vlastní výjimka pro chyby verifikace
+)
 
-app = Flask(__name__)  # Inicializace Flask aplikace
-CORS(app)  # Povolení CORS pro všechny route
-app.config["MAX_CONTENT_LENGTH"] = (
-    10 * 1024 * 1024
-)  # Maximální velikost nahrávaného souboru (10 MB)
-app.config["UPLOAD_FOLDER"] = "uploads"  # Složka pro nahrávané soubory
-app.config["RESULTS_FOLDER"] = "results"  # Složka pro výsledky verifikace
-os.makedirs(
-    app.config["UPLOAD_FOLDER"], exist_ok=True
-)  # Vytvoření složky uploads, pokud neexistuje
-os.makedirs(
-    app.config["RESULTS_FOLDER"], exist_ok=True
-)  # Vytvoření složky results, pokud neexistuje
+app = Flask(__name__)
+CORS(app)
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+app.config["UPLOAD_FOLDER"] = "uploads"
+app.config["RESULTS_FOLDER"] = "results"
+os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
+os.makedirs(app.config["RESULTS_FOLDER"], exist_ok=True)
 
-# Nastavení loggeru pro aplikaci
 app_logger = logging.getLogger("flask.app")
-app_logger.setLevel(logging.DEBUG)  # Nastavení úrovně logování na DEBUG
-flask_handler = logging.StreamHandler()  # Handler pro výstup logů do konzole
+app_logger.setLevel(logging.DEBUG)
+flask_handler = logging.StreamHandler()
 flask_handler.setLevel(logging.DEBUG)
-flask_formatter = logging.Formatter(  # Formát logovacích zpráv
+flask_formatter = logging.Formatter(
     "%(asctime)s - %(threadName)s - %(levelname)s - %(message)s"
 )
 flask_handler.setFormatter(flask_formatter)
-if not app_logger.handlers:  # Přidání handleru, pokud ještě žádný není
+if not app_logger.handlers:
     app_logger.addHandler(flask_handler)
 
-# Načtení hlavní konfigurace aplikace ze souboru config.json
 try:
     with open("config.json", "r", encoding="utf-8") as f:
         app_level_config = json.load(f)
@@ -60,28 +52,25 @@ except FileNotFoundError:
     app_logger.warning(
         "Main config.json not found in root. Using default parameters for EmailVerifier setup."
     )
-    app_level_config = {}  # Použití prázdné konfigurace, pokud soubor neexistuje
+    app_level_config = {}
 except json.JSONDecodeError as e:
     app_logger.error(f"Error parsing main config.json: {e}. Using default parameters.")
-    app_level_config = {}  # Použití prázdné konfigurace při chybě parsování
+    app_level_config = {}
 
-# Odstranění 'batch_size' z konfigurace, pokud existuje (spravováno jinak)
+# batch_size is managed separately via app_batch_size_for_ui
 if "batch_size" in app_level_config:
     del app_level_config["batch_size"]
 
-# Inicializace instance EmailVerifier s konfigurací z config.json nebo výchozími hodnotami
 email_verifier_instance = EmailVerifier(
     timeout=app_level_config.get("timeout", 15),
     smtp_timeout=app_level_config.get("smtp_timeout", 10),
     dns_timeout=app_level_config.get("dns_timeout", 5),
-    catchall_test_enabled=app_level_config.get(  # Povolení testu catch-all, zpětně kompatibilní s 'check_catchall'
+    catchall_test_enabled=app_level_config.get(
         "catchall_test", app_level_config.get("check_catchall", True)
     ),
     check_disposable_enabled=app_level_config.get("check_disposable", True),
     connect_port=app_level_config.get("connect_port", 25),
-    rate_limit_delay_base=app_level_config.get(
-        "rate_limit_delay", 2.0
-    ),  # Nyní se používá pro retry_delay_base
+    rate_limit_delay_base=app_level_config.get("rate_limit_delay", 2.0),
     max_concurrent_domains=app_level_config.get("max_concurrent_domains", 5),
     helo_hostname=app_level_config.get("helo_hostname", None),
     retry_attempts=app_level_config.get("retry_attempts", 2),
@@ -89,154 +78,79 @@ email_verifier_instance = EmailVerifier(
     disposable_domains_file=app_level_config.get(
         "disposable_domains_file_path", "data/disposable_domains.txt"
     ),
-    logger=app_logger,  # Předání loggeru aplikace do verifikátoru
+    logger=app_logger,
     dns_servers=app_level_config.get("dns_servers", None),
     sender_email_override=app_level_config.get("sender_email_override", None),
-    default_sender_email_config=app_level_config.get(
-        "sender_emails", {}
-    ).get(  # Výchozí email odesílatele
-        "default"
-    ),
-    sender_emails_by_domain_config={  # Emaily odesílatele specifické pro domény
+    default_sender_email_config=app_level_config.get("sender_emails", {}).get("default"),
+    sender_emails_by_domain_config={
         k: v
         for k, v in app_level_config.get("sender_emails", {}).items()
-        if k != "default"  # Vyloučení 'default' klíče
+        if k != "default"
     },
 )
 app_logger.info("Global EmailVerifier instance created and configured.")
 
-# Globální stav verifikace a zámek pro synchronizaci
 current_verification_state: Dict[str, Any] = {}
-verification_lock = threading.RLock()  # Použití RLock pro lepší prevenci deadlocků
-bulk_verification_thread = None  # Vlákno pro hromadnou verifikaci
+# RLock allows re-entrant locking for nested lock acquisition
+verification_lock = threading.RLock()
+bulk_verification_thread = None
 
 
 def reset_verification_state():
-    """
-    Resetuje globální stav verifikace na výchozí hodnoty.
-
-    Tato funkce inicializuje všechny proměnné stavu na jejich výchozí hodnoty.
-    Používá se při startu aplikace a při resetování stavu mezi verifikacemi.
-
-    Stav obsahuje následující hodnoty:
-        - status: "idle" - výchozí stav
-        - error_message: None - žádná chyba
-        - uploaded_filepath: None - žádný nahraný soubor
-        - selected_column: None - žádný vybraný sloupec
-        - emails_to_verify: [] - prázdný seznam emailů
-        - total_emails: 0 - žádné emaily k verifikaci
-        - processed_emails: 0 - žádné zpracované emaily
-        - valid_emails: 0 - žádné validní emaily
-        - invalid_emails: 0 - žádné nevalidní emaily
-        - probable_emails: 0 - žádné pravděpodobně validní emaily
-        - unknown_emails: 0 - žádné emaily s neznámým stavem
-        - current_batch_num: 0 - žádná aktuální dávka
-        - total_batches: 0 - žádné dávky
-        - results: {} - prázdný slovník výsledků
-        - verification_log: [] - prázdný log
-        - start_time: None - žádný čas začátku
-        - last_activity_time: None - žádná poslední aktivita
-        - result_filepath: None - žádný soubor s výsledky
-        - accept_all_domains_summary: {} - prázdný souhrn catch-all domén
-        - stop_requested: False - žádný požadavek na zastavení
-        - verification_run_id: None - žádné ID běhu
-        - is_thread_active: False - žádné aktivní vlákno
-        - detected_encoding: None - žádné detekované kódování
-        - detected_delimiter: None - žádný detekovaný oddělovač
-        - app_batch_size_for_ui: 20 - výchozí velikost dávky pro UI
-    """
+    """Resets global verification state to defaults. Called at startup and between verification runs."""
     global current_verification_state
-    with verification_lock:  # Zámek pro bezpečný přístup ke globálnímu stavu
+    with verification_lock:
         current_verification_state = {
-            "status": "idle",  # Aktuální stav (idle, loading_csv, verifying, atd.)
-            "error_message": None,  # Chybová zpráva, pokud nastala chyba
-            "uploaded_filepath": None,  # Cesta k nahranému CSV souboru
-            "selected_column": None,  # Název sloupce s emaily
-            "emails_to_verify": [],  # Seznam emailů k verifikaci
-            "total_emails": 0,  # Celkový počet emailů
-            "processed_emails": 0,  # Počet zpracovaných emailů
-            "valid_emails": 0,  # Počet validních emailů
-            "invalid_emails": 0,  # Počet nevalidních emailů
-            "probable_emails": 0,  # Počet pravděpodobně validních (catch-all)
-            "unknown_emails": 0,  # Počet emailů s neznámým stavem
-            "current_batch_num": 0,  # Číslo aktuální zpracovávané dávky
-            "total_batches": 0,  # Celkový počet dávek
-            "results": {},  # Slovník s výsledky verifikace {email: výsledek}
-            "verification_log": [],  # Seznam logovacích zpráv pro UI
-            "start_time": None,  # Čas zahájení verifikace
-            "last_activity_time": None,  # Čas poslední aktivity
-            "result_filepath": None,  # Cesta k souboru s výsledky
-            "accept_all_domains_summary": {},  # Souhrn catch-all domén
-            "stop_requested": False,  # Příznak požadavku na zastavení
-            "verification_run_id": None,  # Unikátní ID běhu verifikace
-            "is_thread_active": False,  # Příznak, zda běží vlákno verifikace
-            "detected_encoding": None,  # Detekované kódování CSV
-            "detected_delimiter": None,  # Detekovaný oddělovač CSV
-            "app_batch_size_for_ui": app_level_config.get(
-                "ui_batch_size", 20
-            ),  # Velikost dávky pro UI (z konfigurace)
+            "status": "idle",
+            "error_message": None,
+            "uploaded_filepath": None,
+            "selected_column": None,
+            "emails_to_verify": [],
+            "total_emails": 0,
+            "processed_emails": 0,
+            "valid_emails": 0,
+            "invalid_emails": 0,
+            "probable_emails": 0,
+            "unknown_emails": 0,
+            "current_batch_num": 0,
+            "total_batches": 0,
+            "results": {},
+            "verification_log": [],
+            "start_time": None,
+            "last_activity_time": None,
+            "result_filepath": None,
+            "accept_all_domains_summary": {},
+            "stop_requested": False,
+            "verification_run_id": None,
+            "is_thread_active": False,
+            "detected_encoding": None,
+            "detected_delimiter": None,
+            "app_batch_size_for_ui": app_level_config.get("ui_batch_size", 20),
         }
         app_logger.info("Global verification state has been reset to 'idle'.")
 
 
-reset_verification_state()  # Reset stavu při startu aplikace
+reset_verification_state()
 
 
 @app.route("/")
 def index():
-    """
-    Hlavní route aplikace.
-
-    Zobrazuje hlavní stránku aplikace s rozhraním pro:
-    - Verifikaci jednotlivých emailových adres
-    - Nahrávání CSV souborů pro hromadnou verifikaci
-    - Zobrazení průběhu a výsledků verifikace
-
-    Returns:
-        str: HTML šablonu hlavní stránky (index.html)
-    """
-    return render_template("index.html")  # Vrátí renderovanou HTML šablonu
+    return render_template("index.html")
 
 
 @app.route("/verify_single", methods=["POST"])
 def verify_single_email_route():
-    """
-    Route pro verifikaci jednotlivé emailové adresy.
-
-    Očekává JSON s klíčem 'email' obsahujícím adresu k ověření.
-    Provede následující kroky:
-    1. Kontrola syntaxe emailové adresy
-    2. Kontrola disposable domény
-    3. Resolvování MX záznamů
-    4. Test catch-all domény
-    5. SMTP verifikace
-
-    Returns:
-        tuple: (JSON response, HTTP status code)
-            - Při úspěchu: výsledek verifikace obsahující:
-                - is_valid: True/False/None (validní/nevalidní/neznámý)
-                - status_code: kód výsledku verifikace
-                - message: popis výsledku
-                - is_catchall: True/False (catch-all doména)
-                - mx_record: primární MX záznam
-                - smtp_code_internal: SMTP kód odpovědi
-                - verification_steps: seznam kroků verifikace
-            - Při chybě: chybovou zprávu a status 400/500
-    """
-    data = request.json  # Získání JSON dat z požadavku
+    data = request.json
     email_to_verify = data.get("email")
     if not email_to_verify:
         app_logger.warning("API /verify_single: Missing 'email' in request payload.")
-        return (
-            jsonify({"error": "Chybí email v požadavku"}),
-            400,
-        )  # Chyba 400, pokud email chybí
+        return jsonify({"error": "Chybí email v požadavku"}), 400
 
     app_logger.info(
         f"API /verify_single: Received request to verify email: {email_to_verify}"
     )
 
-    # Vytvoření nové smyčky událostí pro tento požadavek (důležité pro asyncio v Flasku)
+    # Flask is synchronous; create new event loop for async email verification
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
@@ -244,7 +158,6 @@ def verify_single_email_route():
         app_logger.info(
             f"API /verify_single: Starting verification process for {email_to_verify}"
         )
-        # Spuštění asynchronní verifikace v synchronním kontextu Flasku
         result = loop.run_until_complete(
             email_verifier_instance.verify_single_email(email_to_verify)
         )
@@ -254,52 +167,21 @@ def verify_single_email_route():
         app_logger.debug(
             f"API /verify_single: Full verification result: {json.dumps(result, indent=2)}"
         )
-        return jsonify(result)  # Vrácení výsledku jako JSON
+        return jsonify(result)
     except Exception as e:
         app_logger.error(
             f"API /verify_single: Error during verification of {email_to_verify}: {e}",
-            exc_info=True,  # Logování s tracebackem
+            exc_info=True,
         )
-        return (
-            jsonify({"error": f"Interní chyba serveru: {str(e)}"}),
-            500,
-        )  # Chyba 500 při interní chybě
+        return jsonify({"error": f"Interní chyba serveru: {str(e)}"}), 500
     finally:
-        loop.close()  # Uzavření smyčky událostí
+        loop.close()
 
 
 @app.route("/load_csv", methods=["POST"])
 def load_csv_route():
-    """
-    Route pro nahrání a zpracování CSV souboru s emaily.
-
-    Očekává multipart/form-data s klíčem 'file' obsahujícím CSV soubor.
-    Provede následující kroky:
-    1. Kontrola existence a typu souboru
-    2. Uložení souboru do uploads složky
-    3. Detekce kódování souboru (utf-8-sig, utf-8, cp1250, iso-8859-2, windows-1250)
-    4. Detekce oddělovače sloupců (,, ;, tab, |)
-    5. Načtení hlaviček CSV
-    6. Detekce sloupce s emaily
-
-    Returns:
-        tuple: (JSON response, HTTP status code)
-            - Při úspěchu: JSON obsahující:
-                - status: "select_column"
-                - columns: seznam sloupců z CSV
-                - suggested_email_column: doporučený sloupec s emaily
-            - Při chybě: chybovou zprávu a status 400/500
-
-    Možné chyby:
-        - Chybí soubor v požadavku
-        - Neplatný typ souboru (není CSV)
-        - Prázdný soubor
-        - Nepodařilo se detekovat kódování
-        - Nepodařilo se načíst hlavičky
-    """
-    app_logger.info("=" * 50)  # Oddělovač v logu pro lepší čitelnost
+    app_logger.info("=" * 50)
     app_logger.info("API /load_csv: Starting CSV upload process")
-    # Detailní logování informací o požadavku pro debugging
     app_logger.info(f"API /load_csv: Request content type: {request.content_type}")
     app_logger.info(f"API /load_csv: Request headers: {dict(request.headers)}")
     app_logger.info(f"API /load_csv: Request method: {request.method}")
@@ -311,27 +193,24 @@ def load_csv_route():
             app_logger.info(
                 f"API /load_csv: Current verification state: {current_verification_state['status']}"
             )
-            # Kontrola, zda již neprobíhá jiná operace
             if current_verification_state["status"] not in [
-                "idle",  # Připraveno
-                "error",  # Nastala chyba
-                "completed",  # Dokončeno
-                "stopped",  # Zastaveno
+                "idle",
+                "error",
+                "completed",
+                "stopped",
             ]:
                 app_logger.warning(
                     f"API /load_csv: Attempt to load CSV while in state '{current_verification_state['status']}'."
                 )
                 return jsonify({"error": "Jiná operace již probíhá."}), 400
-            reset_verification_state()  # Reset stavu pro nový CSV soubor
-            current_verification_state[
-                "status"
-            ] = "loading_csv"  # Nastavení stavu na načítání CSV
+            reset_verification_state()
+            current_verification_state["status"] = "loading_csv"
             current_verification_state["last_activity_time"] = time.time()
             app_logger.info(
                 "API /load_csv: Reset verification state and set status to 'loading_csv'"
             )
 
-        if "file" not in request.files:  # Kontrola, zda byl soubor přiložen
+        if "file" not in request.files:
             with verification_lock:
                 current_verification_state["status"] = "error"
             app_logger.warning("API /load_csv: No file part in the request.")
@@ -340,20 +219,20 @@ def load_csv_route():
             )
             return jsonify({"error": "Soubor nebyl poskytnut"}), 400
 
-        file = request.files["file"]  # Získání souboru z požadavku
+        file = request.files["file"]
         app_logger.info(f"API /load_csv: Received file: {file.filename}")
         app_logger.info(f"API /load_csv: File content type: {file.content_type}")
         app_logger.info(
             f"API /load_csv: File size: {request.content_length if request.content_length else 'unknown'}"
         )
 
-        if file.filename == "":  # Kontrola, zda byl soubor vybrán
+        if file.filename == "":
             with verification_lock:
                 current_verification_state["status"] = "error"
             app_logger.warning("API /load_csv: No file selected (empty filename).")
             return jsonify({"error": "Nebyl vybrán žádný soubor"}), 400
 
-        if not file.filename.lower().endswith(".csv"):  # Kontrola přípony souboru
+        if not file.filename.lower().endswith(".csv"):
             with verification_lock:
                 current_verification_state["status"] = "error"
             app_logger.warning(
@@ -361,8 +240,8 @@ def load_csv_route():
             )
             return jsonify({"error": "Povoleny jsou pouze CSV soubory"}), 400
 
-        filename = secure_filename(file.filename)  # Zabezpečení názvu souboru
-        # Vytvoření unikátní cesty pro uložení souboru
+        filename = secure_filename(file.filename)
+        # Timestamp prefix prevents filename collisions
         uploaded_filepath = (
             Path(app.config["UPLOAD_FOLDER"])
             / f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
@@ -371,8 +250,8 @@ def load_csv_route():
 
         try:
             app_logger.info("API /load_csv: Starting file save operation...")
-            # Čtení a zápis souboru po částech pro velké soubory
-            chunk_size = 8192  # 8KB
+            # Chunked read/write to handle large files without loading into memory
+            chunk_size = 8192
             total_size = 0
             chunk_count = 0
             start_time = time.time()
@@ -380,21 +259,19 @@ def load_csv_route():
             app_logger.info(
                 f"API /load_csv: Opening file for writing: {uploaded_filepath}"
             )
-            with open(
-                uploaded_filepath, "wb"
-            ) as f:  # Otevření souboru pro binární zápis
+            with open(uploaded_filepath, "wb") as f:
                 while True:
                     app_logger.debug(
                         f"API /load_csv: Reading chunk {chunk_count + 1}..."
                     )
-                    chunk = file.read(chunk_size)  # Přečtení části souboru
-                    if not chunk:  # Konec souboru
+                    chunk = file.read(chunk_size)
+                    if not chunk:
                         app_logger.debug("API /load_csv: No more chunks to read")
                         break
-                    f.write(chunk)  # Zápis části do nového souboru
+                    f.write(chunk)
                     total_size += len(chunk)
                     chunk_count += 1
-                    if chunk_count % 100 == 0:  # Logování průběhu každých 100 částí
+                    if chunk_count % 100 == 0:
                         elapsed = time.time() - start_time
                         speed = (
                             total_size / (1024 * 1024 * elapsed) if elapsed > 0 else 0
@@ -409,48 +286,43 @@ def load_csv_route():
                 f"API /load_csv: File '{filename}' saved to '{uploaded_filepath}' ({total_size/1024:.1f}KB total, {chunk_count} chunks, {speed:.1f}MB/s average speed)."
             )
 
-            # Ověření, zda byl soubor správně uložen
             if not uploaded_filepath.exists():
                 raise Exception(f"File was not saved correctly at {uploaded_filepath}")
             app_logger.info(
                 f"API /load_csv: Verified file exists at {uploaded_filepath}"
             )
 
-            # Kontrola velikosti uloženého souboru
             file_size = uploaded_filepath.stat().st_size
             app_logger.info(f"API /load_csv: Saved file size: {file_size} bytes")
 
-            if file_size == 0:  # Pokud je soubor prázdný
+            if file_size == 0:
                 raise Exception("Uploaded file is empty")
 
-            # Detekce kódování a oddělovače
             detected_encoding = None
             headers = []
-            encodings_to_try = [  # Seznam kódování k vyzkoušení
-                "utf-8-sig",  # UTF-8 s BOM (často z Excelu)
+            # Try common encodings in order of likelihood (Excel exports often use utf-8-sig)
+            encodings_to_try = [
+                "utf-8-sig",
                 "utf-8",
-                "cp1250",  # Windows-1250 (Střední Evropa)
-                "iso-8859-2",  # Latin-2 (Střední Evropa)
-                "windows-1250",  # Duplicitní, ale neškodí
+                "cp1250",
+                "iso-8859-2",
+                "windows-1250",
             ]
             app_logger.info("API /load_csv: Starting encoding detection...")
 
-            # Pokus o přečtení prvních bajtů pro kontrolu čitelnosti souboru
             try:
                 app_logger.info("API /load_csv: Reading first 1024 bytes of file...")
                 with open(uploaded_filepath, "rb") as f:
                     first_bytes = f.read(1024)
-                    # Logování prvních bajtů může pomoci při diagnostice problémů s kódováním
                     app_logger.info(
                         f"API /load_csv: First 1024 bytes of file: {first_bytes[:100]}..."
-                    )  # Jen prvních 100 bajtů
+                    )
             except Exception as e:
                 app_logger.error(
                     f"API /load_csv: Error reading first bytes of file: {str(e)}"
                 )
                 raise
 
-            # Seznam oddělovačů k vyzkoušení
             delimiters = [",", ";", "\t", "|"]
             detected_delimiter = None
 
@@ -458,50 +330,44 @@ def load_csv_route():
                 try:
                     app_logger.debug(f"API /load_csv: Trying encoding '{enc}'...")
                     with open(uploaded_filepath, "r", encoding=enc) as f_csv:
-                        # Přečtení prvního řádku pro detekci oddělovače
                         first_line = f_csv.readline().strip()
                         app_logger.debug(
                             f"API /load_csv: First line with encoding '{enc}': {first_line}"
                         )
 
-                        # Pokus o detekci oddělovače
                         for delimiter in delimiters:
                             if delimiter in first_line:
                                 parts = first_line.split(delimiter)
-                                if len(parts) > 1:  # Pokud máme více než jeden sloupec
+                                if len(parts) > 1:
                                     detected_delimiter = delimiter
                                     app_logger.info(
                                         f"API /load_csv: Detected delimiter '{delimiter}' with encoding '{enc}'"
                                     )
-                                    break  # Oddělovač nalezen
+                                    break
 
                         if detected_delimiter:
-                            # Resetování ukazatele souboru a přečtení hlaviček s detekovaným oddělovačem
                             f_csv.seek(0)
                             reader = csv.reader(f_csv, delimiter=detected_delimiter)
-                            headers = next(reader)  # Načtení hlaviček
-                            detected_encoding = enc  # Uložení úspěšného kódování
+                            headers = next(reader)
+                            detected_encoding = enc
                             app_logger.info(
                                 f"API /load_csv: Successfully read CSV with encoding '{enc}' and delimiter '{detected_delimiter}'. Headers: {headers}"
                             )
-                            break  # Kódování a oddělovač nalezeny, ukončení smyčky
-                except (
-                    UnicodeDecodeError,
-                    StopIteration,
-                ) as e:  # Chyby při čtení nebo prázdný soubor
+                            break
+                except (UnicodeDecodeError, StopIteration) as e:
                     app_logger.debug(
                         f"API /load_csv: Failed to read with encoding '{enc}': {str(e)}"
                     )
-                    continue  # Pokračování na další kódování
-                except Exception as e:  # Neočekávané chyby
+                    continue
+                except Exception as e:
                     app_logger.error(
                         f"API /load_csv: Unexpected error while trying encoding '{enc}': {str(e)}"
                     )
                     continue
 
-            if not headers:  # Pokud se nepodařilo načíst hlavičky
+            if not headers:
                 if uploaded_filepath.exists():
-                    os.remove(uploaded_filepath)  # Smazání neúspěšně nahraného souboru
+                    os.remove(uploaded_filepath)
                 with verification_lock:
                     current_verification_state["status"] = "error"
                 app_logger.error(
@@ -523,21 +389,19 @@ def load_csv_route():
                 "e-mail",
                 "mail",
                 "emailaddress",
-            ]  # Běžné názvy sloupců s emaily
+            ]
             for header_item in headers:
-                # Normalizace názvu sloupce pro porovnání (malá písmena, bez mezer a podtržítek)
+                # Normalize header name for comparison (case-insensitive, ignore spaces/underscores)
                 normalized_header = (
                     header_item.lower().replace(" ", "").replace("_", "")
                 )
                 if normalized_header in common_email_headers:
-                    suggested_column = header_item  # Nalezen doporučený sloupec
+                    suggested_column = header_item
                     app_logger.info(
                         f"API /load_csv: Found suggested email column: {suggested_column}"
                     )
                     break
-            if (
-                not suggested_column and headers
-            ):  # Pokud nebyl nalezen, použije se první sloupec
+            if not suggested_column and headers:
                 suggested_column = headers[0]
                 app_logger.info(
                     f"API /load_csv: No email column found, using first column: {suggested_column}"
@@ -546,9 +410,7 @@ def load_csv_route():
             app_logger.info("API /load_csv: Updating verification state...")
             with verification_lock:
                 current_verification_state["uploaded_filepath"] = str(uploaded_filepath)
-                current_verification_state[
-                    "status"
-                ] = "selecting_column"  # Stav pro výběr sloupce
+                current_verification_state["status"] = "selecting_column"
                 current_verification_state["detected_encoding"] = detected_encoding
                 current_verification_state["detected_delimiter"] = detected_delimiter
                 current_verification_state["last_activity_time"] = time.time()
@@ -557,23 +419,21 @@ def load_csv_route():
                 )
 
             response_data = {
-                "status": "select_column",  # Informace pro frontend
-                "columns": headers,  # Seznam sloupců
-                "suggested_email_column": suggested_column,  # Doporučený sloupec
+                "status": "select_column",
+                "columns": headers,
+                "suggested_email_column": suggested_column,
             }
             app_logger.info(f"API /load_csv: Sending response: {response_data}")
-            app_logger.info("=" * 50)  # Konec logu pro tento požadavek
+            app_logger.info("=" * 50)
             return jsonify(response_data)
 
-        except Exception as e:  # Zachycení chyb při zpracování souboru
+        except Exception as e:
             app_logger.error(
                 f"API /load_csv: Error processing CSV file '{filename}': {str(e)}",
                 exc_info=True,
             )
-            if (
-                "uploaded_filepath" in locals() and uploaded_filepath.exists()
-            ):  # Kontrola, zda uploaded_filepath bylo definováno
-                os.remove(uploaded_filepath)  # Smazání souboru při chybě
+            if "uploaded_filepath" in locals() and uploaded_filepath.exists():
+                os.remove(uploaded_filepath)
                 app_logger.info(
                     f"API /load_csv: Removed failed upload file: {uploaded_filepath}"
                 )
@@ -583,7 +443,7 @@ def load_csv_route():
             app_logger.info("=" * 50)
             return jsonify({"error": f"Chyba při zpracování CSV: {str(e)}"}), 500
 
-    except Exception as e:  # Zachycení neočekávaných chyb v handleru
+    except Exception as e:
         app_logger.error(
             f"API /load_csv: Unexpected error in route handler: {str(e)}", exc_info=True
         )
@@ -596,30 +456,6 @@ def load_csv_route():
 
 @app.route("/load_txt", methods=["POST"])
 def load_txt_route():
-    """
-    Route pro nahrání a zpracování TXT souboru s emaily.
-    
-    TXT soubor může obsahovat emaily v různých formátech:
-    - Jeden email na řádek
-    - Emaily oddělené čárkami, středníky nebo jinými oddělovači
-    - Emaily v různých kódováních
-    
-    Očekává multipart/form-data s klíčem 'file' obsahujícím TXT soubor.
-    Provede následující kroky:
-    1. Kontrola existence a typu souboru
-    2. Uložení souboru do uploads složky
-    3. Detekce kódování souboru (utf-8-sig, utf-8, cp1250, iso-8859-2, windows-1250)
-    4. Načtení obsahu souboru
-    5. Parsování emailů z obsahu
-    
-    Returns:
-        tuple: (JSON response, HTTP status code)
-            - Při úspěchu: JSON obsahující:
-                - status: "ready"
-                - total_emails: počet nalezených emailů
-                - sample_emails: ukázka prvních 5 emailů
-            - Při chybě: chybovou zprávu a status 400/500
-    """
     app_logger.info("=" * 50)
     app_logger.info("API /load_txt: Starting TXT upload process")
     app_logger.info(f"API /load_txt: Request content type: {request.content_type}")
@@ -652,14 +488,12 @@ def load_txt_route():
             app_logger.warning("API /load_txt: No file selected.")
             return jsonify({"error": "Nebyl vybrán žádný soubor"}), 400
 
-        # Kontrola přípony souboru
         if not file.filename.lower().endswith('.txt'):
             with verification_lock:
                 current_verification_state["status"] = "error"
             app_logger.warning(f"API /load_txt: Invalid file type: {file.filename}")
             return jsonify({"error": "Povoleny jsou pouze TXT soubory"}), 400
 
-        # Uložení souboru
         filename = secure_filename(file.filename)
         uploaded_filepath = Path("uploads") / filename
         uploaded_filepath.parent.mkdir(exist_ok=True)
@@ -667,7 +501,6 @@ def load_txt_route():
         file.save(str(uploaded_filepath))
         app_logger.info(f"API /load_txt: File saved to: {uploaded_filepath}")
 
-        # Kontrola velikosti souboru
         file_size = uploaded_filepath.stat().st_size
         if file_size == 0:
             with verification_lock:
@@ -678,7 +511,6 @@ def load_txt_route():
 
         app_logger.info(f"API /load_txt: File size: {file_size} bytes")
 
-        # Seznam kódování k vyzkoušení
         encodings_to_try = ["utf-8-sig", "utf-8", "cp1250", "iso-8859-2", "windows-1250"]
         detected_encoding = None
         file_content = None
@@ -702,22 +534,19 @@ def load_txt_route():
             app_logger.error("API /load_txt: Could not read file with any supported encoding.")
             return jsonify({"error": "Nepodařilo se načíst soubor s podporovaným kódováním"}), 400
 
-        # Parsování emailů z obsahu
         import re
         email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
         
-        # Rozdělení obsahu na řádky a hledání emailů
         lines = file_content.splitlines()
         emails_found = []
         
         for line_num, line in enumerate(lines, 1):
             line = line.strip()
-            if not line:  # Přeskočit prázdné řádky
+            if not line:
                 continue
                 
-            # Pokud řádek obsahuje více emailů oddělených čárkami, středníky atd.
+            # Handle lines with multiple emails separated by delimiters
             if any(sep in line for sep in [',', ';', '|', '\t']):
-                # Rozdělit podle různých oddělovačů
                 for sep in [',', ';', '|', '\t']:
                     if sep in line:
                         parts = line.split(sep)
@@ -727,11 +556,10 @@ def load_txt_route():
                                 emails_found.append(part)
                         break
             else:
-                # Jeden email na řádek nebo email v textu
                 matches = re.findall(email_pattern, line)
                 emails_found.extend(matches)
 
-        # Odstranění duplicit a prázdných hodnot
+        # Remove duplicates while preserving order
         unique_emails = list(dict.fromkeys([email.strip() for email in emails_found if email.strip()]))
         
         if not unique_emails:
@@ -743,7 +571,6 @@ def load_txt_route():
 
         app_logger.info(f"API /load_txt: Found {len(unique_emails)} unique emails")
 
-        # Uložení informací o souboru do stavu
         with verification_lock:
             current_verification_state["uploaded_filepath"] = str(uploaded_filepath)
             current_verification_state["detected_encoding"] = detected_encoding
@@ -752,8 +579,7 @@ def load_txt_route():
             current_verification_state["status"] = "ready"
             current_verification_state["last_activity_time"] = time.time()
 
-        # Příprava odpovědi
-        sample_emails = unique_emails[:5]  # Prvních 5 emailů jako ukázka
+        sample_emails = unique_emails[:5]
         
         response_data = {
             "status": "ready",
@@ -784,32 +610,7 @@ def load_txt_route():
 
 @app.route("/select_column", methods=["POST"])
 def select_column_route():
-    """
-    Route pro výběr sloupce s emaily z nahraného CSV.
-
-    Očekává JSON s klíčem 'column' obsahujícím název vybraného sloupce.
-    Provede následující kroky:
-    1. Kontrola stavu verifikace
-    2. Načtení CSV souboru s detekovaným kódováním a oddělovačem
-    3. Extrakce emailů z vybraného sloupce
-    4. Filtrace duplicitních emailů
-    5. Aktualizace stavu verifikace
-
-    Returns:
-        tuple: (JSON response, HTTP status code)
-            - Při úspěchu: JSON obsahující:
-                - status: "ready"
-                - total_emails: počet nalezených unikátních emailů
-            - Při chybě: chybovou zprávu a status 400/500
-
-    Možné chyby:
-        - Neplatný stav pro výběr sloupce
-        - Chybí název sloupce v požadavku
-        - Sloupec nebyl nalezen v CSV
-        - V sloupci nebyly nalezeny žádné emaily
-    """
     with verification_lock:
-        # Kontrola, zda je aplikace ve správném stavu pro výběr sloupce nebo je připravena TXT
         if current_verification_state["status"] not in ["selecting_column", "ready"]:
             app_logger.warning(
                 f"API /select_column: Invalid state '{current_verification_state['status']}' for column selection."
@@ -817,7 +618,6 @@ def select_column_route():
             return jsonify({"error": "Neplatný stav pro výběr sloupce."}), 400
         current_verification_state["last_activity_time"] = time.time()
 
-    # Získání cesty k souboru a typu souboru ze stavu
     uploaded_filepath_str = current_verification_state.get("uploaded_filepath")
     file_type = current_verification_state.get("file_type", "csv")
     
@@ -825,7 +625,6 @@ def select_column_route():
         app_logger.error("API /select_column: Uploaded file path not found or file does not exist.")
         return jsonify({"error": "Nejprve nahrajte soubor"}), 400
 
-    # Pro TXT soubory jsou emaily již zpracovány
     if file_type == "txt":
         emails_list = current_verification_state.get("emails_list", [])
         if not emails_list:
@@ -835,7 +634,7 @@ def select_column_route():
         unique_emails_list = emails_list
         app_logger.info(f"API /select_column: Using {len(unique_emails_list)} emails from TXT file")
     
-    else:  # CSV soubor
+    else:
         data = request.json
         selected_column = data.get("column")
         if not selected_column:
@@ -847,14 +646,9 @@ def select_column_route():
 
         try:
             emails_to_verify_list = []
-            # Otevření CSV souboru s detekovaným kódováním a oddělovačem
             with open(uploaded_filepath_str, "r", encoding=detected_encoding) as f_csv:
-                reader = csv.DictReader(
-                    f_csv, delimiter=detected_delimiter
-                )  # Použití DictReader pro snadný přístup ke sloupcům
-                if (
-                    selected_column not in reader.fieldnames
-                ):  # Kontrola, zda vybraný sloupec existuje
+                reader = csv.DictReader(f_csv, delimiter=detected_delimiter)
+                if selected_column not in reader.fieldnames:
                     with verification_lock:
                         current_verification_state["status"] = "error"
                     app_logger.error(
@@ -866,20 +660,18 @@ def select_column_route():
                         ),
                         400,
                     )
-                for row in reader:  # Iterace přes řádky CSV
-                    email_value = row.get(
-                        selected_column, ""
-                    ).strip()  # Získání hodnoty z vybraného sloupce
-                    if email_value:  # Pokud hodnota není prázdná
+                for row in reader:
+                    email_value = row.get(selected_column, "").strip()
+                    if email_value:
                         emails_to_verify_list.append(email_value)
 
-            # Odstranění duplicitních emailů (zachování pořadí)
+            # Remove duplicates while preserving order
             unique_emails_list = list(dict.fromkeys(emails_to_verify_list))
             app_logger.info(
                 f"API /select_column: Column '{selected_column}' selected. Found {len(emails_to_verify_list)} emails, {len(unique_emails_list)} unique."
             )
 
-            if not unique_emails_list:  # Pokud nebyly nalezeny žádné emaily
+            if not unique_emails_list:
                 with verification_lock:
                     current_verification_state["status"] = "error"
                 app_logger.warning(
@@ -894,7 +686,7 @@ def select_column_route():
                     400,
                 )
 
-        except Exception as e:  # Zachycení chyb při extrakci emailů z CSV
+        except Exception as e:
             with verification_lock:
                 current_verification_state["status"] = "error"
                 current_verification_state["error_message"] = str(e)
@@ -904,14 +696,12 @@ def select_column_route():
             )
             return jsonify({"error": f"Chyba při extrakci emailů z CSV: {str(e)}"}), 500
 
-    # Kontrola, zda byly nalezeny nějaké emaily (pro oba typy souborů)
     if not unique_emails_list:
         with verification_lock:
             current_verification_state["status"] = "error"
         app_logger.warning("API /select_column: No email addresses found.")
         return jsonify({"error": "Nebyly nalezeny žádné platné emailové adresy."}), 400
 
-    # Aktualizace stavu verifikace s načtenými emaily
     with verification_lock:
         if file_type == "csv":
             current_verification_state["selected_column"] = selected_column
@@ -925,46 +715,36 @@ def select_column_route():
 
 
 def run_bulk_verification_in_thread():
-    """
-    Spouští hromadnou verifikaci emailů v samostatném vlákně.
-
-    Tato funkce zpracovává emaily po dávkách a ukládá výsledky verifikace.
-    Používá asynchronní verifikaci pro efektivní zpracování velkého množství emailů.
-    Podporuje zastavení verifikace a zachování výsledků.
-    """
+    """Runs bulk email verification in a separate thread. Processes emails in batches using async verification."""
     global current_verification_state
-    run_id_for_thread = None  # ID běhu specifické pro toto vlákno
+    run_id_for_thread = None
     with verification_lock:
         run_id_for_thread = current_verification_state.get("verification_run_id")
-        current_verification_state[
-            "is_thread_active"
-        ] = True  # Označení, že vlákno je aktivní
+        current_verification_state["is_thread_active"] = True
 
-    # Vytvoření nové smyčky událostí pro toto vlákno (každé vlákno s asyncio potřebuje vlastní smyčku)
+    # Each thread needs its own event loop for asyncio
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
     app_logger.info(
         f"Thread (ID: {run_id_for_thread}): Starting bulk verification process."
     )
-    email_verifier_instance.reset_internal_state_for_run()  # Reset interní cache verifikátoru pro nový běh
+    email_verifier_instance.reset_internal_state_for_run()
 
     try:
-        # Získání seznamu emailů a velikosti dávky ze stavu (kopie pro bezpečnost vláken)
+        # Copy state to avoid race conditions with other threads
         emails_for_this_run = list(
             current_verification_state.get("emails_to_verify", [])
         )
         total_emails_for_this_run = len(emails_for_this_run)
         ui_app_batch_size = current_verification_state.get("app_batch_size_for_ui", 20)
 
-        # Iterace přes emaily po dávkách
         for i in range(0, total_emails_for_this_run, ui_app_batch_size):
-            # Kritická sekce: kontrola požadavku na zastavení a ID běhu na začátku každé dávky
+            # Check for stop request or run ID change before each batch
             with verification_lock:
                 stop_requested = current_verification_state.get("stop_requested", False)
                 current_run_id = current_verification_state.get("verification_run_id")
 
-                # Pokud bylo požádáno o zastavení nebo se ID běhu změnilo (nový běh byl spuštěn)
                 if stop_requested or current_run_id != run_id_for_thread:
                     app_logger.info(
                         f"Thread (ID: {run_id_for_thread}): Stopping verification. "
@@ -973,45 +753,36 @@ def run_bulk_verification_in_thread():
                         f"thread_run_id={run_id_for_thread}"
                     )
 
-                    if (
-                        current_run_id == run_id_for_thread
-                    ):  # Pokud se jedná o aktuální běh tohoto vlákna
-                        current_verification_state[
-                            "status"
-                        ] = "stopped"  # Nastavení stavu na zastaveno
-                        save_verification_results(
-                            run_id_for_thread, is_final_save=True
-                        )  # Uložení finálních výsledků
+                    if current_run_id == run_id_for_thread:
+                        current_verification_state["status"] = "stopped"
+                        save_verification_results(run_id_for_thread, is_final_save=True)
 
-                    break  # Ukončení smyčky zpracování dávek
+                    break
 
                 current_verification_state["last_activity_time"] = time.time()
                 current_verification_state["current_batch_num"] = (
                     i // ui_app_batch_size
-                ) + 1  # Aktualizace čísla dávky
+                ) + 1
 
-            batch_to_process_list = emails_for_this_run[
-                i : i + ui_app_batch_size
-            ]  # Aktuální dávka emailů
+            batch_to_process_list = emails_for_this_run[i : i + ui_app_batch_size]
             app_logger.info(
                 f"Thread (ID: {run_id_for_thread}): Processing batch {current_verification_state['current_batch_num']}/{current_verification_state['total_batches']} ({len(batch_to_process_list)} emails)."
             )
 
             batch_results_list = []
             try:
-                # Asynchronní verifikace dávky emailů
                 batch_results_list = loop.run_until_complete(
                     email_verifier_instance.verify_emails_in_batch(
                         batch_to_process_list
                     )
                 )
-            except Exception as e_gen:  # Zachycení obecné chyby při verifikaci dávky
+            except Exception as e_gen:
                 app_logger.error(
                     f"Thread (ID: {run_id_for_thread}): General error during batch verification: {e_gen}",
                     exc_info=True,
                 )
 
-            # Pokud se nepodařilo získat výsledky, vytvoří se chybové záznamy
+            # Create error entries if batch processing failed
             if not batch_results_list and batch_to_process_list:
                 batch_results_list = [
                     {
@@ -1026,7 +797,7 @@ def run_bulk_verification_in_thread():
                     for eml in batch_to_process_list
                 ]
 
-            # Opětovná kontrola před uložením výsledků dávky (pro případ, že mezitím přišel požadavek na stop)
+            # Re-check before saving batch results (stop request may have arrived during processing)
             with verification_lock:
                 if current_verification_state.get(
                     "verification_run_id"
@@ -1036,18 +807,16 @@ def run_bulk_verification_in_thread():
                     app_logger.info(
                         f"Thread (ID: {run_id_for_thread}): Skipping batch results save - run superseded or stop requested"
                     )
-                    break  # Ukončení smyčky
+                    break
 
-                # Zpracování výsledků dávky a aktualizace statistik
                 for result_item in batch_results_list:
                     email_addr = result_item["email"]
                     current_verification_state["results"][email_addr] = result_item
                     current_verification_state["processed_emails"] += 1
                     if result_item.get("is_valid") is True:
                         domain_part = email_addr.split("@")[-1]
-                        if result_item.get("is_catchall"):  # Pokud je doména catch-all
+                        if result_item.get("is_catchall"):
                             current_verification_state["probable_emails"] += 1
-                            # Aktualizace souhrnu catch-all domén
                             current_verification_state["accept_all_domains_summary"][
                                 domain_part
                             ] = (
@@ -1056,20 +825,17 @@ def run_bulk_verification_in_thread():
                                 ].get(domain_part, 0)
                                 + 1
                             )
-                        else:  # Normálně validní
+                        else:
                             current_verification_state["valid_emails"] += 1
-                    elif result_item.get("is_valid") is False:  # Nevalidní
+                    elif result_item.get("is_valid") is False:
                         current_verification_state["invalid_emails"] += 1
-                    else:  # Neznámý stav
+                    else:
                         current_verification_state["unknown_emails"] += 1
 
-                    # Přidání záznamu do logu pro UI
                     log_status_str = (
-                        "success"  # Zelená barva pro validní
+                        "success"
                         if result_item.get("is_valid")
-                        else (
-                            "warning" if result_item.get("is_catchall") else "error"
-                        )  # Oranžová pro catch-all, červená pro ostatní
+                        else ("warning" if result_item.get("is_catchall") else "error")
                     )
                     current_verification_state["verification_log"].append(
                         {
@@ -1079,53 +845,38 @@ def run_bulk_verification_in_thread():
                             "details": f"Výsledek: {result_item.get('status_code', 'N/A')}",
                         }
                     )
-                    # Omezení délky logu pro UI
+                    # Keep log size manageable for UI
                     if len(current_verification_state["verification_log"]) > 100:
-                        current_verification_state[
+                        current_verification_state["verification_log"] = current_verification_state[
                             "verification_log"
-                        ] = current_verification_state["verification_log"][
-                            -50:
-                        ]  # Ponechání posledních 50 záznamů
+                        ][-50:]
 
-                # Uložení výsledků po každé dávce (pro případ pádu nebo zastavení)
+                # Save after each batch to preserve progress on crash or stop
                 save_verification_results(run_id_for_thread, is_final_save=False)
 
-        # Finální aktualizace stavu po dokončení všech dávek nebo zastavení
+        # Final state update after all batches complete or stop
         with verification_lock:
-            if (
-                current_verification_state.get("verification_run_id")
-                == run_id_for_thread
-            ):  # Pokud stále platí ID tohoto běhu
-                if (
-                    current_verification_state["status"] == "verifying"
-                ):  # Pokud nebyl mezitím stav změněn (např. na 'stopping')
-                    if (
-                        current_verification_state["processed_emails"]
-                        >= total_emails_for_this_run
-                    ):
-                        current_verification_state[
-                            "status"
-                        ] = "completed"  # Všechny emaily zpracovány
+            if current_verification_state.get("verification_run_id") == run_id_for_thread:
+                if current_verification_state["status"] == "verifying":
+                    if current_verification_state["processed_emails"] >= total_emails_for_this_run:
+                        current_verification_state["status"] = "completed"
                         app_logger.info(
                             f"Thread (ID: {run_id_for_thread}): Bulk verification process completed successfully."
                         )
-                    else:  # Pokud nebyly všechny emaily zpracovány (např. kvůli předčasnému zastavení)
+                    else:
                         current_verification_state["status"] = "stopped"
                         app_logger.info(
                             f"Thread (ID: {run_id_for_thread}): Bulk verification process was stopped during execution."
                         )
-                save_verification_results(
-                    run_id_for_thread, is_final_save=True
-                )  # Finální uložení výsledků
-            else:  # Pokud byl tento běh nahrazen novým
+                save_verification_results(run_id_for_thread, is_final_save=True)
+            else:
                 app_logger.info(
                     f"Thread (ID: {run_id_for_thread}): Run was superseded by a new one. Results for this old run will not be saved centrally by this thread."
                 )
 
     finally:
-        # Finální úklid vlákna
         with verification_lock:
-            # Změna is_thread_active na False pouze pokud je to stále aktuální vlákno nebo pokud žádné jiné vlákno není aktivní
+            # Only mark thread inactive if it's still the current run or no other thread is active
             if current_verification_state.get(
                 "verification_run_id"
             ) == run_id_for_thread or not current_verification_state.get(
@@ -1135,152 +886,121 @@ def run_bulk_verification_in_thread():
                 app_logger.info(
                     f"Thread (ID: {run_id_for_thread}): Thread cleanup completed."
                 )
-        loop.close()  # Uzavření smyčky událostí vlákna
+        loop.close()
 
 
 def save_verification_results(run_id_to_save: int, is_final_save: bool = False):
-    """
-    Ukládá výsledky verifikace do CSV souboru.
-
-    Args:
-        run_id_to_save (int): ID běhu verifikace pro uložení
-        is_final_save (bool): Pokud True, jedná se o finální uložení běhu
-    """
+    """Saves verification results to CSV file. Supports incremental saves during batch processing."""
     try:
         with verification_lock:
-            # Kontrola, zda se ID běhu shoduje (pro případ, že by se mezitím spustil nový běh)
+            # Check run ID to prevent saving results from superseded runs
             if current_verification_state["verification_run_id"] != run_id_to_save:
                 app_logger.warning(
                     f"Run ID mismatch during save: {run_id_to_save} vs {current_verification_state['verification_run_id']}"
                 )
                 return
 
-            if not current_verification_state[
-                "results"
-            ]:  # Pokud nejsou žádné výsledky k uložení
+            if not current_verification_state["results"]:
                 app_logger.warning("No results to save")
                 return
 
-            # Určení cesty k souboru s výsledky
-            if not current_verification_state[
-                "result_filepath"
-            ]:  # Pokud ještě nebyla cesta vytvořena
+            if not current_verification_state["result_filepath"]:
                 timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
                 result_filepath = (
                     Path(app.config["RESULTS_FOLDER"])
                     / f"verification_results_{timestamp}.csv"
                 )
                 current_verification_state["result_filepath"] = str(result_filepath)
-            else:  # Použití existující cesty
+            else:
                 result_filepath = Path(current_verification_state["result_filepath"])
 
-            # Příprava dat pro zápis do CSV
             csv_data = []
             for email, result in current_verification_state["results"].items():
-                # Určení stavu na základě is_valid a is_catchall
                 status = "unknown"
                 if result.get("is_valid") is True:
                     status = "valid" if not result.get("is_catchall") else "catchall"
                 elif result.get("is_valid") is False:
                     status = "invalid"
 
-                # Získání typu domény
                 domain_type = "unknown"
-                if result.get("domain_type"):  # Pokud je explicitně uveden
+                if result.get("domain_type"):
                     domain_type = result.get("domain_type")
-                elif result.get("is_disposable"):  # Pokud je doména jednorázová
+                elif result.get("is_disposable"):
                     domain_type = "disposable"
 
-                # Získání SMTP odpovědi s kódem
+                # Handle both old and new result key names for backward compatibility
                 smtp_response = ""
-                if result.get("smtp_response"):  # Starší název klíče
+                if result.get("smtp_response"):
                     smtp_response = result.get("smtp_response")
-                if result.get("smtp_code"):  # Starší název klíče
+                if result.get("smtp_code"):
                     code = result.get("smtp_code")
                     if smtp_response:
                         smtp_response = f"{code}: {smtp_response}"
                     else:
                         smtp_response = f"Code: {code}"
-                elif result.get("smtp_code_internal"):  # Novější název klíče
+                elif result.get("smtp_code_internal"):
                     code = result.get("smtp_code_internal")
-                    if smtp_response:  # Pokud již byla zpráva z 'smtp_response'
+                    if smtp_response:
                         smtp_response = f"{code}: {smtp_response}"
-                    elif result.get("message"):  # Použití 'message' jako textu odpovědi
+                    elif result.get("message"):
                         smtp_response = f"{code}: {result.get('message')}"
                     else:
                         smtp_response = f"Code: {code}"
 
-                # Získání DNS záznamů
                 dns_records = ""
-                if result.get("mx_records"):  # Seznam MX záznamů
-                    # Zformátování jako string oddělený čárkou
+                if result.get("mx_records"):
                     dns_records = ", ".join(
                         [host for prio, host in result.get("mx_records", [])]
                     )
-                elif result.get("mx_record"):  # Jeden MX záznam
+                elif result.get("mx_record"):
                     dns_records = result.get("mx_record")
 
-                # Získání chybové zprávy
                 error_msg = ""
-                if result.get("error"):  # Starší název klíče
+                if result.get("error"):
                     error_msg = result.get("error")
-                elif result.get(
-                    "message"
-                ):  # Novější název klíče (obsahuje detailnější popis)
+                elif result.get("message"):
                     error_msg = result.get("message")
-                elif result.get(
-                    "status_code"
-                ):  # Pokud není zpráva, použije se status_code
+                elif result.get("status_code"):
                     error_msg = f"Status: {result.get('status_code')}"
 
-                # Získání času verifikace (pokud je k dispozici)
                 verification_time = ""
                 if result.get("verification_time"):
                     verification_time = str(result.get("verification_time"))
 
-                # Pole pro CSV řádek
-                # Poznámka: Názvy sloupců by měly být konzistentní s tím, co očekává frontend nebo další zpracování.
-                # Zde jsou použity obecné názvy.
                 row = {
                     "email": email,
-                    "status": status,  # valid, invalid, catchall, unknown
-                    "error_details": error_msg,  # Detailní chybová zpráva nebo stavový kód
-                    "domain_type": domain_type,  # disposable, unknown
-                    "smtp_response_full": smtp_response,  # SMTP kód a zpráva
-                    "mx_servers": dns_records,  # Seznam MX serverů
-                    "verification_duration_ms": verification_time,  # Doba verifikace v ms (pokud je)
-                    # Další potenciálně užitečné informace z 'result':
+                    "status": status,
+                    "error_details": error_msg,
+                    "domain_type": domain_type,
+                    "smtp_response_full": smtp_response,
+                    "mx_servers": dns_records,
+                    "verification_duration_ms": verification_time,
                     "raw_status_code": result.get("status_code"),
                     "is_catchall_domain": result.get("is_catchall", False),
                     "smtp_internal_code": result.get("smtp_code_internal"),
                 }
                 csv_data.append(row)
 
-            if (
-                not csv_data
-            ):  # Pokud nejsou žádná data k zápisu (např. všechny emaily byly chybné před SMTP)
+            if not csv_data:
                 app_logger.warning(
                     "No data to write to CSV, although results dictionary was not empty."
                 )
                 return
 
-            # Určení, zda je potřeba zapsat hlavičky (nový soubor nebo finální uložení)
+            # Write headers for new files or final saves
             write_headers = not result_filepath.exists() or is_final_save
 
-            # Uložení do CSV s kódováním UTF-8-SIG pro kompatibilitu s Excelem
-            mode = (
-                "w" if write_headers else "a"
-            )  # 'w' pro přepsání (s hlavičkami), 'a' pro připojení
+            # UTF-8-SIG encoding ensures Excel can open the file correctly
+            mode = "w" if write_headers else "a"
             with open(result_filepath, mode, newline="", encoding="utf-8-sig") as f:
                 writer = csv.DictWriter(f, fieldnames=csv_data[0].keys())
                 if write_headers:
-                    writer.writeheader()  # Zápis hlaviček
-                writer.writerows(csv_data)  # Zápis dat
+                    writer.writeheader()
+                writer.writerows(csv_data)
 
             app_logger.info(
                 f"Results saved to {result_filepath} ({'final save' if is_final_save else 'incremental save'})"
             )
-            # Přidání logu o uložení (pouze pokud je to relevantní pro aktuální běh)
             if current_verification_state["verification_run_id"] == run_id_to_save:
                 add_verification_log(
                     "success",
@@ -1294,85 +1014,51 @@ def save_verification_results(run_id_to_save: int, is_final_save: bool = False):
             add_verification_log("error", "Chyba při uložení výsledků", str(e))
 
 
-@app.route(
-    "/start_verification", methods=["GET"]
-)  # Metoda GET je zde použita pro jednoduchost volání z UI tlačítka
+@app.route("/start_verification", methods=["GET"])
 def start_verification_route():
-    """
-    Route pro spuštění hromadné verifikace emailů.
-
-    Spustí verifikaci v samostatném vlákně a vrací ID běhu.
-    Provede následující kroky:
-    1. Kontrola stavu verifikace
-    2. Generování nového ID běhu
-    3. Reset stavu verifikace
-    4. Spuštění verifikačního vlákna
-    5. Vrácení ID běhu
-
-    Returns:
-        tuple: (JSON response, HTTP status code)
-            - Při úspěchu: JSON obsahující:
-                - status: "verifying"
-                - message: "Verifikace byla spuštěna."
-                - run_id: ID běhu verifikace
-            - Při chybě: chybovou zprávu a status 400
-
-    Možné chyby:
-        - Neplatný stav pro spuštění verifikace
-        - Chybí emaily k verifikaci
-        - Staré vlákno stále běží
-    """
+    """Starts bulk email verification in a separate thread. Returns run ID."""
     global bulk_verification_thread
     with verification_lock:
-        # Kontrola, zda je možné spustit novou verifikaci
         if current_verification_state["status"] not in [
-            "ready_to_verify",  # Připraveno po výběru sloupce
-            "stopped",  # Předchozí běh byl zastaven
-            "completed",  # Předchozí běh byl dokončen
-            "error",  # Předchozí operace skončila chybou
-            "idle",  # Úplně nový start (pokud by se emaily načetly jinak)
+            "ready_to_verify",
+            "stopped",
+            "completed",
+            "error",
+            "idle",
         ]:
             app_logger.warning(
                 f"API /start_verification: Attempt to start verification in invalid state '{current_verification_state['status']}'."
             )
             return jsonify({"error": "Verifikace již běží nebo není připravena."}), 400
-        if not current_verification_state.get(
-            "emails_to_verify"
-        ):  # Kontrola, zda jsou nějaké emaily k verifikaci
+        if not current_verification_state.get("emails_to_verify"):
             app_logger.warning("API /start_verification: No emails found to verify.")
             return (
                 jsonify({"error": "Nejprve nahrajte CSV a vyberte sloupec s emaily."}),
                 400,
             )
 
-        # Signalizace starému vláknu, aby se ukončilo, pokud ještě běží
+        # Signal old thread to stop if still running
         if bulk_verification_thread and bulk_verification_thread.is_alive():
             app_logger.warning(
                 "API /start_verification: Old verification thread is still active. Signaling it to stop."
             )
-            current_verification_state[
-                "stop_requested"
-            ] = True  # Nastavení příznaku pro zastavení
-            # Krátká pauza, aby staré vlákno mohlo zareagovat
+            current_verification_state["stop_requested"] = True
+            # Brief pause to let old thread react (join would block UI)
             time.sleep(0.5)
-            # Poznámka: Ideálně by se mělo počkat na ukončení vlákna (join), ale to by mohlo blokovat UI.
-            # Alternativou je, že vlákno samo kontroluje run_id a ukončí se, pokud je ID jiné.
 
-        # Generování nového ID běhu a resetování relevantních částí stavu
-        new_run_id_val = int(
-            time.time() * 1000
-        )  # ID na základě timestampu v milisekundách
+        # Generate new run ID and reset relevant state
+        new_run_id_val = int(time.time() * 1000)
         current_verification_state.update(
             {
-                "status": "verifying",  # Nový stav: verifikace probíhá
-                "error_message": None,  # Reset chybové zprávy
-                "processed_emails": 0,  # Reset počítadel
+                "status": "verifying",
+                "error_message": None,
+                "processed_emails": 0,
                 "valid_emails": 0,
                 "invalid_emails": 0,
                 "probable_emails": 0,
                 "unknown_emails": 0,
-                "results": {},  # Reset výsledků
-                "verification_log": [  # Inicializace logu pro nový běh
+                "results": {},
+                "verification_log": [
                     {
                         "timestamp": datetime.now().isoformat(),
                         "status": "info",
@@ -1380,69 +1066,57 @@ def start_verification_route():
                         "details": f"Běh ID: {new_run_id_val}",
                     }
                 ],
-                "start_time": datetime.now().isoformat(),  # Čas spuštění
+                "start_time": datetime.now().isoformat(),
                 "last_activity_time": time.time(),
-                "result_filepath": None,  # Reset cesty k výsledkům (nový soubor pro nový běh)
-                "accept_all_domains_summary": {},  # Reset souhrnu catch-all
-                "stop_requested": False,  # Reset příznaku zastavení pro nový běh
-                "verification_run_id": new_run_id_val,  # Nastavení nového ID běhu
-                "is_thread_active": False,  # Vlákno ještě není aktivní (bude nastaveno ve vlákně)
+                "result_filepath": None,
+                "accept_all_domains_summary": {},
+                "stop_requested": False,
+                "verification_run_id": new_run_id_val,
+                "is_thread_active": False,
             }
         )
 
-        # Výpočet celkového počtu dávek
+        # Calculate total batches (ceiling division)
         app_batch_size_for_ui_calc = current_verification_state.get(
             "app_batch_size_for_ui", 20
-        )  # Použití hodnoty ze stavu
+        )
         total_emails_count = current_verification_state["total_emails"]
         current_verification_state["total_batches"] = (
-            (total_emails_count + app_batch_size_for_ui_calc - 1)  # Zaokrouhlení nahoru
+            (total_emails_count + app_batch_size_for_ui_calc - 1)
             // app_batch_size_for_ui_calc
-            if total_emails_count > 0  # Ošetření dělení nulou
+            if total_emails_count > 0
             else 0
         )
 
         app_logger.info(
             f"API /start_verification: Starting new verification run with ID: {new_run_id_val}."
         )
-        # Vytvoření a spuštění nového vlákna pro hromadnou verifikaci
         bulk_verification_thread = threading.Thread(
-            target=run_bulk_verification_in_thread,  # Cílová funkce vlákna
-            name=f"BulkVerifyThread-{new_run_id_val}",  # Název vlákna pro snazší identifikaci v logu
+            target=run_bulk_verification_in_thread,
+            name=f"BulkVerifyThread-{new_run_id_val}",
         )
-        bulk_verification_thread.daemon = (
-            True  # Nastavení vlákna jako daemon (ukončí se s hlavním programem)
-        )
-        bulk_verification_thread.start()  # Spuštění vlákna
+        bulk_verification_thread.daemon = True
+        bulk_verification_thread.start()
     return jsonify(
         {
             "status": "verifying",
             "message": "Verifikace byla spuštěna.",
-            "run_id": new_run_id_val,  # Vrácení ID běhu klientovi
+            "run_id": new_run_id_val,
         }
     )
 
 
 def add_verification_log(status: str, action: str, details: str = None):
-    """
-    Přidává záznam do logu verifikace (pro UI).
-
-    Args:
-        status (str): Status záznamu (success, error, warning, info)
-        action (str): Popis akce
-        details (str, optional): Detailní informace o akci
-    """
+    """Adds entry to verification log for UI display."""
     with verification_lock:
         log_entry = {
-            "timestamp": datetime.now().strftime(
-                "%Y-%m-%d %H:%M:%S"
-            ),  # Formátované časové razítko
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "status": status,
             "action": action,
             "details": details,
         }
         current_verification_state["verification_log"].append(log_entry)
-        # Omezení délky logu (např. posledních 1000 záznamů)
+        # Keep log size manageable (keep last 1000 entries)
         if len(current_verification_state["verification_log"]) > 1000:
             current_verification_state["verification_log"] = current_verification_state[
                 "verification_log"
@@ -1450,46 +1124,31 @@ def add_verification_log(status: str, action: str, details: str = None):
 
 
 def cleanup_old_files(clear_current_state_files_only: bool = False):
-    """
-    Čistí staré soubory z upload a results složek.
-
-    Args:
-        clear_current_state_files_only (bool): Pokud True, smaže pouze soubory,
-            které nejsou součástí aktuálního stavu verifikace.
-            Pokud False, smaže všechny soubory ve složkách.
-    """
+    """Cleans old files from uploads and results folders."""
     try:
         with verification_lock:
-            current_files = set()  # Sada souborů, které jsou aktuálně používány
-            if current_verification_state.get(
-                "uploaded_filepath"
-            ):  # Získání s .get pro bezpečnost
+            current_files = set()
+            if current_verification_state.get("uploaded_filepath"):
                 current_files.add(Path(current_verification_state["uploaded_filepath"]))
             if current_verification_state.get("result_filepath"):
                 current_files.add(Path(current_verification_state["result_filepath"]))
 
-            # Čištění složky uploads
             uploads_dir = Path(app.config["UPLOAD_FOLDER"])
-            for file_path in uploads_dir.glob(
-                "*"
-            ):  # Iterace přes všechny soubory ve složce
-                if (
-                    clear_current_state_files_only
-                ):  # Pokud se mají mazat jen nepoužívané
+            for file_path in uploads_dir.glob("*"):
+                if clear_current_state_files_only:
                     if file_path not in current_files:
                         try:
-                            file_path.unlink()  # Smazání souboru
+                            file_path.unlink()
                             app_logger.info(f"Deleted old upload file: {file_path}")
                         except Exception as e:
                             app_logger.error(f"Error deleting file {file_path}: {e}")
-                else:  # Pokud se mají mazat všechny soubory
+                else:
                     try:
                         file_path.unlink()
                         app_logger.info(f"Deleted upload file: {file_path}")
                     except Exception as e:
                         app_logger.error(f"Error deleting file {file_path}: {e}")
 
-            # Čištění složky results (stejná logika)
             results_dir = Path(app.config["RESULTS_FOLDER"])
             for file_path in results_dir.glob("*"):
                 if clear_current_state_files_only:
@@ -1512,28 +1171,10 @@ def cleanup_old_files(clear_current_state_files_only: bool = False):
 
 @app.route("/cleanup", methods=["POST"])
 def cleanup_route():
-    """
-    Route pro vyčištění starých souborů a reset stavu.
-
-    Provede následující kroky:
-    1. Smazání všech souborů z uploads složky
-    2. Smazání všech souborů z results složky
-    3. Reset stavu verifikace
-
-    Returns:
-        tuple: (JSON response, HTTP status code)
-            - Při úspěchu: JSON obsahující:
-                - status: "success"
-                - message: "Cleanup completed"
-            - Při chybě: chybovou zprávu a status 500
-
-    Možné chyby:
-        - Chyba při mazání souborů
-        - Chyba při resetu stavu
-    """
+    """Cleans old files and resets verification state."""
     try:
-        cleanup_old_files(clear_current_state_files_only=False)  # Smazání všech souborů
-        reset_verification_state()  # Resetování globálního stavu
+        cleanup_old_files(clear_current_state_files_only=False)
+        reset_verification_state()
         return jsonify({"status": "success", "message": "Cleanup completed"})
     except Exception as e:
         app_logger.error(f"Error during cleanup: {e}", exc_info=True)
@@ -1542,44 +1183,13 @@ def cleanup_route():
 
 @app.route("/status", methods=["GET"])
 def status_route():
-    """
-    Route pro získání aktuálního stavu verifikace.
-
-    Vrací detailní informace o průběhu verifikace včetně:
-    - Aktuálního stavu
-    - Statistik zpracování
-    - Posledních záznamů z logu
-    - Časových údajů
-    - Informací o výsledcích
-
-    Returns:
-        tuple: (JSON response, HTTP status code)
-            - Při úspěchu: JSON obsahující:
-                - status: aktuální stav verifikace
-                - error_message: popis chyby (pokud nastala)
-                - total_emails: celkový počet emailů
-                - processed_emails: počet zpracovaných emailů
-                - valid_emails: počet validních emailů
-                - invalid_emails: počet nevalidních emailů
-                - probable_emails: počet pravděpodobně validních emailů
-                - unknown_emails: počet emailů s neznámým stavem
-                - current_batch: číslo aktuální dávky
-                - total_batches: celkový počet dávek
-                - start_time: čas začátku verifikace
-                - last_activity_time: čas poslední aktivity
-                - result_filepath: cesta k souboru s výsledky
-                - has_results: příznak existence výsledků
-                - verification_log_batch: poslední záznamy z logu
-            - Při chybě: chybovou zprávu a status 500
-    """
+    """Returns current verification status and statistics."""
     try:
-        with verification_lock:  # Zámek pro bezpečné čtení stavu
-            # Získání dávky logů pro UI (např. poslední N záznamů dle velikosti dávky pro UI)
+        with verification_lock:
             log_batch = current_verification_state["verification_log"][
                 -current_verification_state.get("app_batch_size_for_ui", 20) :
             ]
 
-            # Sestavení JSON odpovědi s relevantními informacemi ze stavu
             return jsonify(
                 {
                     "status": current_verification_state["status"],
@@ -1599,8 +1209,8 @@ def status_route():
                     "result_filepath": current_verification_state["result_filepath"],
                     "has_results": bool(
                         current_verification_state["result_filepath"]
-                    ),  # True, pokud existuje cesta k výsledkům
-                    "verification_log_batch": log_batch,  # Dávka logů pro UI
+                    ),
+                    "verification_log_batch": log_batch,
                 }
             )
     except Exception as e:
@@ -1610,41 +1220,13 @@ def status_route():
 
 @app.route("/stop_verification", methods=["POST"])
 def stop_verification_route():
-    """
-    Route pro zastavení probíhající verifikace.
-
-    Provede následující kroky:
-    1. Kontrola aktuálního stavu verifikace
-    2. Nastavení příznaku pro zastavení
-    3. Počkání na dokončení aktuální dávky (vlákno samo kontroluje příznak)
-    4. Uložení dosavadních výsledků
-    5. Aktualizace stavu verifikace
-
-    Returns:
-        tuple: (JSON response, HTTP status code)
-            - Při úspěchu: JSON obsahující:
-                - status: "stopped"
-                - message: "Verification process stopped"
-                - filepath: cesta k souboru s výsledky
-                - has_results: příznak existence výsledků
-            - Při chybě: chybovou zprávu a status 500
-
-    Možné chyby:
-        - Verifikace neběží
-        - Chyba při ukládání výsledků
-    """
+    """Stops running verification process. Saves partial results."""
     try:
         with verification_lock:
             final_status = current_verification_state.get("status", "idle")
-            run_id_at_stop = current_verification_state.get(
-                "verification_run_id"
-            )  # ID běhu v momentě požadavku na stop
+            run_id_at_stop = current_verification_state.get("verification_run_id")
 
-            # Pokud verifikace neběží nebo není ve stavu, kdy ji lze zastavit
-            if final_status not in [
-                "verifying",
-                "running",
-            ]:  # 'running' je alias pro 'verifying'
+            if final_status not in ["verifying", "running"]:
                 return jsonify(
                     {
                         "status": final_status,
@@ -1655,48 +1237,36 @@ def stop_verification_route():
                     }
                 )
 
-            # Nastavení příznaků pro zastavení
             current_verification_state["stop_requested"] = True
-            current_verification_state[
-                "status"
-            ] = "stopping"  # Přechodný stav "zastavování"
+            current_verification_state["status"] = "stopping"
             add_verification_log(
                 "info",
                 "Požadavek na zastavení",
                 "Verifikace bude zastavena po dokončení aktuální dávky.",
             )
 
-        # Počkání na vlákno, aby se ukončilo (s timeoutem)
-        # Vlákno by mělo samo detekovat 'stop_requested' nebo změnu 'run_id'
+        # Wait for thread to finish (with timeout)
         if bulk_verification_thread and bulk_verification_thread.is_alive():
-            bulk_verification_thread.join(timeout=5.0)  # Počká maximálně 5 sekund
+            bulk_verification_thread.join(timeout=5.0)
 
-        # Finální aktualizace stavu a uložení výsledků
         with verification_lock:
-            # Ujistíme se, že operujeme na stejném běhu, který byl zastavován
+            # Ensure we're operating on the same run that was being stopped
             if current_verification_state.get("verification_run_id") == run_id_at_stop:
-                save_verification_results(
-                    run_id_at_stop, is_final_save=True
-                )  # Uložení finálních (nebo částečných) výsledků
-                current_verification_state[
-                    "status"
-                ] = "stopped"  # Konečný stav "zastaveno"
+                save_verification_results(run_id_at_stop, is_final_save=True)
+                current_verification_state["status"] = "stopped"
                 add_verification_log(
                     "info",
                     "Verifikace zastavena",
                     "Proces verifikace byl úspěšně zastaven.",
                 )
             else:
-                # Pokud se mezitím spustil nový běh, tento starý je již irelevantní
                 app_logger.info(
                     f"Stop request for run {run_id_at_stop} processed, but a new run is active."
                 )
 
             return jsonify(
                 {
-                    "status": current_verification_state.get(
-                        "status", "stopped"
-                    ),  # Vrácení aktuálního stavu
+                    "status": current_verification_state.get("status", "stopped"),
                     "message": "Verification process stopped",
                     "filepath": current_verification_state.get("result_filepath"),
                     "has_results": bool(
@@ -1714,7 +1284,7 @@ def stop_verification_route():
                     "message": f"Error stopping verification: {str(e)}",
                     "has_results": bool(
                         current_verification_state.get("result_filepath")
-                    ),  # .get pro bezpečnost
+                    ),
                 }
             ),
             500,
@@ -1723,64 +1293,34 @@ def stop_verification_route():
 
 @app.route("/download_results", methods=["GET"])
 def download_results_route():
-    """
-    Route pro stažení výsledků verifikace.
-
-    Provede následující kroky:
-    1. Kontrola existence souboru s výsledky
-    2. Kontrola bezpečnosti cesty k souboru
-    3. Odeslání souboru pro stažení
-
-    Returns:
-        tuple: (File response, HTTP status code)
-            - Při úspěchu: CSV soubor pro stažení
-            - Při chybě: chybovou zprávu a status 404/403/500
-
-    Možné chyby:
-        - Soubor s výsledky neexistuje
-        - Neplatná cesta k souboru
-        - Soubor není v povolené složce
-    """
+    """Downloads verification results CSV file. Includes security check to ensure file is in allowed directory."""
     try:
         with verification_lock:
-            # Kontrola, zda existuje cesta k souboru s výsledky
-            if not current_verification_state.get(
-                "result_filepath"
-            ):  # .get pro bezpečnost
+            if not current_verification_state.get("result_filepath"):
                 return jsonify({"error": "No results file available"}), 404
 
             result_path = Path(current_verification_state["result_filepath"])
-            if not result_path.exists():  # Kontrola, zda soubor fyzicky existuje
+            if not result_path.exists():
                 return jsonify({"error": "Results file not found"}), 404
 
-            # Bezpečnostní kontrola: zajistí, že soubor je ve složce RESULTS_FOLDER
-            results_folder = Path(
-                app.config["RESULTS_FOLDER"]
-            ).resolve()  # Absolutní cesta k povolené složce
-            result_path_resolved = (
-                result_path.resolve()
-            )  # Absolutní cesta k požadovanému souboru
+            # Security check: ensure file is in RESULTS_FOLDER directory
+            results_folder = Path(app.config["RESULTS_FOLDER"]).resolve()
+            result_path_resolved = result_path.resolve()
 
-            # Zkontroluje, zda cesta k souboru začíná cestou k povolené složce
             if not str(result_path_resolved).startswith(str(results_folder)):
                 app_logger.error(
                     f"Security check failed: {result_path_resolved} is not in {results_folder}"
                 )
-                return (
-                    jsonify({"error": "Invalid file path"}),
-                    403,
-                )  # Chyba 403 Forbidden
+                return jsonify({"error": "Invalid file path"}), 403
 
-            # Získání názvu souboru z cesty
             filename = result_path.name
 
             app_logger.info(f"Sending file for download: {result_path}")
-            # Odeslání souboru klientovi
             return send_file(
                 result_path,
-                mimetype="text/csv",  # MIME typ pro CSV
-                as_attachment=True,  # Soubor se má stáhnout, ne zobrazit v prohlížeči
-                download_name=filename,  # Název souboru pro stažení
+                mimetype="text/csv",
+                as_attachment=True,
+                download_name=filename,
             )
 
     except Exception as e:
@@ -1789,30 +1329,23 @@ def download_results_route():
 
 
 if __name__ == "__main__":
-    # Načtení konfigurace hosta a portu z proměnných prostředí nebo výchozích hodnot
-    host_val = os.environ.get(
-        "FLASK_RUN_HOST", "0.0.0.0"
-    )  # Výchozí host 0.0.0.0 (poslouchá na všech rozhraních)
-    port_val = int(os.environ.get("FLASK_RUN_PORT", 5001))  # Výchozí port 5001
-    is_debug_mode = (
-        os.environ.get("FLASK_DEBUG", "1") == "1"
-    )  # Povolení debug módu (výchozí je zapnuto)
+    host_val = os.environ.get("FLASK_RUN_HOST", "0.0.0.0")
+    port_val = int(os.environ.get("FLASK_RUN_PORT", 5001))
+    is_debug_mode = os.environ.get("FLASK_DEBUG", "1") == "1"
     app_logger.info(
         f"Starting Flask app on {host_val}:{port_val} with debug_mode={is_debug_mode}"
     )
 
-    # Registrace funkce pro úklid při ukončení aplikace
     import atexit
 
-    # Lambda funkce, která zavolá cleanup_old_files s parametrem, aby se mazaly jen nepoužívané soubory
-    # Pokud by se měly mazat všechny, parametr by byl False.
+    # Clean up unused files on exit (not files in current state)
     atexit.register(lambda: cleanup_old_files(clear_current_state_files_only=True))
 
-    # Spuštění Flask aplikace
     app.run(
-        debug=is_debug_mode,  # Povolení debug módu
+        debug=is_debug_mode,
         host=host_val,
         port=port_val,
-        threaded=True,  # Povolení více vláken pro zpracování požadavků (důležité pro asyncio a vlákna na pozadí)
-        use_reloader=is_debug_mode,  # Povolení automatického restartu při změnách kódu (pouze v debug módu)
+        # Threaded mode required for asyncio and background threads
+        threaded=True,
+        use_reloader=is_debug_mode,
     )

@@ -2,28 +2,11 @@
 
 
 class EmailVerifierException(Exception):
-    """
-    Základní třída výjimky pro všechny specifické chyby v EmailVerifieru.
-
-    Attributes:
-        message (str): Popisná zpráva o chybě.
-        status_code (str, optional): Interní stavový kód chyby pro snadnější identifikaci.
-                                     Výchozí je None.
-        verification_steps (list, optional): Seznam kroků verifikace, které vedly k této chybě.
-                                            Výchozí je prázdný seznam.
-    """
+    """Base exception class for all EmailVerifier-specific errors."""
 
     def __init__(
         self, message: str, status_code: str = None, verification_steps: list = None
     ):
-        """
-        Inicializuje EmailVerifierException.
-
-        Args:
-            message (str): Zpráva o chybě.
-            status_code (str, optional): Interní stavový kód chyby.
-            verification_steps (list, optional): Seznam kroků verifikace.
-        """
         super().__init__(message)
         self.message = message
         self.status_code = status_code
@@ -33,82 +16,54 @@ class EmailVerifierException(Exception):
 
 
 class VerificationError(EmailVerifierException):
-    """
-    Obecná chyba, která nastala během procesu verifikace emailu.
-    Indikuje, že email nemohl být úspěšně ověřen z nějakého důvodu,
-    který není specifikován detailnějšími typy výjimek.
-    """
+    """Generic error during email verification process."""
 
     pass
 
 
 class TimeoutException(EmailVerifierException):
-    """
-    Výjimka signalizující vypršení časového limitu (timeout) během operace.
-    Například při čekání na odpověď od DNS nebo SMTP serveru.
-    """
+    """Timeout occurred during operation (e.g., waiting for DNS or SMTP response)."""
 
     pass
 
 
 class NoConnectionException(EmailVerifierException):
-    """
-    Výjimka signalizující nemožnost navázat spojení s cílovým serverem.
-    Může nastat, pokud server není dostupný nebo odmítá spojení.
-    """
+    """Unable to establish connection to target server."""
 
     pass
 
 
 class UnexpectedResponseException(EmailVerifierException):
-    """
-    Výjimka signalizující, že odpověď od serveru byla neočekávaná
-    nebo nemohla být správně interpretována.
-    """
+    """Server response was unexpected or could not be interpreted."""
 
     pass
 
 
 class RateLimitException(EmailVerifierException):
-    """
-    Výjimka signalizující, že byl překročen povolený počet požadavků
-    (rate limit) na cílový server nebo službu.
-    """
+    """Rate limit exceeded on target server or service."""
 
     pass
 
 
 class DNSError(EmailVerifierException):
-    """
-    Výjimka signalizující problém související s DNS dotazy.
-    Například nenalezení MX záznamů nebo jiné chyby při DNS překladu.
-    """
+    """DNS-related error (e.g., MX records not found)."""
 
     pass
 
 
 class SyntaxError(EmailVerifierException):
-    """
-    Výjimka signalizující, že formát emailové adresy je neplatný
-    (nevyhovuje syntaktickým pravidlům).
-    """
+    """Email address format is invalid (does not meet syntax rules)."""
 
     pass
 
 
 class DisposableDomainError(EmailVerifierException):
-    """
-    Výjimka signalizující, že doména emailové adresy je rozpoznána
-    jako jednorázová (disposable) doména.
-    """
+    """Email domain is recognized as disposable."""
 
     pass
 
 
 class ConfigurationError(EmailVerifierException):
-    """
-    Výjimka signalizující problém v konfiguraci EmailVerifieru
-    nebo jeho závislostí.
-    """
+    """Configuration error in EmailVerifier or its dependencies."""
 
     pass

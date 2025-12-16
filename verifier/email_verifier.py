@@ -12,17 +12,15 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-import aiodns  # Asynchronní DNS resolver
-import aiosmtplib  # Asynchronní SMTP klient
+import aiodns
+import aiosmtplib
 from email_validator import (
     EmailNotValidError,
     validate_email,
-)  # Pro validaci syntaxe emailu
-from dns.resolver import (
-    Resolver,
-)  # Synchronní DNS resolver (použit pro konfiguraci asynchronního)
+)
+from dns.resolver import Resolver
 
-from .exceptions import (  # Import vlastních výjimek
+from .exceptions import (
     EmailVerifierException,
     TimeoutException,
     NoConnectionException,
@@ -34,32 +32,27 @@ from .exceptions import (  # Import vlastních výjimek
     ConfigurationError,
 )
 
-# Výchozí cesta ke konfiguračnímu souboru verifikátoru
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "default_verifier_config.json"
-# SMTP kódy označující úspěch
 SMTP_CODES_SUCCESS = (250, 251, 252)
-# SMTP kódy označující dočasné selhání
 SMTP_CODES_TEMP_FAIL = (421, 450, 451, 452)
-# SMTP kódy označující trvalé selhání
 SMTP_CODES_PERM_FAIL = (500, 501, 502, 503, 504, 550, 551, 552, 553, 554)
 
-# Sada kódů SMTP chyb, které jsou považovány za dočasné
+# SMTP error codes that indicate temporary failures (retryable)
 TEMPORARY_ERROR_CODES = {
-    421,  # Služba není dostupná, zavřete přenosový kanál
-    450,  # Požadovaná akce nebyla provedena: schránka nedostupná (např. plná)
-    451,  # Požadovaná akce přerušena: chyba v zpracování
-    452,  # Požadovaná akce nebyla provedena: nedostatek místa v systému
-    454,  # Dočasné selhání autentizace
-    458,  # Nelze se připojit k serveru kvůli omezení rychlosti
-    459,  # Server příliš zaneprázdněn
-    471,  # Lokální chyba zpracování na straně serveru, zkuste to později
-    472,  # Dočasná chyba serveru
-    552,  # Požadovaná akce přerušena: překročení alokace úložiště (často dočasné)
-    553,  # Požadovaná akce nebyla provedena: název schránky není povolen (někdy dočasné kvůli politice)
-    554,  # Transakce selhala (často obsahuje zprávu o reputaci nebo blokování)
+    421,
+    450,
+    451,
+    452,
+    454,
+    458,
+    459,
+    471,
+    472,
+    552,
+    553,
+    554,
 }
 
-# Sada známých domén freemailových služeb
 KNOWN_FREEMAIL_DOMAINS = {
     "gmail.com",
     "googlemail.com",
@@ -84,10 +77,8 @@ KNOWN_FREEMAIL_DOMAINS = {
     "me.com",
     "mac.com",
 }
-# Porty používané pro testování catch-all domén
 CATCHALL_TEST_PORTS = [25, 587]
 
-# Domény patřící společnosti Microsoft
 MICROSOFT_DOMAINS = {
     "outlook.com",
     "hotmail.com",
@@ -97,17 +88,15 @@ MICROSOFT_DOMAINS = {
     "microsoft.com",
 }
 
-# Vzory MX záznamů používané servery Microsoftu
 MICROSOFT_MX_PATTERNS = [
     "*.mail.protection.outlook.com",
     "*.outlook.com",
     "*.hotmail.com",
 ]
 
-# Domény citlivé na reputaci odesílatele (zejména české)
+# Czech email providers that are sensitive to sender reputation
 REPUTATION_SENSITIVE_DOMAINS = {"centrum.cz", "post.cz", "seznam.cz", "email.cz"}
 
-# Vzory v chybových zprávách SMTP, které indikují problémy s reputací
 REPUTATION_ERROR_PATTERNS = [
     "poor reputation",
     "reputation",
@@ -119,42 +108,30 @@ REPUTATION_ERROR_PATTERNS = [
 
 
 class EmailVerifier:
-    """
-    Třída pro ověřování emailových adres pomocí SMTP a DNS dotazů.
-    """
+    """Verifies email addresses using SMTP and DNS queries."""
 
     def __init__(
         self,
-        timeout: int = 15,  # Celkový časový limit pro ověření jednoho emailu v sekundách
-        smtp_timeout: int = 10,  # Časový limit pro SMTP operace v sekundách
-        dns_timeout: int = 5,  # Časový limit pro DNS dotazy v sekundách
-        catchall_test_enabled: bool = True,  # Povolit testování catch-all domén
-        check_disposable_enabled: bool = True,  # Povolit kontrolu domén na jedno použití
-        connect_port: int = 25,  # Výchozí port pro SMTP připojení
-        rate_limit_delay_base: float = 2.0,  # Základní prodleva pro rate limiting (nepoužívá se přímo, spíše pro retry)
-        max_concurrent_domains: int = 5,  # Maximální počet souběžných ověřování pro různé domény
-        helo_hostname: Optional[
-            str
-        ] = None,  # Hostname použitý v SMTP HELO/EHLO příkazu
-        retry_attempts: int = 2,  # Počet pokusů o opakování při dočasných chybách
-        retry_delay_base: float = 5.0,  # Základní prodleva pro opakování v sekundách (exponenciálně roste)
-        disposable_domains_file: str = "data/disposable_domains.txt",  # Cesta k souboru se seznamem domén na jedno použití
-        logger: Optional[logging.Logger] = None,  # Instance loggeru pro záznam událostí
-        dns_servers: Optional[List[str]] = None,  # Seznam DNS serverů k použití
-        sender_email_override: Optional[
-            str
-        ] = None,  # Přepsání emailu odesílatele pro všechny domény
-        default_sender_email_config: Optional[
-            str
-        ] = None,  # Výchozí email odesílatele, pokud není specifikován jinak
-        sender_emails_by_domain_config: Optional[
-            Dict[str, str]
-        ] = None,  # Konfigurace emailů odesílatele pro specifické domény
+        timeout: int = 15,
+        smtp_timeout: int = 10,
+        dns_timeout: int = 5,
+        catchall_test_enabled: bool = True,
+        check_disposable_enabled: bool = True,
+        connect_port: int = 25,
+        rate_limit_delay_base: float = 2.0,
+        max_concurrent_domains: int = 5,
+        helo_hostname: Optional[str] = None,
+        retry_attempts: int = 2,
+        retry_delay_base: float = 5.0,
+        disposable_domains_file: str = "data/disposable_domains.txt",
+        logger: Optional[logging.Logger] = None,
+        dns_servers: Optional[List[str]] = None,
+        sender_email_override: Optional[str] = None,
+        default_sender_email_config: Optional[str] = None,
+        sender_emails_by_domain_config: Optional[Dict[str, str]] = None,
     ):
-        self.logger = logger or self._setup_default_logger()  # Nastavení loggeru
-        self.internal_config = (
-            self._load_default_config_from_file()
-        )  # Načtení výchozí konfigurace ze souboru
+        self.logger = logger or self._setup_default_logger()
+        self.internal_config = self._load_default_config_from_file()
 
         self.timeout = timeout
         self.smtp_timeout = smtp_timeout
@@ -162,19 +139,21 @@ class EmailVerifier:
         self.catchall_test_enabled = catchall_test_enabled
         self.check_disposable_enabled = check_disposable_enabled
         self.default_connect_port = connect_port
-        self.rate_limit_delay_base = rate_limit_delay_base  # Tato proměnná se aktuálně nepoužívá pro aktivní rate limiting, ale spíše pro retry_delay
+        self.rate_limit_delay_base = rate_limit_delay_base
+        # Semaphore limits concurrent connections to different domains to avoid overwhelming servers
         self.max_concurrent_domains_semaphore = asyncio.Semaphore(
             max_concurrent_domains
-        )  # Semafór pro omezení souběžných připojení k různým doménám
-        self.helo_hostname = (  # Určení hostname pro HELO/EHLO
+        )
+        # HELO hostname defaults to machine FQDN if not specified
+        self.helo_hostname = (
             helo_hostname
             or self.internal_config.get("helo_hostname")
-            or socket.getfqdn()  # Pokud není zadáno, použije se FQDN aktuálního stroje
+            or socket.getfqdn()
         )
         self.retry_attempts = retry_attempts
         self.retry_delay_base = retry_delay_base
         self.sender_email_override = sender_email_override
-        self.default_sender_email = (  # Určení výchozího emailu odesílatele
+        self.default_sender_email = (
             default_sender_email_config
             or self.internal_config.get(
                 "default_sender_email", f"verifier@{self.helo_hostname}"
@@ -182,89 +161,62 @@ class EmailVerifier:
         )
         self.sender_emails_by_domain = (
             sender_emails_by_domain_config
-            or self.internal_config.get(  # Načtení emailů odesílatele specifických pro domény
-                "sender_emails_by_domain", {}
-            )
+            or self.internal_config.get("sender_emails_by_domain", {})
         )
 
-        _dns_servers_to_use = dns_servers or self.internal_config.get(
-            "dns_servers"
-        )  # Určení DNS serverů
-        self.dns_resolver = (
-            Resolver()
-        )  # Instance synchronního resolveru (používá se pro nastavení asynchronního)
+        _dns_servers_to_use = dns_servers or self.internal_config.get("dns_servers")
+        # Sync resolver used only for configuring async resolver
+        self.dns_resolver = Resolver()
         if _dns_servers_to_use:
             self.dns_resolver.nameservers = _dns_servers_to_use
 
-        self.async_dns_resolver = (
-            aiodns.DNSResolver(  # Instance asynchronního DNS resolveru
-                timeout=self.dns_timeout,
-                tries=self.internal_config.get(
-                    "dns_resolver_tries", 2
-                ),  # Počet pokusů DNS dotazu
-                servers=_dns_servers_to_use,  # Použije nakonfigurované DNS servery
-            )
+        self.async_dns_resolver = aiodns.DNSResolver(
+            timeout=self.dns_timeout,
+            tries=self.internal_config.get("dns_resolver_tries", 2),
+            servers=_dns_servers_to_use,
         )
 
-        self.disposable_domains_file_path = Path(
-            disposable_domains_file
-        )  # Cesta k souboru s jednorázovými doménami
-        self._ensure_data_dirs_exist()  # Zajistí existenci adresáře pro data
-        self.disposable_domains: Set[
-            str
-        ] = self._load_disposable_domains()  # Načtení seznamu jednorázových domén
+        self.disposable_domains_file_path = Path(disposable_domains_file)
+        self._ensure_data_dirs_exist()
+        self.disposable_domains: Set[str] = self._load_disposable_domains()
 
-        self.verification_steps: List[
-            Dict[str, Any]
-        ] = []  # Seznam kroků provedených během ověření jednoho emailu
-        self.is_catchall_domain_cache: Dict[
-            str, Optional[bool]
-        ] = {}  # Cache pro výsledky testu catch-all domén
-        self.mx_records_cache: Dict[
-            str, List[Tuple[int, str]]
-        ] = {}  # Cache pro MX záznamy
-        self.mx_cache_lock = (
-            asyncio.Lock()
-        )  # Zámek pro synchronizaci přístupu k MX cache
+        self.verification_steps: List[Dict[str, Any]] = []
+        self.is_catchall_domain_cache: Dict[str, Optional[bool]] = {}
+        self.mx_records_cache: Dict[str, List[Tuple[int, str]]] = {}
+        # Lock protects MX cache from concurrent access
+        self.mx_cache_lock = asyncio.Lock()
 
         self.logger.info(
             f"EmailVerifier init. HELO: {self.helo_hostname}, Catch-all: {self.catchall_test_enabled}, Disposable check: {self.check_disposable_enabled}"
         )
 
     def _setup_default_logger(self) -> logging.Logger:
-        """
-        Nastaví a vrátí výchozí instanci loggeru, pokud nebyla poskytnuta.
-        """
+        """Creates and returns default logger instance if none provided."""
         logger = logging.getLogger("EmailVerifierDefault")
-        if not logger.handlers:  # Pokud logger ještě nemá handlery
-            logger.setLevel(logging.INFO)  # Nastaví úroveň logování na INFO
-            ch = logging.StreamHandler()  # Vytvoří handler pro výstup do konzole
+        if not logger.handlers:
+            logger.setLevel(logging.INFO)
+            ch = logging.StreamHandler()
             ch.setLevel(logging.INFO)
-            formatter = logging.Formatter(  # Definuje formát logovacích zpráv
+            formatter = logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
             ch.setFormatter(formatter)
-            logger.addHandler(ch)  # Přidá handler k loggeru
+            logger.addHandler(ch)
         return logger
 
     def _load_default_config_from_file(self) -> Dict[str, Any]:
-        """
-        Načte výchozí konfiguraci ze souboru JSON.
-        """
-        if DEFAULT_CONFIG_PATH.exists():  # Pokud konfigurační soubor existuje
+        """Loads default configuration from JSON file."""
+        if DEFAULT_CONFIG_PATH.exists():
             try:
                 with open(DEFAULT_CONFIG_PATH, "r", encoding="utf-8") as f:
-                    return json.load(f)  # Načte JSON data
+                    return json.load(f)
             except Exception as e:
                 self.logger.error(f"Error parsing/loading {DEFAULT_CONFIG_PATH}: {e}")
-        return {}  # Vrátí prázdný slovník, pokud soubor neexistuje nebo dojde k chybě
+        return {}
 
     def _ensure_data_dirs_exist(self):
-        """
-        Zajistí, že adresář pro datové soubory (např. disposable_domains.txt) existuje.
-        """
+        """Ensures data directory exists for files like disposable_domains.txt."""
         try:
-            # Vytvoří nadřazený adresář souboru s jednorázovými doménami, pokud neexistuje
             self.disposable_domains_file_path.parent.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             self.logger.error(
@@ -272,21 +224,15 @@ class EmailVerifier:
             )
 
     def _load_disposable_domains(self) -> Set[str]:
-        """
-        Načte seznam domén na jedno použití ze souboru.
-        Vrací sadu domén (lowercase).
-        """
-        if (
-            not self.check_disposable_enabled
-        ):  # Pokud je kontrola vypnutá, vrátí prázdnou sadu
+        """Loads disposable domains from file. Returns lowercase set of domains."""
+        if not self.check_disposable_enabled:
             return set()
-        if self.disposable_domains_file_path.exists():  # Pokud soubor existuje
+        if self.disposable_domains_file_path.exists():
             try:
                 with open(
                     self.disposable_domains_file_path, "r", encoding="utf-8"
                 ) as f:
-                    # Načte řádky, odstraní bílé znaky, převede na malá písmena
-                    # Ignoruje prázdné řádky a řádky začínající '#' (komentáře)
+                    # Skip empty lines and comments (lines starting with #)
                     return {
                         line.strip().lower()
                         for line in f
@@ -300,58 +246,38 @@ class EmailVerifier:
             self.logger.warning(
                 f"Disposable domains file '{self.disposable_domains_file_path}' not found."
             )
-        return set()  # Vrátí prázdnou sadu, pokud soubor neexistuje nebo dojde k chybě
+        return set()
 
     def reset_internal_state_for_run(self):
-        """
-        Resetuje interní stav (cache) pro nové dávkové spuštění.
-        Používá se, pokud instance EmailVerifier běží dlouhodobě a zpracovává více dávek.
-        """
+        """Resets internal caches for new batch run. Used when instance processes multiple batches."""
         self.is_catchall_domain_cache = {}
         self.mx_records_cache = {}
 
     def _reset_steps_for_single_email(self):
-        """
-        Resetuje seznam kroků ověření pro nový email.
-        """
+        """Resets verification steps list for new email."""
         self.verification_steps = []
 
     def _add_verification_step(
         self, status: str, action: str, details: str = "", code: Optional[Any] = None
     ):
-        """
-        Přidá krok do záznamu o průběhu ověření.
-        :param status: Stav kroku (např. "info", "success", "error", "warning").
-        :param action: Popis prováděné akce (např. "DNS MX query", "SMTP Connect").
-        :param details: Další detaily o kroku.
-        :param code: Kód související s krokem (např. SMTP kód).
-        """
+        """Adds a step to verification trace for debugging and user feedback."""
         step = {
-            "timestamp": datetime.now().isoformat(),  # Časové razítko kroku
+            "timestamp": datetime.now().isoformat(),
             "status": status,
             "action": action,
             "details": details,
-            "code": str(code)
-            if code is not None
-            else None,  # Převede kód na string, pokud existuje
+            "code": str(code) if code is not None else None,
         }
         self.verification_steps.append(step)
-        self.logger.debug(  # Zapíše krok do logu (pokud je úroveň DEBUG)
+        self.logger.debug(
             f"Step: {action} - {details} (Status: {status}, Code: {code})"
         )
 
     async def _resolve_mx_records(self, domain: str) -> List[Tuple[int, str]]:
-        """
-        Získá a seřadí MX záznamy pro danou doménu.
-        Používá asynchronní DNS resolver a cache.
-        :param domain: Doména, pro kterou se hledají MX záznamy.
-        :return: Seřazený seznam MX záznamů (priorita, hostitel).
-        :raises DNSError: Pokud dojde k chybě DNS nebo nejsou nalezeny MX záznamy.
-        """
+        """Resolves and sorts MX records for domain. Uses async DNS resolver with caching."""
         self._add_verification_step("info", "DNS MX query", f"Getting MX for {domain}")
 
-        # Nejprve zkontroluje cache
-        async with self.mx_cache_lock:  # Zámek pro bezpečný přístup k cache
+        async with self.mx_cache_lock:
             if domain in self.mx_records_cache:
                 cached_records = self.mx_records_cache[domain]
                 self._add_verification_step(
@@ -360,7 +286,7 @@ class EmailVerifier:
                 return cached_records
 
         try:
-            # Vytvoří novou instanci DNS resolveru pro každý dotaz (doporučení aiodns pro stabilitu v asyncio)
+            # Create new resolver instance per query (aiodns recommendation for asyncio stability)
             resolver = aiodns.DNSResolver(
                 timeout=self.dns_timeout,
                 tries=self.internal_config.get("dns_resolver_tries", 2),
@@ -369,18 +295,14 @@ class EmailVerifier:
                 hasattr(self.async_dns_resolver, "nameservers")
                 and self.async_dns_resolver.nameservers
             ):
-                resolver.nameservers = (
-                    self.async_dns_resolver.nameservers
-                )  # Použije nakonfigurované nameservery
+                resolver.nameservers = self.async_dns_resolver.nameservers
 
-            mx_records = await resolver.query(
-                domain, "MX"
-            )  # Provede DNS dotaz na MX záznamy
-            # Seřadí MX záznamy podle priority a odstraní tečku na konci hostname
+            mx_records = await resolver.query(domain, "MX")
+            # Sort by priority and remove trailing dot from hostname
             sorted_mxs = sorted(
                 [(int(r.priority), str(r.host).rstrip(".")) for r in mx_records]
             )
-            if not sorted_mxs:  # Pokud nebyly nalezeny žádné MX záznamy
+            if not sorted_mxs:
                 msg = f"No MX records found for {domain}."
                 self._add_verification_step("error", "DNS MX query", msg)
                 raise DNSError(
@@ -389,7 +311,6 @@ class EmailVerifier:
                     verification_steps=self.verification_steps,
                 )
 
-            # Uloží výsledek do cache
             async with self.mx_cache_lock:
                 self.mx_records_cache[domain] = sorted_mxs
 
@@ -397,15 +318,15 @@ class EmailVerifier:
                 "success", "DNS MX query", f"Found MX: {sorted_mxs}"
             )
             return sorted_mxs
-        except aiodns.error.DNSError as e:  # Zachytí chyby DNS resolveru
+        except aiodns.error.DNSError as e:
             msg = f"DNS error (MX) for {domain}: {e.args[0]} (code: {e.args[1]})"
             self._add_verification_step("error", "DNS MX query", msg)
-            raise DNSError(  # Vyvolá vlastní výjimku DNSError
+            raise DNSError(
                 msg,
                 status_code=f"dns_error_code_{e.args[1]}",
                 verification_steps=self.verification_steps,
             ) from e
-        except Exception as e:  # Zachytí ostatní neočekávané chyby
+        except Exception as e:
             msg = f"Unexpected error during DNS MX query for {domain}: {str(e)}"
             self._add_verification_step("error", "DNS MX query", msg)
             raise DNSError(
@@ -415,12 +336,8 @@ class EmailVerifier:
             ) from e
 
     async def _resolve_host_ip_for_log(self, hostname: str) -> Optional[str]:
-        """
-        Pokusí se přeložit hostname na IP adresu (A nebo AAAA záznam) pro logovací účely.
-        Vrací první nalezenou IP adresu nebo None.
-        """
+        """Resolves hostname to IP (A or AAAA record) for logging purposes. Returns first found IP or None."""
         try:
-            # Vytvoří novou instanci DNS resolveru
             resolver = aiodns.DNSResolver(
                 timeout=self.dns_timeout,
                 tries=self.internal_config.get("dns_resolver_tries", 2),
@@ -430,13 +347,12 @@ class EmailVerifier:
                 and self.async_dns_resolver.nameservers
             ):
                 resolver.nameservers = self.async_dns_resolver.nameservers
-            records_a = await resolver.query(hostname, "A")  # Hledá A záznam (IPv4)
+            records_a = await resolver.query(hostname, "A")
             if records_a:
                 return str(records_a[0].host)
         except aiodns.error.DNSError:
-            pass  # Ignoruje chybu, pokud A záznam není nalezen
+            pass
         try:
-            # Vytvoří novou instanci DNS resolveru
             resolver = aiodns.DNSResolver(
                 timeout=self.dns_timeout,
                 tries=self.internal_config.get("dns_resolver_tries", 2),
@@ -446,31 +362,25 @@ class EmailVerifier:
                 and self.async_dns_resolver.nameservers
             ):
                 resolver.nameservers = self.async_dns_resolver.nameservers
-            records_aaaa = await resolver.query(
-                hostname, "AAAA"
-            )  # Hledá AAAA záznam (IPv6)
+            records_aaaa = await resolver.query(hostname, "AAAA")
             if records_aaaa:
                 return str(records_aaaa[0].host)
         except aiodns.error.DNSError:
-            pass  # Ignoruje chybu, pokud AAAA záznam není nalezen
+            pass
         return None
 
     def _is_disposable_domain(self, domain: str) -> bool:
-        """
-        Zkontroluje, zda je doména nebo její nadřazená doména v seznamu jednorázových domén.
-        :param domain: Doména ke kontrole.
-        :return: True, pokud je doména jednorázová, jinak False.
-        """
-        if not self.check_disposable_enabled:  # Pokud je kontrola vypnutá
+        """Checks if domain or its parent domain is in disposable domains list."""
+        if not self.check_disposable_enabled:
             return False
-        normalized_domain = domain.lower()  # Normalizuje doménu na malá písmena
-        if normalized_domain in self.disposable_domains:  # Přímá shoda
+        normalized_domain = domain.lower()
+        if normalized_domain in self.disposable_domains:
             self._add_verification_step(
                 "warning", "Domain check", f"Domain '{domain}' is disposable."
             )
             return True
         parts = normalized_domain.split(".")
-        # Zkontroluje, zda je dvoudílná nadřazená doména (např. sub.example.com -> example.com) jednorázová
+        # Check if parent domain (e.g., sub.example.com -> example.com) is disposable
         if len(parts) > 2 and ".".join(parts[-2:]) in self.disposable_domains:
             self._add_verification_step(
                 "warning", "Domain check", f"Parent domain of '{domain}' is disposable."
@@ -479,46 +389,33 @@ class EmailVerifier:
         return False
 
     def _is_reputation_error(self, code: int, message: str) -> bool:
-        """
-        Zkontroluje, zda SMTP chyba souvisí s reputací IP adresy.
-        :param code: SMTP kód.
-        :param message: SMTP chybová zpráva.
-        :return: True, pokud chyba souvisí s reputací, jinak False.
-        """
-        if code == 554:  # SMTP kód 554 často indikuje problémy s reputací
+        """Checks if SMTP error is related to sender IP reputation."""
+        if code == 554:
             return True
-        message_lower = message.lower()  # Převede zprávu na malá písmena pro porovnání
-        # Hledá klíčová slova související s reputací ve zprávě
+        message_lower = message.lower()
         return any(pattern in message_lower for pattern in REPUTATION_ERROR_PATTERNS)
 
     def _get_sender_email(self, recipient_domain: str) -> str:
-        """
-        Získá nejvhodnější email odesílatele pro danou doménu příjemce.
-        Upřednostňuje specifické odesílatele pro domény citlivé na reputaci.
-        :param recipient_domain: Doména příjemce emailu.
-        :return: Emailová adresa odesílatele.
-        """
-        if self.sender_email_override:  # Pokud je nastaven globální přepis odesílatele
+        """Selects best sender email for recipient domain. Prioritizes domain-specific senders for reputation-sensitive domains."""
+        if self.sender_email_override:
             return self.sender_email_override
 
-        # Pro domény citlivé na reputaci se pokusí použít odesílatele ze stejné domény nebo důvěryhodné domény
+        # For reputation-sensitive domains, try same-domain or trusted-domain senders first
         if recipient_domain in REPUTATION_SENSITIVE_DOMAINS:
-            # Nejprve se pokusí najít odesílatele ze stejné domény
             for domain_key, sender in self.sender_emails_by_domain.items():
                 if domain_key == recipient_domain:
                     return sender
 
-            # Pokud není nalezen odesílatel ze stejné domény, zkusí důvěryhodné domény
+            # Fallback to trusted domains if same-domain sender not found
             trusted_domains = ["gmail.com", "outlook.com", "yahoo.com"]
             for domain_key in trusted_domains:
                 if domain_key in self.sender_emails_by_domain:
                     return self.sender_emails_by_domain[domain_key]
 
-        # Použije odesílatele specifického pro doménu, pokud je definován
         if recipient_domain in self.sender_emails_by_domain:
             return self.sender_emails_by_domain[recipient_domain]
 
-        return self.default_sender_email  # Jinak použije výchozího odesílatele
+        return self.default_sender_email
 
     async def _perform_smtp_check(
         self, email: str, domain: str, mx_host: str, port: int
