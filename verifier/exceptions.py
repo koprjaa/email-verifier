@@ -1,4 +1,10 @@
-# src/verifier/exceptions.py
+"""
+Project: email-verifier
+File: verifier/exceptions.py
+Description: Custom exception classes for email verification error handling.
+Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
+License: MIT
+"""
 
 
 class EmailVerifierException(Exception):
