@@ -1,5 +1,6 @@
 # Web framework and extensions
 flask==3.0.2
+Flask-Cors==4.0.1
 Flask-Limiter==3.5.0
 Werkzeug==3.0.1
 click==8.1.7
