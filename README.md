@@ -1,258 +1,115 @@
-# Email Verifier
+# email-verifier
 
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Python](https://img.shields.io/badge/python-3.10-blue)
-![Flask](https://img.shields.io/badge/flask-3.0.2-green)
+**Async SMTP email verification with catch-all detection, DNS caching, and a Flask bulk-upload UI.**
 
-## Overview
+![python](https://img.shields.io/badge/python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![license](https://img.shields.io/badge/license-MIT-A31F34?style=flat-square)
+![status](https://img.shields.io/badge/status-active-22863A?style=flat-square)
+![flask](https://img.shields.io/badge/flask-3.0-000?style=flat-square&logo=flask&logoColor=white)
+![aiosmtplib](https://img.shields.io/badge/aiosmtplib-2.0-222?style=flat-square)
+![aiodns](https://img.shields.io/badge/aiodns-3.1-222?style=flat-square)
+![pandas](https://img.shields.io/badge/pandas-2.2-150458?style=flat-square&logo=pandas&logoColor=white)
 
-Email verification web application that validates email addresses using SMTP and DNS checks. Implements bulk verification with concurrent processing, catch-all domain detection, and disposable email filtering. Built as a Flask application with an async verification engine.
+## The problem
 
-## Motivation
+Most email verification services charge per check. Most open-source tools stop at syntax + MX lookup, which says nothing about whether the mailbox actually exists. Gmail and catch-all domains silently accept anything.
 
-Email verification is unreliable when done purely through syntax or DNS checks. Many domains accept all emails (catch-all), making verification ambiguous. This project implements SMTP-based verification to determine actual mailbox existence. The architecture separates concerns between web interface, business logic, and verification engine to demonstrate production-ready code organization.
+This project does it the hard way: real SMTP connections, `RCPT TO` probing, and a reputation layer for Czech providers (`seznam.cz`, `centrum.cz`, `post.cz`, `email.cz`) that routinely tarpit unknown senders.
 
-## What This Project Does
+## What you get
 
-Verifies email addresses through multiple stages:
-1. Syntax validation using email-validator
-2. Disposable domain checking against a configurable list
-3. DNS MX record resolution with caching
-4. Catch-all domain detection via test emails
-5. SMTP connection and RCPT TO verification
-6. Result classification (valid, invalid, probable, unknown)
+A Flask web app on port **5001** with:
 
-Supports single email verification via API and bulk verification via CSV/TXT file upload. Results are exported as CSV with detailed verification steps.
+- **REST API** — `POST /verify_single` for one address, CSV upload endpoint for bulk
+- **Bulk pipeline** — upload thousands of rows, watch progress update live, download timestamped CSV result
+- **Five-stage verification** per address:
+  1. RFC 5322 syntax (`email-validator`)
+  2. Disposable domain filter (external blocklist at `data/disposable_domains.txt`)
+  3. DNS MX lookup with caching (`aiodns`)
+  4. Catch-all probe (optional) — detects domains that accept any recipient
+  5. SMTP `RCPT TO` over async connections (`aiosmtplib`) on ports 25 and 587
+- **Retry + backoff** — configurable attempts with exponential delay on 4xx SMTP errors (421, 450, 451, 452)
+- **Rate limiting** — semaphore (default 5 concurrent domains) + jittered 2s base delay + 15s DNS / 10s SMTP timeouts
+- **Result classes** — `valid`, `invalid`, `probable`, `unknown`, `catchall`
 
 ## Architecture
 
-Three-layer architecture:
-
-**Web Layer (`app/routes/`)**
-- Flask blueprints for HTTP endpoints
-- Synchronous request handling
-- Creates new asyncio event loops per request for async verification
-
-**Service Layer (`app/services/`)**
-- `VerificationService`: Orchestrates verification, manages background threads for bulk operations
-- `FileService`: Handles file uploads, encoding detection, CSV parsing
-- `StateService`: Manages verification state and CSV result generation
-
-**Verification Engine (`verifier/`)**
-- `EmailVerifier`: Async core engine using aiodns and aiosmtplib
-- Implements semaphore-based concurrency limiting per domain
-- Caches MX records and catch-all test results
-- Custom exception hierarchy for error classification
-
-**State Management (`app/models/`)**
-- `VerificationState`: Thread-safe state container using RLock
-- Stores verification progress, results, and statistics
-- Accessed by both Flask routes and background verification threads
-
-Bulk verification runs in a separate thread to avoid blocking Flask. Each request creates its own asyncio event loop because Flask is synchronous. State is shared between threads using locks.
-
-## Tech Stack
-
-**Backend**
-- Flask 3.0.2: Web framework
-- aiosmtplib 2.0.2: Async SMTP client
-- aiodns 3.1.1: Async DNS resolver
-- email-validator 2.1.1: Syntax validation
-- dnspython 2.6.1: DNS utilities
-
-**Data Processing**
-- pandas 2.2.2: CSV parsing and manipulation
-- charset-normalizer: Encoding detection
-
-**Concurrency**
-- asyncio: Async I/O for verification operations
-- threading: Background thread for bulk verification
-- asyncio.Semaphore: Domain-level concurrency limiting
-
-**Configuration**
-- JSON-based configuration with environment variable overrides
-- Configurable sender emails per domain for reputation management
-
-## Data Sources
-
-**Disposable Domains**
-- Loaded from `data/disposable_domains.txt` (not included in repository)
-- File format: one domain per line, comments start with #
-- Falls back to empty set if file missing
-
-**MX Records**
-- Resolved via DNS queries using system or configured DNS servers
-- Cached per EmailVerifier instance to reduce DNS lookups
-
-**Catch-all Detection**
-- Sends test emails to random addresses on target domain
-- Tests on ports 25 and 587
-- Special handling for Microsoft domains due to ambiguous responses
-
-**Known Freemail Domains**
-- Hardcoded list of major providers (Gmail, Yahoo, Outlook, etc.)
-- Used to skip catch-all tests on freemail domains
-
-## Key Design Decisions
-
-**Async Verification with Sync Flask**
-Flask is synchronous, but SMTP/DNS operations benefit from async I/O. Each request creates a new event loop. This avoids blocking but requires careful loop management. Bulk operations run in a background thread with its own event loop.
-
-**Semaphore-Based Concurrency Limiting**
-Limits concurrent connections per domain, not globally. Prevents overwhelming individual mail servers while allowing parallel verification across domains. Default: 5 concurrent domains.
-
-**Catch-all Domain Detection**
-Catch-all domains accept all emails, making verification ambiguous. The system sends test emails to random addresses. If accepted, the domain is marked catch-all and results are classified as "probable" rather than "valid".
-
-**Sender Email Configuration**
-Different domains require different sender addresses for reputation. Configurable per-domain sender emails prevent reputation-based rejections. Default sender falls back to verifier@{hostname}.
-
-**Thread-Safe State Management**
-VerificationState uses RLock for re-entrant locking. Allows nested lock acquisition and safe access from multiple threads. State updates are atomic within lock context.
-
-**MX Record Caching**
-DNS lookups are expensive. MX records are cached per EmailVerifier instance. Cache is protected by asyncio.Lock for thread-safe access.
-
-**Encoding Detection**
-CSV files may use various encodings. The system tries multiple encodings (UTF-8, CP1250, ISO-8859-2) and delimiters (comma, semicolon, tab) before parsing.
-
-**Separate Event Loops**
-Flask requests cannot share an event loop. Each request creates and closes its own loop. This is necessary because Flask's threading model conflicts with asyncio's event loop model.
-
-## Limitations
-
-**Verification Accuracy**
-- Catch-all domains cannot be definitively verified. Results are marked "probable".
-- Some mail servers reject verification attempts as spam, leading to false negatives.
-- Rate limiting may cause timeouts or rejections.
-- Microsoft domains often return ambiguous responses, treated as catch-all.
-
-**Concurrency**
-- Single EmailVerifier instance shared across requests. Bulk operations may contend for semaphore slots.
-- Event loop creation per request adds overhead. Not suitable for high-throughput scenarios.
-- Background thread for bulk verification is single-threaded. No parallel batch processing.
-
-**State Management**
-- VerificationState is in-memory. No persistence across application restarts.
-- No distributed state. Cannot scale horizontally without shared state solution.
-- State cleanup relies on atexit handlers. May not run on abnormal termination.
-
-**File Handling**
-- Uploaded files stored on filesystem. No size limits beyond Flask's MAX_CONTENT_LENGTH.
-- No file validation beyond extension checking.
-- Results directory grows unbounded without manual cleanup.
-
-**Configuration**
-- Disposable domains file must be provided separately. Not included in repository.
-- No validation of config.json structure. Invalid config may cause runtime errors.
-- Environment variables override config.json but type checking is minimal.
-
-**Error Handling**
-- SMTP errors are caught and classified, but network failures may result in "unknown" status.
-- DNS failures are retried but may still fail if DNS servers are unreachable.
-- No automatic retry for bulk verification failures. Manual restart required.
-
-**Security**
-- No authentication or authorization. All endpoints are public.
-- File uploads use secure_filename but no content scanning.
-- No rate limiting on API endpoints beyond SMTP-level limits.
-
-**Scalability**
-- Designed for single-instance deployment. No database or message queue.
-- Thread-based bulk processing limits throughput.
-- No horizontal scaling support.
-
-## How to Run
-
-**Prerequisites**
-- Python 3.10+
-- Virtual environment (recommended)
-
-**Setup**
-```bash
-git clone <repository-url>
-cd email-verifier
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-pip install -r requirements.txt
+```
+┌──────────────┐    ┌───────────────────┐    ┌─────────────────────┐
+│  Flask UI /  │───▶│  EmailVerifier    │───▶│  Async engine       │
+│  REST API    │    │  (global instance)│    │  • aiodns DNS       │
+│  (Flask 3.0) │    │                   │    │  • aiosmtplib SMTP  │
+└──────────────┘    └───────────────────┘    │  • backoff retry    │
+                            │                │  • asyncio.Semaphore│
+                            ▼                └─────────────────────┘
+                    ┌───────────────────┐
+                    │  results/*.csv    │
+                    │  (timestamped)    │
+                    └───────────────────┘
 ```
 
-**Configuration**
-Create `config.json` in project root (see `config.json.example` if provided). Optional: set environment variables:
-- `FLASK_RUN_HOST`: Server host (default: 0.0.0.0)
-- `FLASK_RUN_PORT`: Server port (default: 5001)
-- `FLASK_DEBUG`: Debug mode (default: 1)
+## Install and run
 
-**Optional: Disposable Domains**
-Create `data/disposable_domains.txt` with one domain per line. Application works without this file but disposable checking will be disabled.
-
-**Run**
 ```bash
+uv venv
+uv pip install -r requirements.txt
 python run.py
+# → http://localhost:5001
 ```
 
-Application starts on `http://localhost:5001` (or configured port).
+## Config
 
-## Example Usage
+Everything lives in `config.json`:
 
-**Single Email Verification (API)**
+```jsonc
+{
+  "server": { "host": "0.0.0.0", "port": 5001 },
+  "smtp": {
+    "ports": [25, 587],
+    "timeout": 10,
+    "retry_attempts": 2,
+    "retry_delay_base": 5,
+    "base_delay": 2.0
+  },
+  "dns": { "timeout": 15, "servers": ["8.8.8.8", "1.1.1.1"] },
+  "catchall": { "enabled": true, "test_address": "nonexistent-..." }
+}
+```
+
+No `.env` required. The disposable blocklist at `data/disposable_domains.txt` is optional — if missing, a warning is logged and that stage is skipped.
+
+## Example — single verification
+
 ```bash
 curl -X POST http://localhost:5001/verify_single \
   -H "Content-Type: application/json" \
-  -d '{"email": "test@example.com"}'
+  -d '{"email":"test@example.com"}'
 ```
 
-**Bulk Verification (Web UI)**
-1. Open `http://localhost:5001`
-2. Upload CSV file with email column
-3. Select email column
-4. Start verification
-5. Download results CSV when complete
-
-**Status Check (API)**
-```bash
-curl http://localhost:5001/status
+```json
+{
+  "email": "test@example.com",
+  "status": "invalid",
+  "steps": {
+    "syntax": "ok",
+    "disposable": "ok",
+    "mx": ["mx.example.com"],
+    "catchall": false,
+    "smtp_rcpt": "550 mailbox unavailable"
+  }
+}
 ```
 
-Returns current verification state, statistics, and recent log entries.
+## Example — bulk upload
 
-## Future Improvements
+Upload a CSV with an `email` column via the UI. Output lands in `results/verification_<timestamp>.csv` with per-address status, MX, catch-all flag, and the full SMTP dialogue for auditing.
 
-**Architecture**
-- Replace thread-based bulk processing with task queue (Celery, RQ)
-- Add database for state persistence and result storage
-- Implement proper async Flask (Quart) or separate API server
-- Add Redis for distributed caching and state
+## Known limits
 
-**Verification**
-- Implement greylisting detection and retry logic
-- Add SPF/DKIM/DMARC validation
-- Support for additional SMTP ports (465, 587 with TLS)
-- Improve catch-all detection accuracy
-
-**Scalability**
-- Horizontal scaling with shared state backend
-- API rate limiting middleware
-- Batch processing with message queues
-- Result pagination for large datasets
-
-**User Experience**
-- Authentication and user accounts
-- Progress WebSocket updates instead of polling
-- Export formats beyond CSV (JSON, Excel)
-- Email verification history
-
-**Reliability**
-- Comprehensive error recovery
-- Automatic retry with exponential backoff
-- Health check endpoints
-- Monitoring and metrics integration
-
-## Author
-
-Jan Alexandr Kopřiva  
-jan.alexandr.kopriva@gmail.com
+- **IPv4 SMTP egress required** — many residential ISPs block outbound port 25. Runs best on a VPS or cloud instance.
+- **No queue** — a crash mid-bulk loses in-flight state. OK for thousands, not millions.
+- **Not 100% conclusive** — catch-all domains and greylist tarpits return `probable` / `unknown`. Treat those as signals, not verdicts.
 
 ## License
 
-MIT License
+[MIT](LICENSE)
