@@ -6,6 +6,7 @@ Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
 License: MIT
 """
 import asyncio
+import ipaddress
 import logging
 import random
 import socket
@@ -374,6 +375,84 @@ class EmailVerifier:
             pass
         return None
 
+    @staticmethod
+    def _is_blocked_ip(ip_str: str) -> bool:
+        """
+        Returns True if the IP address belongs to a private, loopback, link-local,
+        CGNAT, reserved or otherwise non-globally-routable range. Used as an SSRF
+        guard to prevent unauthenticated internal-network probing via attacker-
+        influenced MX records.
+        """
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            # Unparseable address -> treat as unsafe.
+            return True
+        # CGNAT (RFC 6598) is not flagged by is_private; check explicitly.
+        cgnat = ipaddress.ip_network("100.64.0.0/10")
+        if ip.version == 4 and ip in cgnat:
+            return True
+        return (
+            ip.is_private
+            or ip.is_loopback
+            or ip.is_link_local
+            or ip.is_multicast
+            or ip.is_reserved
+            or ip.is_unspecified
+        )
+
+    async def _resolve_all_host_ips(self, hostname: str) -> List[str]:
+        """Resolves a hostname to all of its A and AAAA records (for SSRF validation)."""
+        ips: List[str] = []
+        for record_type in ("A", "AAAA"):
+            try:
+                resolver = aiodns.DNSResolver(
+                    timeout=self.dns_timeout,
+                    tries=self.internal_config.get("dns_resolver_tries", 2),
+                )
+                if (
+                    hasattr(self.async_dns_resolver, "nameservers")
+                    and self.async_dns_resolver.nameservers
+                ):
+                    resolver.nameservers = self.async_dns_resolver.nameservers
+                records = await resolver.query(hostname, record_type)
+                ips.extend(str(r.host) for r in records)
+            except aiodns.error.DNSError:
+                continue
+        return ips
+
+    async def _assert_mx_host_is_public(self, mx_host: str, port: int) -> None:
+        """
+        SSRF guard: resolves the MX host and refuses to connect if any of its
+        resolved IP addresses fall into a private/loopback/link-local/CGNAT/
+        reserved range. Raises NoConnectionException when blocked.
+        """
+        resolved_ips = await self._resolve_all_host_ips(mx_host)
+        if not resolved_ips:
+            msg = f"Could not resolve MX host {mx_host} to a public IP address."
+            self._add_verification_step(
+                "error", f"SSRF check (Port {port})", msg
+            )
+            raise NoConnectionException(
+                msg,
+                status_code="mx_host_unresolvable",
+                verification_steps=self.verification_steps,
+            )
+        for ip_str in resolved_ips:
+            if self._is_blocked_ip(ip_str):
+                msg = (
+                    f"Refusing to connect to MX host {mx_host}: resolved IP "
+                    f"{ip_str} is in a private/reserved range (SSRF protection)."
+                )
+                self._add_verification_step(
+                    "error", f"SSRF check (Port {port})", msg
+                )
+                raise NoConnectionException(
+                    msg,
+                    status_code="mx_host_blocked",
+                    verification_steps=self.verification_steps,
+                )
+
     def _is_disposable_domain(self, domain: str) -> bool:
         """Checks if domain or its parent domain is in disposable domains list."""
         if not self.check_disposable_enabled:
@@ -434,6 +513,10 @@ class EmailVerifier:
         :return: Tuple (platnost, stavový kód, zpráva, interní SMTP kód).
         :raises TimeoutException, NoConnectionException, RateLimitException, UnexpectedResponseException
         """
+        # SSRF guard: ensure the MX host resolves only to public IPs before any
+        # outbound connection is attempted. Raises NoConnectionException if blocked.
+        await self._assert_mx_host_is_public(mx_host, port)
+
         server_ip_for_log = await self._resolve_host_ip_for_log(
             mx_host
         )  # Get server IP address for logging

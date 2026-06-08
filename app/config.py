@@ -22,9 +22,9 @@ class Config:
         self.max_content_length = 10 * 1024 * 1024  # 10 MB
         self.upload_folder = "uploads"
         self.results_folder = "results"
-        self.flask_run_host = os.environ.get("FLASK_RUN_HOST", "0.0.0.0")
+        self.flask_run_host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
         self.flask_run_port = int(os.environ.get("FLASK_RUN_PORT", 5001))
-        self.flask_debug = os.environ.get("FLASK_DEBUG", "1") == "1"
+        self.flask_debug = os.environ.get("FLASK_DEBUG", "0") == "1"
         
         # Load from config.json if exists
         self.app_level_config = self._load_config_file()
