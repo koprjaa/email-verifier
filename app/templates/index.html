@@ -389,6 +389,19 @@
             e.stopPropagation();
         }
 
+        // Escape untrusted text before inserting into innerHTML.
+        // Server-influenced values (SMTP banners, MX hostnames, domains, IPs,
+        // step messages) must pass through this to prevent reflected DOM XSS.
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         function displayGlobalAlert(message, type = 'danger', duration = 5000) {
             if (!globalAlertsContainer) return;
             const alertId = `alert-${Date.now()}`;
@@ -397,7 +410,7 @@
             alertDiv.className = `alert alert-${type} alert-dismissible fade show shadow-sm`;
             alertDiv.role = 'alert';
             alertDiv.innerHTML = `
-                ${message}
+                ${escapeHtml(message)}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             `;
             globalAlertsContainer.appendChild(alertDiv);
@@ -476,7 +489,7 @@
                     alertClass = 'alert-warning';
                     statusText = 'Pravděpodobně validní (Catch-all doména)';
                     iconClass = 'fas fa-exclamation-triangle';
-                    additionalInfo = `<p class="small mb-0 mt-2"><strong>Poznámka:</strong> Doména <code>${data.email.split('@')[1]}</code> přijímá všechny emaily. Existence této konkrétní schránky není 100% zaručena.</p>`;
+                    additionalInfo = `<p class="small mb-0 mt-2"><strong>Poznámka:</strong> Doména <code>${escapeHtml(data.email.split('@')[1])}</code> přijímá všechny emaily. Existence této konkrétní schránky není 100% zaručena.</p>`;
                 } else {
                     alertClass = 'alert-success';
                     statusText = 'Validní';
@@ -497,17 +510,17 @@
                 if (data.status_code === 'dns_error') statusText = 'Nelze ověřit (Chyba DNS)';
                 if (data.blocked) { // Speciální případ z backendu
                      statusText = 'Nelze ověřit (Blokováno)';
-                     additionalInfo = `<p class="small mb-0 mt-2"><strong>Poznámka:</strong> ${data.blocked_message || 'Verifikace byla blokována.'}</p>`;
+                     additionalInfo = `<p class="small mb-0 mt-2"><strong>Poznámka:</strong> ${escapeHtml(data.blocked_message || 'Verifikace byla blokována.')}</p>`;
                 }
             }
 
             singleEmailResultArea.innerHTML = `
                 <div class="alert ${alertClass} mb-0">
-                    <h6 class="alert-heading"><i class="${iconClass} me-2" aria-hidden="true"></i>Výsledek pro: ${email}</h6>
+                    <h6 class="alert-heading"><i class="${iconClass} me-2" aria-hidden="true"></i>Výsledek pro: ${escapeHtml(email)}</h6>
                     <p class="mb-1"><strong>Status:</strong> ${statusText}</p>
-                    <p class="mb-1"><strong>SMTP kód:</strong> <code>${data.smtp_code_internal || data.status_code || 'N/A'}</code></p>
-                    <p class="mb-1"><strong>Zpráva:</strong> ${data.message || 'N/A'}</p>
-                    ${data.mx_record ? `<p class="mb-1"><strong>MX server:</strong> ${data.mx_record} (${data.server_ip || 'N/A'})</p>` : ''}
+                    <p class="mb-1"><strong>SMTP kód:</strong> <code>${escapeHtml(data.smtp_code_internal || data.status_code || 'N/A')}</code></p>
+                    <p class="mb-1"><strong>Zpráva:</strong> ${escapeHtml(data.message || 'N/A')}</p>
+                    ${data.mx_record ? `<p class="mb-1"><strong>MX server:</strong> ${escapeHtml(data.mx_record)} (${escapeHtml(data.server_ip || 'N/A')})</p>` : ''}
                     ${additionalInfo}
                 </div>
                 <div id="singleVerificationStepsLog" class="log-display-area mt-2" style="max-height: 200px;"></div>
@@ -529,12 +542,12 @@
             const time = step.timestamp ? new Date(step.timestamp).toLocaleTimeString('cs-CZ', { hour12: false }) : '';
             const action = step.action || step.message || ''; // Použít action nebo message
             const details = step.details || '';
-            const code = step.code ? ` (Kód: ${step.code})` : '';
+            const code = step.code ? ` (Kód: ${escapeHtml(step.code)})` : '';
 
             stepDiv.innerHTML = `
-                ${time ? `<small class="text-muted me-2">[${time}]</small>` : ''}
-                <strong>${action}</strong>${code}
-                ${details ? `<div class="ms-3 ps-2 text-muted small border-start border-2">${details}</div>` : ''}
+                ${time ? `<small class="text-muted me-2">[${escapeHtml(time)}]</small>` : ''}
+                <strong>${escapeHtml(action)}</strong>${code}
+                ${details ? `<div class="ms-3 ps-2 text-muted small border-start border-2">${escapeHtml(details)}</div>` : ''}
             `;
             logContainer.appendChild(stepDiv);
         }
@@ -949,11 +962,11 @@
                     statusAlertClass = 'alert-warning';
                     break;
                 case 'error':
-                    statusMsgText = `<i class="fas fa-times-circle me-1" aria-hidden="true"></i> Chyba: ${data.error_message || 'Neznámá chyba'}`;
+                    statusMsgText = `<i class="fas fa-times-circle me-1" aria-hidden="true"></i> Chyba: ${escapeHtml(data.error_message || 'Neznámá chyba')}`;
                     statusAlertClass = 'alert-danger';
                     break;
                 default:
-                    statusMsgText = `Neznámý stav: ${data.status}`;
+                    statusMsgText = `Neznámý stav: ${escapeHtml(data.status)}`;
             }
             bulkStatusMessage.className = `status-message-area alert ${statusAlertClass}`;
             bulkStatusMessage.innerHTML = statusMsgText;
@@ -962,8 +975,8 @@
             const catchallDomains = data.catchall_domains || [];
             if (catchallDomains.length > 0) {
                 catchallDomainsDisplayArea.style.display = 'block';
-                catchallDomainsListEl.innerHTML = catchallDomains.map(domainInfo => 
-                    `<div>${typeof domainInfo === 'string' ? domainInfo : `${domainInfo.domain} (${domainInfo.count})`}</div>`
+                catchallDomainsListEl.innerHTML = catchallDomains.map(domainInfo =>
+                    `<div>${typeof domainInfo === 'string' ? escapeHtml(domainInfo) : `${escapeHtml(domainInfo.domain)} (${escapeHtml(domainInfo.count)})`}</div>`
                 ).join('');
             } else {
                 catchallDomainsDisplayArea.style.display = 'none';

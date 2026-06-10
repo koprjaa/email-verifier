@@ -5,9 +5,10 @@ Description: Flask application factory that creates and configures the Flask app
 Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
 License: MIT
 """
+import hmac
 import logging
+import os
 from flask import Flask
-from flask_cors import CORS
 
 from app.config import Config
 from app.utils.logging import setup_logging
@@ -32,9 +33,10 @@ def create_app(config=None):
     else:
         app.config.update(app_config.to_dict())
     
-    # Setup CORS
-    CORS(app)
-    
+    # CORS intentionally not enabled: this is a same-origin local app.
+    # (Previously `CORS(app)` opened all origins — removed for security.)
+
+
     # Setup logging
     setup_logging(app)
     
@@ -82,6 +84,28 @@ def create_app(config=None):
     
     # Register routes
     register_routes(app)
-    
+
+    # Optional shared-token auth. Fail-open by design: enforced ONLY when the
+    # EMAIL_VERIFIER_TOKEN env var is set, so the default local UX is unchanged.
+    # When set, every request must present the token via the
+    # 'X-Auth-Token' header or '?token=' query param. The index page and static
+    # assets are exempt so the UI can load and prompt the user.
+    auth_token = os.environ.get("EMAIL_VERIFIER_TOKEN")
+    if auth_token:
+        app_logger.info("EMAIL_VERIFIER_TOKEN set: shared-token auth enabled.")
+
+        @app.before_request
+        def _require_token():
+            from flask import request, jsonify
+
+            if request.endpoint in ("static", "verification.index"):
+                return None
+            if request.path == "/":
+                return None
+            provided = request.headers.get("X-Auth-Token") or request.args.get("token")
+            if not provided or not hmac.compare_digest(provided, auth_token):
+                return jsonify({"error": "Unauthorized"}), 401
+            return None
+
     return app
 

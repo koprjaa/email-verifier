@@ -96,14 +96,14 @@ def load_csv():
             with state.lock:
                 state.set("status", "error")
                 state.set("error_message", str(e))
-            return jsonify({"error": f"Chyba při zpracování CSV: {str(e)}"}), 500
+            return jsonify({"error": "Chyba při zpracování CSV."}), 500
     
     except Exception as e:
         logger.error(f"API /load_csv: Unexpected error: {str(e)}", exc_info=True)
         with state.lock:
             state.set("status", "error")
             state.set("error_message", str(e))
-        return jsonify({"error": f"Neočekávaná chyba serveru: {str(e)}"}), 500
+        return jsonify({"error": "Neočekávaná chyba serveru."}), 500
 
 
 @file_upload_bp.route("/load_txt", methods=["POST"])
@@ -185,14 +185,14 @@ def load_txt():
             with state.lock:
                 state.set("status", "error")
                 state.set("error_message", str(e))
-            return jsonify({"error": f"Chyba při zpracování TXT: {str(e)}"}), 500
-    
+            return jsonify({"error": "Chyba při zpracování TXT."}), 500
+
     except Exception as e:
         logger.error(f"API /load_txt: Unexpected error: {str(e)}", exc_info=True)
         with state.lock:
             state.set("status", "error")
             state.set("error_message", str(e))
-        return jsonify({"error": f"Chyba při zpracování TXT: {str(e)}"}), 500
+        return jsonify({"error": "Chyba při zpracování TXT."}), 500
 
 
 @file_upload_bp.route("/select_column", methods=["POST"])
@@ -250,7 +250,7 @@ def select_column():
                 state.set("status", "error")
                 state.set("error_message", str(e))
             logger.error(f"API /select_column: Error extracting emails: {e}", exc_info=True)
-            return jsonify({"error": f"Chyba při extrakci emailů z CSV: {str(e)}"}), 500
+            return jsonify({"error": "Chyba při extrakci emailů z CSV."}), 500
     
     if not unique_emails:
         with state.lock:
@@ -302,5 +302,5 @@ def download_results():
     
     except Exception as e:
         logger.error(f"Error downloading results: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Chyba při stahování výsledků."}), 500
 

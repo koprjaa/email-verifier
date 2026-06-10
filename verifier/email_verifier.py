@@ -777,6 +777,11 @@ class EmailVerifier:
                     break
                 smtp_client = None  # Explicit initialization
                 try:
+                    # SSRF guard: ensure the MX host resolves only to public IPs
+                    # before any outbound connection. Mirrors _perform_smtp_check.
+                    # Raises NoConnectionException if blocked.
+                    await self._assert_mx_host_is_public(mx_host, 25)
+
                     smtp_client = aiosmtplib.SMTP(  # Create SMTP client
                         hostname=mx_host,
                         port=25,

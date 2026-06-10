@@ -58,7 +58,7 @@ def verify_single_email():
             f"API /verify_single: Error during verification of {email_to_verify}: {e}",
             exc_info=True,
         )
-        return jsonify({"error": f"Interní chyba serveru: {str(e)}"}), 500
+        return jsonify({"error": "Interní chyba serveru."}), 500
     finally:
         loop.close()
 
@@ -80,7 +80,7 @@ def start_verification():
         return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"API /start_verification: Error: {e}", exc_info=True)
-        return jsonify({"error": f"Chyba při spuštění verifikace: {str(e)}"}), 500
+        return jsonify({"error": "Chyba při spuštění verifikace."}), 500
 
 
 @verification_bp.route("/stop_verification", methods=["POST"])
@@ -126,7 +126,7 @@ def stop_verification():
         logger.error(f"Error stopping verification: {e}", exc_info=True)
         return jsonify({
             "status": "error",
-            "message": f"Error stopping verification: {str(e)}",
+            "message": "Error stopping verification.",
             "has_results": bool(state.get("result_filepath")),
         }), 500
 

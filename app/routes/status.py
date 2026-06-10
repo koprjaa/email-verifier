@@ -42,7 +42,7 @@ def get_status():
             })
     except Exception as e:
         logger.error(f"Error getting status: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Chyba při získávání stavu."}), 500
 
 
 @status_bp.route("/cleanup", methods=["POST"])
@@ -57,5 +57,5 @@ def cleanup():
         return jsonify({"status": "success", "message": "Cleanup completed"})
     except Exception as e:
         logger.error(f"Error during cleanup: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Chyba při čištění."}), 500
 
