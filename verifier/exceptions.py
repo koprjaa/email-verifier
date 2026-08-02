@@ -1,17 +1,25 @@
 """
 Project: email-verifier
 File: verifier/exceptions.py
-Description: Custom exception classes for email verification error handling.
+Description: Exceptions raised while verifying an address.
 Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
 License: MIT
 """
 
 
 class EmailVerifierException(Exception):
-    """Base exception class for all EmailVerifier-specific errors."""
+    """Base for every error this package raises.
+
+    Carries the status the address should be reported with and the steps that
+    ran before the failure, so a caller can report a partial result instead of
+    only an error.
+    """
 
     def __init__(
-        self, message: str, status_code: str = None, verification_steps: list = None
+        self,
+        message: str,
+        status_code: str | None = None,
+        verification_steps: list | None = None,
     ):
         super().__init__(message)
         self.message = message
@@ -21,55 +29,25 @@ class EmailVerifierException(Exception):
         )
 
 
-class VerificationError(EmailVerifierException):
-    """Generic error during email verification process."""
-
-    pass
-
-
 class TimeoutException(EmailVerifierException):
-    """Timeout occurred during operation (e.g., waiting for DNS or SMTP response)."""
-
-    pass
+    """An operation ran out of time, usually a DNS or SMTP response."""
 
 
 class NoConnectionException(EmailVerifierException):
-    """Unable to establish connection to target server."""
-
-    pass
+    """The mail server could not be reached."""
 
 
 class UnexpectedResponseException(EmailVerifierException):
-    """Server response was unexpected or could not be interpreted."""
-
-    pass
+    """The server answered with something the client cannot interpret."""
 
 
 class RateLimitException(EmailVerifierException):
-    """Rate limit exceeded on target server or service."""
+    """The server is refusing further probes for now.
 
-    pass
+    Caught on its own, because the address is then neither valid nor invalid.
+    The caller has to try again rather than record a verdict.
+    """
 
 
 class DNSError(EmailVerifierException):
-    """DNS-related error (e.g., MX records not found)."""
-
-    pass
-
-
-class SyntaxError(EmailVerifierException):
-    """Email address format is invalid (does not meet syntax rules)."""
-
-    pass
-
-
-class DisposableDomainError(EmailVerifierException):
-    """Email domain is recognized as disposable."""
-
-    pass
-
-
-class ConfigurationError(EmailVerifierException):
-    """Configuration error in EmailVerifier or its dependencies."""
-
-    pass
+    """The domain has no usable MX record."""

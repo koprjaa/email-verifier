@@ -7,22 +7,20 @@ License: MIT
 """
 import logging
 import threading
-import time
-from datetime import datetime
-from typing import Dict, Any
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class VerificationState:
     """Manages global verification state with thread-safe access."""
-    
+
     def __init__(self, default_batch_size: int = 20):
-        self._state: Dict[str, Any] = {}
+        self._state: dict[str, Any] = {}
         self._lock = threading.RLock()
         self._default_batch_size = default_batch_size
         self.reset()
-    
+
     def reset(self):
         """Reset state to defaults."""
         with self._lock:
@@ -53,43 +51,43 @@ class VerificationState:
                 "detected_delimiter": None,
                 "app_batch_size_for_ui": self._default_batch_size,
             }
-    
+
     def get(self, key: str, default=None):
         """Get state value."""
         with self._lock:
             return self._state.get(key, default)
-    
+
     def set(self, key: str, value: Any):
         """Set state value."""
         with self._lock:
             self._state[key] = value
-    
-    def update(self, updates: Dict[str, Any]):
+
+    def update(self, updates: dict[str, Any]):
         """Update multiple state values."""
         with self._lock:
             self._state.update(updates)
-    
+
     def __getitem__(self, key: str):
         """Get state value using bracket notation."""
         with self._lock:
             return self._state[key]
-    
+
     def __setitem__(self, key: str, value: Any):
         """Set state value using bracket notation."""
         with self._lock:
             self._state[key] = value
-    
+
     def __contains__(self, key: str) -> bool:
         """Check if key exists in state."""
         with self._lock:
             return key in self._state
-    
+
     @property
     def lock(self):
         """Get the lock for manual synchronization."""
         return self._lock
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Get state as dictionary (for JSON serialization)."""
         with self._lock:
             return self._state.copy()

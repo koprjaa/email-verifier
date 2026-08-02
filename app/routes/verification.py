@@ -8,9 +8,8 @@ License: MIT
 import asyncio
 import json
 import logging
-from flask import Blueprint, jsonify, request, current_app
 
-from app.services.verification_service import VerificationService
+from flask import Blueprint, current_app, jsonify, request
 
 logger = logging.getLogger(__name__)
 verification_bp = Blueprint("verification", __name__)
@@ -28,20 +27,20 @@ def verify_single_email():
     """Verify a single email address."""
     data = request.json
     email_to_verify = data.get("email")
-    
+
     if not email_to_verify:
         logger.warning("API /verify_single: Missing 'email' in request payload.")
         return jsonify({"error": "Chybí email v požadavku"}), 400
-    
+
     logger.info(f"API /verify_single: Received request to verify email: {email_to_verify}")
-    
+
     # Get services from app context
     verification_service = current_app.verification_service
-    
+
     # Flask is synchronous; create new event loop for async email verification
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    
+
     try:
         logger.info(f"API /verify_single: Starting verification process for {email_to_verify}")
         result = verification_service.verify_single_email(email_to_verify)
@@ -53,11 +52,8 @@ def verify_single_email():
             f"API /verify_single: Full verification result: {json.dumps(result, indent=2)}"
         )
         return jsonify(result)
-    except Exception as e:
-        logger.error(
-            f"API /verify_single: Error during verification of {email_to_verify}: {e}",
-            exc_info=True,
-        )
+    except Exception:
+        logger.exception("API /verify_single: Error during verification of {email_to_verify}")
         return jsonify({"error": "Interní chyba serveru."}), 500
     finally:
         loop.close()
@@ -67,7 +63,7 @@ def verify_single_email():
 def start_verification():
     """Start bulk email verification."""
     verification_service = current_app.verification_service
-    
+
     try:
         run_id = verification_service.start_bulk_verification()
         return jsonify({
@@ -78,8 +74,8 @@ def start_verification():
     except ValueError as e:
         logger.warning(f"API /start_verification: {e}")
         return jsonify({"error": str(e)}), 400
-    except Exception as e:
-        logger.error(f"API /start_verification: Error: {e}", exc_info=True)
+    except Exception:
+        logger.exception("API /start_verification: Error")
         return jsonify({"error": "Chyba při spuštění verifikace."}), 500
 
 
@@ -88,21 +84,21 @@ def stop_verification():
     """Stop running verification."""
     verification_service = current_app.verification_service
     state = current_app.verification_state
-    
+
     try:
         run_id = verification_service.stop_verification()
-        
+
         if not run_id:
             return jsonify({
                 "status": state.get("status", "idle"),
                 "message": "No verification process is currently running",
                 "has_results": bool(state.get("result_filepath")),
             })
-        
+
         # Wait for thread to finish (with timeout)
         if verification_service.verification_thread and verification_service.verification_thread.is_alive():
             verification_service.verification_thread.join(timeout=5.0)
-        
+
         with state.lock:
             if state.get("verification_run_id") == run_id:
                 from app.services.state_service import StateService
@@ -114,16 +110,16 @@ def stop_verification():
                     "Verifikace zastavena",
                     "Proces verifikace byl úspěšně zastaven.",
                 )
-        
+
         return jsonify({
             "status": state.get("status", "stopped"),
             "message": "Verification process stopped",
             "filepath": state.get("result_filepath"),
             "has_results": bool(state.get("result_filepath")),
         })
-    
-    except Exception as e:
-        logger.error(f"Error stopping verification: {e}", exc_info=True)
+
+    except Exception:
+        logger.exception("Error stopping verification")
         return jsonify({
             "status": "error",
             "message": "Error stopping verification.",

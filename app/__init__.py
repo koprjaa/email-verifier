@@ -8,14 +8,15 @@ License: MIT
 import hmac
 import logging
 import os
+
 from flask import Flask
 
 from app.config import Config
-from app.utils.logging import setup_logging
-from app.routes import register_routes
 from app.models.verification_state import VerificationState
-from app.services.verification_service import VerificationService
+from app.routes import register_routes
 from app.services.file_service import FileService
+from app.services.verification_service import VerificationService
+from app.utils.logging import setup_logging
 from verifier.email_verifier import EmailVerifier
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ logger = logging.getLogger(__name__)
 def create_app(config=None):
     """Create and configure Flask application."""
     app = Flask(__name__, template_folder="templates")
-    
+
     # Load configuration
     app_config = Config()
     app.config_obj = app_config  # Store config object for services
@@ -32,18 +33,18 @@ def create_app(config=None):
         app.config.update(config)
     else:
         app.config.update(app_config.to_dict())
-    
+
     # CORS intentionally not enabled: this is a same-origin local app.
     # (Previously `CORS(app)` opened all origins — removed for security.)
 
 
     # Setup logging
     setup_logging(app)
-    
+
     # Initialize verification state
     default_batch_size = app_config.app_level_config.get("ui_batch_size", 20)
     app.verification_state = VerificationState(default_batch_size=default_batch_size)
-    
+
     # Initialize EmailVerifier
     verifier_config = app_config.get_verifier_config()
     app_logger = logging.getLogger("flask.app")
@@ -75,13 +76,13 @@ def create_app(config=None):
         },
     )
     app_logger.info("Global EmailVerifier instance created and configured.")
-    
+
     # Initialize services
     app.verification_service = VerificationService(
         app.email_verifier, app.verification_state, app_config
     )
     app.file_service = FileService(app_config, app.verification_state)
-    
+
     # Register routes
     register_routes(app)
 
@@ -96,7 +97,7 @@ def create_app(config=None):
 
         @app.before_request
         def _require_token():
-            from flask import request, jsonify
+            from flask import jsonify, request
 
             if request.endpoint in ("static", "verification.index"):
                 return None

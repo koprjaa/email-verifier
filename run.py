@@ -7,8 +7,8 @@ License: MIT
 """
 import atexit
 import logging
+
 from app import create_app
-from app.services.file_service import FileService
 
 logger = logging.getLogger(__name__)
 

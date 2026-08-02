@@ -7,9 +7,9 @@ License: MIT
 """
 from flask import Flask
 
-from app.routes.verification import verification_bp
 from app.routes.file_upload import file_upload_bp
 from app.routes.status import status_bp
+from app.routes.verification import verification_bp
 
 
 def register_routes(app: Flask):

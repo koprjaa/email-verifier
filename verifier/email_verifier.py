@@ -6,36 +6,38 @@ Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
 License: MIT
 """
 import asyncio
-import ipaddress
+import contextlib
+import json
 import logging
 import random
 import socket
-import re
-import json
 import time
 from datetime import datetime
-from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 import aiodns
 import aiosmtplib
+from dns.resolver import Resolver
 from email_validator import (
     EmailNotValidError,
     validate_email,
 )
-from dns.resolver import Resolver
 
+from .classify import (
+    choose_sender,
+    is_blocked_ip,
+    is_disposable_domain,
+    is_reputation_error,
+    is_temporary_error,
+)
 from .exceptions import (
-    EmailVerifierException,
-    TimeoutException,
-    NoConnectionException,
-    UnexpectedResponseException,
-    RateLimitException,
     DNSError,
-    SyntaxError as VerifierSyntaxError,
-    DisposableDomainError,
-    ConfigurationError,
+    EmailVerifierException,
+    NoConnectionException,
+    RateLimitException,
+    TimeoutException,
+    UnexpectedResponseException,
 )
 
 DEFAULT_CONFIG_PATH = Path(__file__).resolve().parent / "default_verifier_config.json"
@@ -44,21 +46,6 @@ SMTP_CODES_TEMP_FAIL = (421, 450, 451, 452)
 SMTP_CODES_PERM_FAIL = (500, 501, 502, 503, 504, 550, 551, 552, 553, 554)
 
 # SMTP error codes that indicate temporary failures (retryable)
-TEMPORARY_ERROR_CODES = {
-    421,
-    450,
-    451,
-    452,
-    454,
-    458,
-    459,
-    471,
-    472,
-    552,
-    553,
-    554,
-}
-
 KNOWN_FREEMAIL_DOMAINS = {
     "gmail.com",
     "googlemail.com",
@@ -101,18 +88,6 @@ MICROSOFT_MX_PATTERNS = [
 ]
 
 # Czech email providers that are sensitive to sender reputation
-REPUTATION_SENSITIVE_DOMAINS = {"centrum.cz", "post.cz", "seznam.cz", "email.cz"}
-
-REPUTATION_ERROR_PATTERNS = [
-    "poor reputation",
-    "reputation",
-    "spam",
-    "blocked",
-    "blacklisted",
-    "rejected",
-]
-
-
 class EmailVerifier:
     """Verifies email addresses using SMTP and DNS queries."""
 
@@ -126,15 +101,15 @@ class EmailVerifier:
         connect_port: int = 25,
         rate_limit_delay_base: float = 2.0,
         max_concurrent_domains: int = 5,
-        helo_hostname: Optional[str] = None,
+        helo_hostname: str | None = None,
         retry_attempts: int = 2,
         retry_delay_base: float = 5.0,
         disposable_domains_file: str = "data/disposable_domains.txt",
-        logger: Optional[logging.Logger] = None,
-        dns_servers: Optional[List[str]] = None,
-        sender_email_override: Optional[str] = None,
-        default_sender_email_config: Optional[str] = None,
-        sender_emails_by_domain_config: Optional[Dict[str, str]] = None,
+        logger: logging.Logger | None = None,
+        dns_servers: list[str] | None = None,
+        sender_email_override: str | None = None,
+        default_sender_email_config: str | None = None,
+        sender_emails_by_domain_config: dict[str, str] | None = None,
     ):
         self.logger = logger or self._setup_default_logger()
         self.internal_config = self._load_default_config_from_file()
@@ -184,11 +159,11 @@ class EmailVerifier:
 
         self.disposable_domains_file_path = Path(disposable_domains_file)
         self._ensure_data_dirs_exist()
-        self.disposable_domains: Set[str] = self._load_disposable_domains()
+        self.disposable_domains: set[str] = self._load_disposable_domains()
 
-        self.verification_steps: List[Dict[str, Any]] = []
-        self.is_catchall_domain_cache: Dict[str, Optional[bool]] = {}
-        self.mx_records_cache: Dict[str, List[Tuple[int, str]]] = {}
+        self.verification_steps: list[dict[str, Any]] = []
+        self.is_catchall_domain_cache: dict[str, bool | None] = {}
+        self.mx_records_cache: dict[str, list[tuple[int, str]]] = {}
         # Lock protects MX cache from concurrent access
         self.mx_cache_lock = asyncio.Lock()
 
@@ -210,44 +185,38 @@ class EmailVerifier:
             logger.addHandler(ch)
         return logger
 
-    def _load_default_config_from_file(self) -> Dict[str, Any]:
+    def _load_default_config_from_file(self) -> dict[str, Any]:
         """Loads default configuration from JSON file."""
         if DEFAULT_CONFIG_PATH.exists():
             try:
-                with open(DEFAULT_CONFIG_PATH, "r", encoding="utf-8") as f:
+                with Path(DEFAULT_CONFIG_PATH).open(encoding="utf-8") as f:
                     return json.load(f)
-            except Exception as e:
-                self.logger.error(f"Error parsing/loading {DEFAULT_CONFIG_PATH}: {e}")
+            except Exception:
+                self.logger.exception("Error parsing/loading {DEFAULT_CONFIG_PATH}")
         return {}
 
     def _ensure_data_dirs_exist(self):
         """Ensures data directory exists for files like disposable_domains.txt."""
         try:
             self.disposable_domains_file_path.parent.mkdir(parents=True, exist_ok=True)
-        except OSError as e:
-            self.logger.error(
-                f"Error creating data directory {self.disposable_domains_file_path.parent}: {e}"
-            )
+        except OSError:
+            self.logger.exception("Error creating data directory {self.disposable_domains_file_path.parent}")
 
-    def _load_disposable_domains(self) -> Set[str]:
+    def _load_disposable_domains(self) -> set[str]:
         """Loads disposable domains from file. Returns lowercase set of domains."""
         if not self.check_disposable_enabled:
             return set()
         if self.disposable_domains_file_path.exists():
             try:
-                with open(
-                    self.disposable_domains_file_path, "r", encoding="utf-8"
-                ) as f:
+                with self.disposable_domains_file_path.open(encoding="utf-8") as f:
                     # Skip empty lines and comments (lines starting with #)
                     return {
                         line.strip().lower()
                         for line in f
                         if line.strip() and not line.startswith("#")
                     }
-            except Exception as e:
-                self.logger.error(
-                    f"Error loading disposable domains from '{self.disposable_domains_file_path}': {e}"
-                )
+            except Exception:
+                self.logger.exception("Error loading disposable domains from '{self.disposable_domains_file_path}'")
         else:
             self.logger.warning(
                 f"Disposable domains file '{self.disposable_domains_file_path}' not found."
@@ -264,7 +233,7 @@ class EmailVerifier:
         self.verification_steps = []
 
     def _add_verification_step(
-        self, status: str, action: str, details: str = "", code: Optional[Any] = None
+        self, status: str, action: str, details: str = "", code: Any | None = None
     ):
         """Adds a step to verification trace for debugging and user feedback."""
         step = {
@@ -279,7 +248,7 @@ class EmailVerifier:
             f"Step: {action} - {details} (Status: {status}, Code: {code})"
         )
 
-    async def _resolve_mx_records(self, domain: str) -> List[Tuple[int, str]]:
+    async def _resolve_mx_records(self, domain: str) -> list[tuple[int, str]]:
         """Resolves and sorts MX records for domain. Uses async DNS resolver with caching."""
         self._add_verification_step("info", "DNS MX query", f"Getting MX for {domain}")
 
@@ -333,7 +302,7 @@ class EmailVerifier:
                 verification_steps=self.verification_steps,
             ) from e
         except Exception as e:
-            msg = f"Unexpected error during DNS MX query for {domain}: {str(e)}"
+            msg = f"Unexpected error during DNS MX query for {domain}: {e!s}"
             self._add_verification_step("error", "DNS MX query", msg)
             raise DNSError(
                 msg,
@@ -341,7 +310,7 @@ class EmailVerifier:
                 verification_steps=self.verification_steps,
             ) from e
 
-    async def _resolve_host_ip_for_log(self, hostname: str) -> Optional[str]:
+    async def _resolve_host_ip_for_log(self, hostname: str) -> str | None:
         """Resolves hostname to IP (A or AAAA record) for logging purposes. Returns first found IP or None."""
         try:
             resolver = aiodns.DNSResolver(
@@ -375,35 +344,11 @@ class EmailVerifier:
             pass
         return None
 
-    @staticmethod
-    def _is_blocked_ip(ip_str: str) -> bool:
-        """
-        Returns True if the IP address belongs to a private, loopback, link-local,
-        CGNAT, reserved or otherwise non-globally-routable range. Used as an SSRF
-        guard to prevent unauthenticated internal-network probing via attacker-
-        influenced MX records.
-        """
-        try:
-            ip = ipaddress.ip_address(ip_str)
-        except ValueError:
-            # Unparseable address -> treat as unsafe.
-            return True
-        # CGNAT (RFC 6598) is not flagged by is_private; check explicitly.
-        cgnat = ipaddress.ip_network("100.64.0.0/10")
-        if ip.version == 4 and ip in cgnat:
-            return True
-        return (
-            ip.is_private
-            or ip.is_loopback
-            or ip.is_link_local
-            or ip.is_multicast
-            or ip.is_reserved
-            or ip.is_unspecified
-        )
+    _is_blocked_ip = staticmethod(is_blocked_ip)
 
-    async def _resolve_all_host_ips(self, hostname: str) -> List[str]:
+    async def _resolve_all_host_ips(self, hostname: str) -> list[str]:
         """Resolves a hostname to all of its A and AAAA records (for SSRF validation)."""
-        ips: List[str] = []
+        ips: list[str] = []
         for record_type in ("A", "AAAA"):
             try:
                 resolver = aiodns.DNSResolver(
@@ -454,56 +399,31 @@ class EmailVerifier:
                 )
 
     def _is_disposable_domain(self, domain: str) -> bool:
-        """Checks if domain or its parent domain is in disposable domains list."""
+        """Disposable check, with the step recorded for the report."""
         if not self.check_disposable_enabled:
             return False
-        normalized_domain = domain.lower()
-        if normalized_domain in self.disposable_domains:
+        if is_disposable_domain(domain, self.disposable_domains):
             self._add_verification_step(
                 "warning", "Domain check", f"Domain '{domain}' is disposable."
-            )
-            return True
-        parts = normalized_domain.split(".")
-        # Check if parent domain (e.g., sub.example.com -> example.com) is disposable
-        if len(parts) > 2 and ".".join(parts[-2:]) in self.disposable_domains:
-            self._add_verification_step(
-                "warning", "Domain check", f"Parent domain of '{domain}' is disposable."
             )
             return True
         return False
 
     def _is_reputation_error(self, code: int, message: str) -> bool:
-        """Checks if SMTP error is related to sender IP reputation."""
-        if code == 554:
-            return True
-        message_lower = message.lower()
-        return any(pattern in message_lower for pattern in REPUTATION_ERROR_PATTERNS)
+        return is_reputation_error(code, message)
 
     def _get_sender_email(self, recipient_domain: str) -> str:
-        """Selects best sender email for recipient domain. Prioritizes domain-specific senders for reputation-sensitive domains."""
-        if self.sender_email_override:
-            return self.sender_email_override
-
-        # For reputation-sensitive domains, try same-domain or trusted-domain senders first
-        if recipient_domain in REPUTATION_SENSITIVE_DOMAINS:
-            for domain_key, sender in self.sender_emails_by_domain.items():
-                if domain_key == recipient_domain:
-                    return sender
-
-            # Fallback to trusted domains if same-domain sender not found
-            trusted_domains = ["gmail.com", "outlook.com", "yahoo.com"]
-            for domain_key in trusted_domains:
-                if domain_key in self.sender_emails_by_domain:
-                    return self.sender_emails_by_domain[domain_key]
-
-        if recipient_domain in self.sender_emails_by_domain:
-            return self.sender_emails_by_domain[recipient_domain]
-
-        return self.default_sender_email
+        """Address to probe from. See classify.choose_sender."""
+        return choose_sender(
+            recipient_domain,
+            self.sender_emails_by_domain,
+            self.default_sender_email,
+            self.sender_email_override,
+        )
 
     async def _perform_smtp_check(
         self, email: str, domain: str, mx_host: str, port: int
-    ) -> Tuple[bool, str, str, Optional[int]]:
+    ) -> tuple[bool, str, str, int | None]:
         """
         Provede SMTP komunikaci s MX serverem pro ověření emailové adresy.
         :param email: Emailová adresa k ověření.
@@ -585,7 +505,7 @@ class EmailVerifier:
                 self._add_verification_step(
                     "warning",
                     "MAIL FROM",
-                    f"Reputation-based rejection detected. Will retry with different sender if available.",
+                    "Reputation-based rejection detected. Will retry with different sender if available.",
                 )
                 # Try to find alternative sender
                 alternative_sender = None
@@ -638,10 +558,8 @@ class EmailVerifier:
                 "info", "RCPT TO", f"Resp: {code} {msg_str}", code
             )
 
-            try:
-                await smtp_client.rset()  # Reset SMTP transaction
-            except (aiosmtplib.SMTPException, OSError):
-                pass  # Ignore errors during RSET
+            with contextlib.suppress(aiosmtplib.SMTPException, OSError):
+                await smtp_client.rset()  # A failed reset does not change the verdict
 
             if code in SMTP_CODES_SUCCESS:  # If RCPT TO succeeds, email is valid
                 return True, "valid", msg_str, code
@@ -661,10 +579,10 @@ class EmailVerifier:
             self._add_verification_step(
                 "error",
                 f"SMTP Timeout (Port {port})",
-                f"Timeout with {mx_host}: {str(e)}",
+                f"Timeout with {mx_host}: {e!s}",
             )
             raise TimeoutException(
-                f"Timeout on {mx_host}:{port} - {str(e)}",
+                f"Timeout on {mx_host}:{port} - {e!s}",
                 status_code="smtp_timeout",
                 verification_steps=self.verification_steps,
             ) from e
@@ -677,10 +595,10 @@ class EmailVerifier:
             self._add_verification_step(
                 "error",
                 f"SMTP Connect Error (Port {port})",
-                f"Connect error to {mx_host}: {str(e)}",
+                f"Connect error to {mx_host}: {e!s}",
             )
             raise NoConnectionException(
-                f"Connect error to {mx_host}:{port} - {str(e)}",
+                f"Connect error to {mx_host}:{port} - {e!s}",
                 status_code="smtp_connect_error",
                 verification_steps=self.verification_steps,
             ) from e
@@ -698,10 +616,8 @@ class EmailVerifier:
             return False, "unknown_smtp_error", f"{e.code} {e.message}", e.code
         finally:
             if smtp_client and smtp_client.is_connected:  # If client is connected
-                try:
-                    await smtp_client.quit()  # Close SMTP connection
-                except (aiosmtplib.SMTPException, OSError):
-                    pass  # Ignore errors during QUIT
+                with contextlib.suppress(aiosmtplib.SMTPException, OSError):
+                    await smtp_client.quit()  # The verdict is already decided
 
         # If code reaches here, unexpected flow occurred
         return (
@@ -724,7 +640,7 @@ class EmailVerifier:
         )
 
     async def _is_catch_all_domain(
-        self, domain: str, mx_hosts_priority: List[Tuple[int, str]]
+        self, domain: str, mx_hosts_priority: list[tuple[int, str]]
     ) -> bool:
         """
         Tests whether the domain is "catch-all" (accepts emails to non-existent addresses).
@@ -822,13 +738,17 @@ class EmailVerifier:
                     )
 
                     # Special handling for Microsoft domains
-                    if self._is_microsoft_domain(domain, mx_host):
-                        # "Access denied" response from Microsoft is often ambiguous
-                        if code == 550 and "Access denied" in msg_str:
+                    # Microsoft answers "Access denied" whether or not the
+                    # mailbox exists, so the reply carries no verdict.
+                    if (
+                        self._is_microsoft_domain(domain, mx_host)
+                        and code == 550
+                        and "Access denied" in msg_str
+                    ):
                             self._add_verification_step(
                                 "warning",
                                 "Catch-all Test (Microsoft)",
-                                f"Microsoft domain detected - Access denied response treated as inconclusive.",
+                                "Microsoft domain detected - Access denied response treated as inconclusive.",
                             )
                             inconclusive_tests += 1
                             accepted = True  # Consider accepted for purposes of ending test on this MX
@@ -849,10 +769,8 @@ class EmailVerifier:
                     self.logger.debug(f"Unexpected error in catch-all sub-test: {e}")
                 finally:
                     if smtp_client and smtp_client.is_connected:
-                        try:
+                        with contextlib.suppress(aiosmtplib.SMTPException, OSError):
                             await smtp_client.quit()
-                        except (aiosmtplib.SMTPException, OSError):
-                            pass
             if not accepted:  # If email was not accepted by any MX server
                 self._add_verification_step(
                     "info",
@@ -885,30 +803,9 @@ class EmailVerifier:
         return is_catchall
 
     def _is_temporary_error(self, code: int, message: str) -> bool:
-        """
-        Checks whether SMTP error (code and message) indicates a temporary problem
-        that could be resolved by retrying.
-        """
-        if code in TEMPORARY_ERROR_CODES:  # Check by SMTP code
-            return True
-        message_lower = message.lower()  # Convert message to lowercase
-        # Search for keywords indicating temporary error
-        return any(
-            pattern in message_lower
-            for pattern in [
-                "temporary",
-                "try again",
-                "later",
-                "busy",
-                "overloaded",
-                "rate limit",
-                "throttled",
-                "quota",
-                "limit exceeded",
-            ]
-        )
+        return is_temporary_error(code, message)
 
-    async def verify_single_email(self, email: str, attempt: int = 1) -> Dict[str, Any]:
+    async def verify_single_email(self, email: str, attempt: int = 1) -> dict[str, Any]:
         """
         Verifies the validity of a single email address.
         :param email: Email address to verify.
@@ -959,7 +856,7 @@ class EmailVerifier:
             )
             return res  # End verification
 
-        mx_records: List[Tuple[int, str]] = []
+        mx_records: list[tuple[int, str]] = []
         try:
             mx_records = await self._resolve_mx_records(domain)  # Get MX records
             if mx_records:
@@ -977,7 +874,7 @@ class EmailVerifier:
             return res
         except Exception as e:  # Unexpected error during DNS query
             self._add_verification_step(
-                "error", "DNS MX query", f"Unexpected error: {str(e)}"
+                "error", "DNS MX query", f"Unexpected error: {e!s}"
             )
             res.update(
                 {
@@ -1053,10 +950,10 @@ class EmailVerifier:
             ) as e:  # Catch Timeout or NoConnection (may be temporary)
                 self.logger.warning(f"Temp error for {email} on {mx_host}: {e.message}")
                 # Check if error is actually temporary
-                if self._is_temporary_error(
-                    e.code if hasattr(e, "code") else 0, e.message
+                if (
+                    self._is_temporary_error(e.code if hasattr(e, "code") else 0, e.message)
+                    and attempt < self.retry_attempts
                 ):
-                    if attempt < self.retry_attempts:  # If retry is possible
                         delay = self.retry_delay_base * (2**attempt)
                         self._add_verification_step(
                             "warning",
@@ -1068,14 +965,14 @@ class EmailVerifier:
                 # If error is not temporary or attempts exhausted, continue to next MX
                 continue
             except EmailVerifierException as e:  # Catch other custom exceptions
-                self.logger.error(
-                    f"Verifier error for {email} on {mx_host}: {e.message}"
+                self.logger.warning(
+                    "Verifier error for %s on %s: %s", email, mx_host, e.message
                 )
                 # Check if error is temporary (e.g., UnexpectedResponse, which may be temporary)
-                if self._is_temporary_error(
-                    e.code if hasattr(e, "code") else 0, e.message
+                if (
+                    self._is_temporary_error(e.code if hasattr(e, "code") else 0, e.message)
+                    and attempt < self.retry_attempts
                 ):
-                    if attempt < self.retry_attempts:
                         delay = self.retry_delay_base * (2**attempt)
                         self._add_verification_step(
                             "warning",
@@ -1113,8 +1010,8 @@ class EmailVerifier:
         return res
 
     async def verify_emails_in_batch(
-        self, email_list: List[str]
-    ) -> List[Dict[str, Any]]:
+        self, email_list: list[str]
+    ) -> list[dict[str, Any]]:
         """
         Verifies a list of email addresses concurrently.
         :param email_list: List of email addresses to verify.
@@ -1147,7 +1044,7 @@ class EmailVerifier:
                         "email": email,
                         "is_valid": None,
                         "status_code": "internal_verifier_error",
-                        "message": f"Verifier error: {type(item).__name__} - {str(item)}",
+                        "message": f"Verifier error: {type(item).__name__} - {item!s}",
                         "is_catchall": False,
                         "mx_record": None,
                         "smtp_code_internal": None,

@@ -6,7 +6,8 @@ Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
 License: MIT
 """
 import logging
-from flask import Blueprint, jsonify, current_app
+
+from flask import Blueprint, current_app, jsonify
 
 logger = logging.getLogger(__name__)
 status_bp = Blueprint("status", __name__)
@@ -16,13 +17,13 @@ status_bp = Blueprint("status", __name__)
 def get_status():
     """Returns current verification status and statistics."""
     state = current_app.verification_state
-    
+
     try:
         with state.lock:
             log_batch = state.get("verification_log", [])[
                 -state.get("app_batch_size_for_ui", 20) :
             ]
-            
+
             return jsonify({
                 "status": state.get("status"),
                 "error_message": state.get("error_message"),
@@ -40,8 +41,8 @@ def get_status():
                 "has_results": bool(state.get("result_filepath")),
                 "verification_log_batch": log_batch,
             })
-    except Exception as e:
-        logger.error(f"Error getting status: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Error getting status")
         return jsonify({"error": "Chyba při získávání stavu."}), 500
 
 
@@ -50,12 +51,12 @@ def cleanup():
     """Cleans old files and resets verification state."""
     state = current_app.verification_state
     file_service = current_app.file_service
-    
+
     try:
         file_service.cleanup_files(clear_current_state_only=False)
         state.reset()
         return jsonify({"status": "success", "message": "Cleanup completed"})
-    except Exception as e:
-        logger.error(f"Error during cleanup: {e}", exc_info=True)
+    except Exception:
+        logger.exception("Error during cleanup")
         return jsonify({"error": "Chyba při čištění."}), 500
 

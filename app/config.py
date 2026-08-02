@@ -9,15 +9,14 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Dict, Any
-
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
 class Config:
     """Application configuration."""
-    
+
     def __init__(self):
         self.max_content_length = 10 * 1024 * 1024  # 10 MB
         self.upload_folder = "uploads"
@@ -25,18 +24,18 @@ class Config:
         self.flask_run_host = os.environ.get("FLASK_RUN_HOST", "127.0.0.1")
         self.flask_run_port = int(os.environ.get("FLASK_RUN_PORT", 5001))
         self.flask_debug = os.environ.get("FLASK_DEBUG", "0") == "1"
-        
+
         # Load from config.json if exists
         self.app_level_config = self._load_config_file()
-        
+
         # Ensure directories exist
         Path(self.upload_folder).mkdir(exist_ok=True)
         Path(self.results_folder).mkdir(exist_ok=True)
-    
-    def _load_config_file(self) -> Dict[str, Any]:
+
+    def _load_config_file(self) -> dict[str, Any]:
         """Load configuration from config.json file."""
         try:
-            with open("config.json", "r", encoding="utf-8") as f:
+            with Path("config.json").open(encoding="utf-8") as f:
                 config = json.load(f)
             logger.info("Main config.json loaded successfully.")
             return config
@@ -45,19 +44,19 @@ class Config:
                 "Main config.json not found in root. Using default parameters."
             )
             return {}
-        except json.JSONDecodeError as e:
-            logger.error(f"Error parsing main config.json: {e}. Using default parameters.")
+        except json.JSONDecodeError:
+            logger.exception("Error parsing main config.json, using default parameters")
             return {}
-    
-    def to_dict(self) -> Dict[str, Any]:
+
+    def to_dict(self) -> dict[str, Any]:
         """Convert config to dictionary for Flask app.config."""
         return {
             "MAX_CONTENT_LENGTH": self.max_content_length,
             "UPLOAD_FOLDER": self.upload_folder,
             "RESULTS_FOLDER": self.results_folder,
         }
-    
-    def get_verifier_config(self) -> Dict[str, Any]:
+
+    def get_verifier_config(self) -> dict[str, Any]:
         """Get configuration for EmailVerifier."""
         config = self.app_level_config.copy()
         # batch_size is managed separately via app_batch_size_for_ui

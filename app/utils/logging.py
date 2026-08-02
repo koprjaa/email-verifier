@@ -12,7 +12,7 @@ def setup_logging(app):
     """Setup application logging."""
     app_logger = logging.getLogger("flask.app")
     app_logger.setLevel(logging.DEBUG)
-    
+
     if not app_logger.handlers:
         flask_handler = logging.StreamHandler()
         flask_handler.setLevel(logging.DEBUG)
@@ -21,6 +21,6 @@ def setup_logging(app):
         )
         flask_handler.setFormatter(flask_formatter)
         app_logger.addHandler(flask_handler)
-    
+
     return app_logger
 
