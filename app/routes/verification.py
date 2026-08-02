@@ -60,7 +60,7 @@ def verify_single_email():
         )
         return jsonify(result)
     except Exception:
-        logger.exception("API /verify_single: Error during verification of {email_to_verify}")
+        logger.exception(f"API /verify_single: Error during verification of {email_to_verify}")
         return jsonify({"error": "Interní chyba serveru."}), 500
     finally:
         loop.close()

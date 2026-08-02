@@ -167,7 +167,7 @@ class VerificationService:
                         self.verifier.verify_emails_in_batch(batch)
                     )
                 except Exception:
-                    logger.exception("Thread (ID: {run_id}): Error during batch verification")
+                    logger.exception(f"Thread (ID: {run_id}): Error during batch verification")
 
                 if not batch_results and batch:
                     batch_results = [{

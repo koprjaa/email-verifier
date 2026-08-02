@@ -113,7 +113,7 @@ class FileService:
             except (UnicodeDecodeError, StopIteration):
                 continue
             except Exception:
-                logger.exception("Error trying encoding '{enc}'")
+                logger.exception(f"Error trying encoding '{enc}'")
                 continue
 
         return detected_encoding, detected_delimiter, headers
@@ -228,13 +228,13 @@ class FileService:
                             file_path.unlink()
                             logger.info(f"Deleted old upload file: {file_path}")
                         except Exception:
-                            logger.exception("Error deleting file {file_path}")
+                            logger.exception(f"Error deleting file {file_path}")
                 else:
                     try:
                         file_path.unlink()
                         logger.info(f"Deleted upload file: {file_path}")
                     except Exception:
-                        logger.exception("Error deleting file {file_path}")
+                        logger.exception(f"Error deleting file {file_path}")
 
             # Clean results folder
             results_dir = Path(self.config.results_folder)
@@ -245,11 +245,11 @@ class FileService:
                             file_path.unlink()
                             logger.info(f"Deleted old result file: {file_path}")
                         except Exception:
-                            logger.exception("Error deleting file {file_path}")
+                            logger.exception(f"Error deleting file {file_path}")
                 else:
                     try:
                         file_path.unlink()
                         logger.info(f"Deleted result file: {file_path}")
                     except Exception:
-                        logger.exception("Error deleting file {file_path}")
+                        logger.exception(f"Error deleting file {file_path}")
 

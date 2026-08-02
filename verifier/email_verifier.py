@@ -199,7 +199,7 @@ class EmailVerifier:
                 with Path(DEFAULT_CONFIG_PATH).open(encoding="utf-8") as f:
                     return json.load(f)
             except Exception:
-                self.logger.exception("Error parsing/loading {DEFAULT_CONFIG_PATH}")
+                self.logger.exception(f"Error parsing/loading {DEFAULT_CONFIG_PATH}")
         return {}
 
     def _ensure_data_dirs_exist(self):
@@ -207,7 +207,7 @@ class EmailVerifier:
         try:
             self.disposable_domains_file_path.parent.mkdir(parents=True, exist_ok=True)
         except OSError:
-            self.logger.exception("Error creating data directory {self.disposable_domains_file_path.parent}")
+            self.logger.exception(f"Error creating data directory {self.disposable_domains_file_path.parent}")
 
     def _load_disposable_domains(self) -> set[str]:
         """Loads disposable domains from file. Returns lowercase set of domains."""
