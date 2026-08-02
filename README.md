@@ -101,6 +101,12 @@ so following one without a check lets a stranger point this tool at a private
 network. Every resolved address is refused unless it is globally routable, and
 that includes the carrier-grade NAT range, which `is_private` does not cover.
 
+The check then hands back the addresses it approved, and the SMTP client is
+given one of those rather than the hostname. Passing the name on would have it
+resolved a second time, and a host under someone else's control can answer
+differently that time. Nothing on this connection uses TLS, so there is no
+certificate that connecting by address could mismatch.
+
 ## Limits
 
 - The host needs outbound IPv4 port 25. Many residential providers block it. A virtual server works better.

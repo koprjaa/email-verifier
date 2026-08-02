@@ -1,8 +1,11 @@
 """Tests for the decisions the verifier makes without touching the network."""
 
 import sys
+from pathlib import Path
 
 import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
 
 classify = sys.modules["verifier.classify"]
 
@@ -215,3 +218,21 @@ def test_the_domain_lookup_ignores_case():
 @pytest.mark.parametrize("domain", sorted(REPUTATION_SENSITIVE_DOMAINS))
 def test_every_sensitive_domain_is_handled(domain):
     assert choose_sender(domain, SENDERS, DEFAULT) == "probe@gmail.com" or domain == "seznam.cz"
+
+
+# --- DNS rebinding ----------------------------------------------------------
+
+
+def test_the_verifier_connects_to_a_checked_address_not_a_name():
+    """An MX name resolved twice can answer differently the second time.
+
+    _assert_mx_host_is_public returns the addresses it validated, and the SMTP
+    client is handed one of those rather than the hostname. Without that the
+    guard checks one host and the connection reaches another.
+    """
+    source = (ROOT / "verifier" / "email_verifier.py").read_text(encoding="utf-8")
+
+    assert "return resolved_ips" in source, "the guard must hand back what it checked"
+    assert "hostname=safe_ips[0]" in source, "the probe must connect to a checked address"
+    assert "hostname=catchall_ips[0]" in source, "the catch-all test must too"
+    assert "hostname=mx_host" not in source, "no connection may be made to the bare name"

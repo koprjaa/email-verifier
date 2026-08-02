@@ -366,11 +366,18 @@ class EmailVerifier:
                 continue
         return ips
 
-    async def _assert_mx_host_is_public(self, mx_host: str, port: int) -> None:
-        """
-        SSRF guard: resolves the MX host and refuses to connect if any of its
-        resolved IP addresses fall into a private/loopback/link-local/CGNAT/
-        reserved range. Raises NoConnectionException when blocked.
+    async def _assert_mx_host_is_public(self, mx_host: str, port: int) -> list[str]:
+        """Resolve the MX host and return the addresses that are safe to use.
+
+        An MX record is set by whoever owns the recipient domain, so following
+        one without a check lets a stranger aim this at a private network. Every
+        resolved address has to be globally routable or nothing is returned.
+
+        The caller connects to one of these addresses rather than to the name.
+        Passing the name on would have it resolved a second time, and a host
+        under someone else's control can answer differently that time.
+
+        Raises NoConnectionException when the host cannot be used.
         """
         resolved_ips = await self._resolve_all_host_ips(mx_host)
         if not resolved_ips:
@@ -397,6 +404,7 @@ class EmailVerifier:
                     status_code="mx_host_blocked",
                     verification_steps=self.verification_steps,
                 )
+        return resolved_ips
 
     def _is_disposable_domain(self, domain: str) -> bool:
         """Disposable check, with the step recorded for the report."""
@@ -435,7 +443,7 @@ class EmailVerifier:
         """
         # SSRF guard: ensure the MX host resolves only to public IPs before any
         # outbound connection is attempted. Raises NoConnectionException if blocked.
-        await self._assert_mx_host_is_public(mx_host, port)
+        safe_ips = await self._assert_mx_host_is_public(mx_host, port)
 
         server_ip_for_log = await self._resolve_host_ip_for_log(
             mx_host
@@ -450,8 +458,10 @@ class EmailVerifier:
         current_smtp_code = None  # Last received SMTP code
         try:
             async with self.max_concurrent_domains_semaphore:  # Limit concurrent connections
-                smtp_client = aiosmtplib.SMTP(  # Create SMTP client
-                    hostname=mx_host, port=port, timeout=self.smtp_timeout
+                # Connect to the checked address, not the name. No TLS runs on
+                # this connection, so there is no certificate to mismatch.
+                smtp_client = aiosmtplib.SMTP(
+                    hostname=safe_ips[0], port=port, timeout=self.smtp_timeout
                 )
                 await smtp_client.connect(
                     timeout=self.smtp_timeout
@@ -696,12 +706,12 @@ class EmailVerifier:
                     # SSRF guard: ensure the MX host resolves only to public IPs
                     # before any outbound connection. Mirrors _perform_smtp_check.
                     # Raises NoConnectionException if blocked.
-                    await self._assert_mx_host_is_public(mx_host, 25)
+                    catchall_ips = await self._assert_mx_host_is_public(mx_host, 25)
 
-                    smtp_client = aiosmtplib.SMTP(  # Create SMTP client
-                        hostname=mx_host,
+                    smtp_client = aiosmtplib.SMTP(
+                        hostname=catchall_ips[0],
                         port=25,
-                        timeout=self.smtp_timeout,  # Testuje na portu 25
+                        timeout=self.smtp_timeout,
                     )
                     await smtp_client.connect(timeout=self.smtp_timeout)
 
