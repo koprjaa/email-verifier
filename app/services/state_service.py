@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/services/state_service.py
-Description: Service for managing verification state updates and CSV result file generation.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    state_service.py
+#
+# Description:
+# Holds the state of the running verifications and serializes access to it.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import csv
 import logging
 from datetime import datetime

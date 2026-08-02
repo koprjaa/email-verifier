@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/routes/file_upload.py
-Description: Flask routes for CSV/TXT file upload, processing, and result download.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    file_upload.py
+#
+# Description:
+# Routes for uploading an address list, choosing its column, and downloading the results.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import logging
 import time
 from pathlib import Path

@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: verifier/email_verifier.py
-Description: Core email verification engine implementing SMTP, DNS, and catch-all domain checks.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    email_verifier.py
+#
+# Description:
+# Verifies an address in stages: syntax, domain, MX records, SMTP probe, and catch-all detection.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import asyncio
 import contextlib
 import json

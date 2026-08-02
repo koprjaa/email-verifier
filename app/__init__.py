@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/__init__.py
-Description: Flask application factory that creates and configures the Flask app instance.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    __init__.py
+#
+# Description:
+# Builds the Flask application: configuration, logging, and route registration.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import hmac
 import logging
 import os

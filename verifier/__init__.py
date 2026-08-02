@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: verifier/__init__.py
-Description: Package initialization for email verification module exports.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    __init__.py
+#
+# Description:
+# Package entry point. Exposes EmailVerifier and the exceptions it raises.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 from .email_verifier import EmailVerifier
 from .exceptions import (
     EmailVerifierException,

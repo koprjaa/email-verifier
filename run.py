@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: run.py
-Description: Application entry point that initializes Flask app and handles cleanup on exit.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    run.py
+#
+# Description:
+# Development entry point that starts the Flask application.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import atexit
 import logging
 

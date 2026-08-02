@@ -1,11 +1,18 @@
-"""
-Project: email-verifier
-File: verifier/classify.py
-Description: Decisions the verifier makes from an address, an IP or an SMTP reply.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
+#
+# Project: email-verifier
+# File:    classify.py
+#
+# Description:
+# The decisions the verifier makes from an address, an IP, or an SMTP reply, without touching the network.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
 
-These are the judgement calls the verifier makes without asking anything of the
+"""These are the judgement calls the verifier makes without asking anything of the
 network: whether an address may be probed at all, and what a server's answer
 means. They sit here so they can be read and tested on their own.
 """

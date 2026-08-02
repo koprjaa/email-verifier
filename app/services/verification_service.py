@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/services/verification_service.py
-Description: Service layer for managing single and bulk email verification operations with threading.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    verification_service.py
+#
+# Description:
+# Runs a verification in the background and reports its progress to the state service.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import asyncio
 import logging
 import threading

@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/routes/__init__.py
-Description: Registers all Flask route blueprints with the application.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    __init__.py
+#
+# Description:
+# Registers every blueprint on the application.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 from flask import Flask
 
 from app.routes.file_upload import file_upload_bp

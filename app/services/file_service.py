@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/services/file_service.py
-Description: Service for processing uploaded files including encoding detection, CSV parsing, and cleanup.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    file_service.py
+#
+# Description:
+# Reads an uploaded address list: encoding detection, CSV parsing, and cleanup of old uploads.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import csv
 import logging
 import re

@@ -1,11 +1,16 @@
-"""
-Project: email-verifier
-File: verifier/exceptions.py
-Description: Exceptions raised while verifying an address.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
-
+#
+# Project: email-verifier
+# File:    exceptions.py
+#
+# Description:
+# The exception types the verifier raises.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
 
 class EmailVerifierException(Exception):
     """Base for every error this package raises.

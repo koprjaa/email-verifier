@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/routes/status.py
-Description: Flask routes for checking verification status and performing cleanup operations.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    status.py
+#
+# Description:
+# Routes that report the progress of a run and clear a finished one.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import logging
 
 from flask import Blueprint, current_app, jsonify

@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/routes/verification.py
-Description: Flask routes for single and bulk email verification operations.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    verification.py
+#
+# Description:
+# Routes that start a run, stop it, and verify a single address.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import asyncio
 import json
 import logging

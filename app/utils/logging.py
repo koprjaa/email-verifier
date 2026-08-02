@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/utils/logging.py
-Description: Configures application-wide logging with formatters and handlers.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    logging.py
+#
+# Description:
+# Logging setup for the Flask application.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import logging
 
 

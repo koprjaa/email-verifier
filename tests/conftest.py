@@ -1,3 +1,17 @@
+#
+# Project: email-verifier
+# File:    conftest.py
+#
+# Description:
+# Test setup that keeps the suite off the network.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 """Keep the tests off the network.
 
 verifier/__init__.py imports EmailVerifier, which needs aiodns and an event

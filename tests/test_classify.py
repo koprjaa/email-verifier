@@ -1,3 +1,17 @@
+#
+# Project: email-verifier
+# File:    test_classify.py
+#
+# Description:
+# Tests for the decisions the verifier makes without touching the network.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 """Tests for the decisions the verifier makes without touching the network."""
 
 import sys

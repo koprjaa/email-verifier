@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/config.py
-Description: Manages application configuration including loading from config.json and environment variables.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    config.py
+#
+# Description:
+# Flask configuration: upload limits, paths, and the verifier defaults.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import json
 import logging
 import os

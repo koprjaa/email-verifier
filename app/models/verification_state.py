@@ -1,10 +1,17 @@
-"""
-Project: email-verifier
-File: app/models/verification_state.py
-Description: Thread-safe state management for email verification process with locking mechanisms.
-Author: Jan Alexandr Kopřiva jan.alexandr.kopriva@gmail.com
-License: MIT
-"""
+#
+# Project: email-verifier
+# File:    verification_state.py
+#
+# Description:
+# The state of one running verification: progress, results, and the stop flag.
+#
+# Author:
+# Jan Alexandr Kopřiva
+# jan.alexandr.kopriva@gmail.com
+#
+# License: MIT
+#
+
 import logging
 import threading
 from typing import Any
