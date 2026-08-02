@@ -250,3 +250,48 @@ def test_the_verifier_connects_to_a_checked_address_not_a_name():
     assert "hostname=safe_ips[0]" in source, "the probe must connect to a checked address"
     assert "hostname=catchall_ips[0]" in source, "the catch-all test must too"
     assert "hostname=mx_host" not in source, "no connection may be made to the bare name"
+
+
+# --- the blocklist that ships with the repository ----------------------------
+
+BLOCKLIST = ROOT / "data" / "disposable_domains.txt"
+
+
+def shipped_domains():
+    lines = BLOCKLIST.read_text(encoding="utf-8").splitlines()
+    return {s.lower() for line in lines if (s := line.strip()) and not s.startswith("#")}
+
+
+def test_the_blocklist_is_shipped():
+    """It used to be gitignored, so a fresh clone logged a warning and then let
+    every disposable address through."""
+    assert BLOCKLIST.exists(), "data/disposable_domains.txt is missing from the repo"
+
+
+def test_the_blocklist_is_not_empty():
+    assert len(shipped_domains()) >= 20
+
+
+def test_the_blocklist_catches_the_obvious_providers():
+    domains = shipped_domains()
+    for known in ("mailinator.com", "guerrillamail.com", "yopmail.com"):
+        assert known in domains
+
+
+def test_the_blocklist_does_not_list_a_real_mail_provider():
+    domains = shipped_domains()
+    for real in ("gmail.com", "seznam.cz", "outlook.com", "protonmail.com"):
+        assert real not in domains
+
+
+def test_every_entry_looks_like_a_bare_domain():
+    for domain in shipped_domains():
+        assert "@" not in domain and "/" not in domain and "." in domain
+        assert domain == domain.strip().lower()
+
+
+def test_the_shipped_list_works_through_the_public_check():
+    domains = shipped_domains()
+    assert is_disposable_domain("mailinator.com", domains) is True
+    assert is_disposable_domain("throwaway.mailinator.com", domains) is True
+    assert is_disposable_domain("gmail.com", domains) is False

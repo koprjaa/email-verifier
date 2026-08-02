@@ -216,17 +216,25 @@ class EmailVerifier:
         if self.disposable_domains_file_path.exists():
             try:
                 with self.disposable_domains_file_path.open(encoding="utf-8") as f:
-                    # Skip empty lines and comments (lines starting with #)
+                    # Skip empty lines and comments. Strip before the # test, so an
+                    # indented comment is a comment too.
                     return {
-                        line.strip().lower()
+                        stripped.lower()
                         for line in f
-                        if line.strip() and not line.startswith("#")
+                        if (stripped := line.strip()) and not stripped.startswith("#")
                     }
             except Exception:
-                self.logger.exception("Error loading disposable domains from '{self.disposable_domains_file_path}'")
+                # Was a plain string, so the path printed as literal braces.
+                self.logger.exception(
+                    f"Could not read disposable domains from "
+                    f"'{self.disposable_domains_file_path}'. The disposable check is off."
+                )
         else:
+            # Say what the consequence is. A missing file used to read as a note
+            # rather than as "every disposable address will now pass".
             self.logger.warning(
-                f"Disposable domains file '{self.disposable_domains_file_path}' not found."
+                f"Disposable domains file '{self.disposable_domains_file_path}' not found. "
+                f"The disposable check is off and no address will be rejected for it."
             )
         return set()
 

@@ -1,0 +1,38 @@
+# Disposable and temporary mailbox providers.
+#
+# A starter list, not a complete one. Every domain here was checked to resolve
+# on 2026-08-02. Thousands more exist and new ones appear constantly, so treat
+# a miss as expected rather than as a bug. For production, replace this file
+# with a maintained list and keep the same one-domain-per-line format.
+#
+# Lines starting with # and blank lines are ignored.
+# A subdomain of a listed domain matches too.
+
+10minutemail.com
+33mail.com
+anonaddy.me
+byom.de
+discard.email
+dispostable.com
+einrot.com
+emailondeck.com
+fakeinbox.com
+fakemail.net
+guerrillamail.com
+harakirimail.com
+inboxkitten.com
+luxusmail.org
+mailcatch.com
+maildrop.cc
+mailinator.com
+mailsac.com
+mintemail.com
+moakt.com
+mohmal.com
+sharklasers.com
+spamgourmet.com
+temp-mail.org
+tempmailo.com
+tempr.email
+trashmail.com
+yopmail.com

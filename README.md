@@ -76,7 +76,9 @@ All settings live in `config.json`. No `.env` file is needed.
 }
 ```
 
-The disposable blocklist is optional. If the file is missing, the application logs a warning and skips that stage.
+A starter blocklist ships in `data/disposable_domains.txt`. It holds 28 well known temporary mailbox providers, one domain per line, and a subdomain of a listed domain matches too. It is a starting point, not a complete list. Thousands of these providers exist and new ones appear constantly, so replace the file with a maintained list before relying on this stage. The format stays the same.
+
+If the file is missing the application logs a warning and skips the stage, which means every disposable address passes. The warning says so.
 
 ## How it works
 

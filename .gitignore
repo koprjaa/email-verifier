@@ -29,7 +29,6 @@ custom_logs/
 *.log
 *.log.*
 config.json
-data/disposable_domains.txt
 
 # Environment variables
 .env
