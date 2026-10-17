@@ -2,7 +2,6 @@
 // File: classify.rs
 // Description: Network-independent address and SMTP policy decisions.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use std::{

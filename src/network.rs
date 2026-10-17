@@ -2,7 +2,6 @@
 // File: network.rs
 // Description: DNS lookups and bounded plaintext SMTP sessions to pinned IP addresses.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use crate::verifier::{Settings, Step};

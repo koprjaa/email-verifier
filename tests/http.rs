@@ -2,7 +2,6 @@
 // File: tests/http.rs
 // Description: Offline HTTP integration tests for authentication, upload, jobs and downloads.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 mod support;

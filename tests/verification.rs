@@ -2,7 +2,6 @@
 // File: tests/verification.rs
 // Description: Offline pipeline tests, retry outcomes, cache behavior and concurrency isolation.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 mod support;

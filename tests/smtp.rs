@@ -2,7 +2,6 @@
 // File: tests/smtp.rs
 // Description: Real SMTP protocol exercised against loopback fixtures only.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use email_verifier::{network::smtp_session, verifier::Settings};

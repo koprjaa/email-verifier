@@ -2,7 +2,6 @@
 // File: lib.rs
 // Description: Public modules for email verification and the web application.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 pub mod classify;

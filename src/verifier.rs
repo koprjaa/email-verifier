@@ -2,7 +2,6 @@
 // File: verifier.rs
 // Description: Isolated verification traces, DNS caches, catch-all tests and retry orchestration.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use crate::{

@@ -2,7 +2,6 @@
 // File: tests/classify.rs
 // Description: Equivalents of every original classification and shipped-list test.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use email_verifier::classify::*;

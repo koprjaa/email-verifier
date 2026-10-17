@@ -2,7 +2,6 @@
 // File: main.rs
 // Description: HTTP server entry point using the original environment variables.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use email_verifier::{

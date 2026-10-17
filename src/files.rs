@@ -2,7 +2,6 @@
 // File: files.rs
 // Description: Encoding detection, ordered address extraction and result CSV serialization.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use crate::verifier::VerificationResult;

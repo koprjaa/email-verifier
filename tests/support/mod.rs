@@ -2,7 +2,6 @@
 // File: tests/support/mod.rs
 // Description: Deterministic network replacement and isolated working directories.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use email_verifier::{

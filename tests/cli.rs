@@ -2,7 +2,6 @@
 // File: tests/cli.rs
 // Description: Process-level startup, environment and exit-code checks without external network.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use std::{

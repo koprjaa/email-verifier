@@ -2,7 +2,6 @@
 // File: tests/files.rs
 // Description: Encoding, extraction and byte-level CSV regression tests.
 // Author: Jan Alexandr Kopřiva
-// Based on email-verifier by Jan Alexandr Kopřiva
 // License: MIT
 
 use email_verifier::{
