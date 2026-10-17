@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<!-- Project: email-verifier / File: index.html
+Description: Same-origin single and bulk email verification interface.
+Author: Jan Alexandr Kopřiva
+Based on email-verifier by Jan Alexandr Kopřiva
+License: MIT -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Email Verifier</title>
+<style>body{font:16px system-ui;background:#f8f9fa;color:#212529;max-width:850px;margin:40px auto;padding:0 20px}section{background:white;border:1px solid #ddd;border-radius:8px;padding:24px;margin:20px 0}button,input,select{font:inherit;padding:9px;margin:5px}button,a{cursor:pointer}pre{white-space:pre-wrap;overflow-wrap:anywhere}progress{width:100%}.drop{padding:25px;border:2px dashed #0d6efd}h1{color:#0d6efd}</style></head>
+<body><h1>Email Verifier</h1><label>Access token (if configured) <input id="token" type="password" autocomplete="off"></label>
+<section><h2>Single email verification</h2><form id="single"><input id="email" type="email" placeholder="Email address" required><button>Verify</button></form><pre id="singleResult"></pre></section>
+<section><h2>Bulk email verification</h2><p>Upload CSV or TXT. CSV delimiters: comma, semicolon, tab or pipe. Supported encodings include UTF-8 and CP1250.</p><div class="drop" id="drop">Drop a CSV or TXT file here, or <input type="file" id="file" accept=".csv,.txt"></div><div id="columns" hidden><select id="column"></select><button id="select">Confirm column</button></div><p><button id="start">Start verification</button><button id="stop">Stop and save</button><button id="cleanup">Clear files</button><a id="download" hidden>Download results (CSV)</a></p><progress id="progress" max="100" value="0"></progress><pre id="state"></pre></section>
+<script>
+const $=id=>document.getElementById(id);
+async function api(path,options={}){options.headers={...options.headers,'X-Auth-Token':$('token').value};const response=await fetch(path,options);const data=await response.json();if(!response.ok)throw Error(data.error||response.statusText);return data;}
+function showError(error){$('state').textContent=error.message;}
+$('single').onsubmit=async event=>{event.preventDefault();$('singleResult').textContent='Verifying...';try{$('singleResult').textContent=JSON.stringify(await api('/verify_single',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:$('email').value.trim()})}),null,2);}catch(error){$('singleResult').textContent=error.message;}};
+async function upload(file){if(!file)return;try{const form=new FormData();form.append('file',file);const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),60000);let data;try{data=await api(file.name.toLowerCase().endsWith('.txt')?'/load_txt':'/load_csv',{method:'POST',body:form,signal:controller.signal});}finally{clearTimeout(timer);}if(data.status==='select_column'){$('column').replaceChildren();for(const column of data.columns){const option=document.createElement('option');option.value=column;option.textContent=column;$('column').append(option);}$('column').value=data.suggested_email_column;$('columns').hidden=false;}else{await api('/select_column',{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});}$('state').textContent=JSON.stringify(data,null,2);}catch(error){showError(error);}}
+$('file').onchange=()=>upload($('file').files[0]);for(const name of ['dragover','drop'])$('drop').addEventListener(name,event=>{event.preventDefault();if(name==='drop')upload(event.dataTransfer.files[0]);});
+$('select').onclick=async()=>{try{const data=await api('/select_column',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({column:$('column').value})});$('columns').hidden=true;$('state').textContent=JSON.stringify(data,null,2);}catch(error){showError(error);}};
+let polling=null;
+async function refresh(){try{const data=await api('/status');$('state').textContent=JSON.stringify(data,null,2);$('progress').value=data.total_emails?100*data.processed_emails/data.total_emails:0;$('download').hidden=!data.has_results;$('download').href='/download_results?token='+encodeURIComponent($('token').value);if(['completed','stopped','error'].includes(data.status)){clearInterval(polling);polling=null;}}catch(error){showError(error);}}
+$('start').onclick=async()=>{try{await api('/start_verification?confirm=true');if(polling)clearInterval(polling);polling=setInterval(refresh,2000);refresh();}catch(error){showError(error);}};
+$('stop').onclick=async()=>{try{await api('/stop_verification',{method:'POST'});refresh();}catch(error){showError(error);}};
+$('cleanup').onclick=async()=>{try{const data=await api('/cleanup',{method:'POST'});$('state').textContent=data.message;$('download').hidden=true;$('progress').value=0;}catch(error){showError(error);}};
+</script></body></html>

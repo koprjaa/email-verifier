@@ -1,0 +1,5 @@
+name;Email Address;note
+One;one@example.com;first
+Two;two@example.com;second
+Duplicate;one@example.com;again
+Blank; ;skip

@@ -1,4 +1,28 @@
-# Python
+# Build output
+/target/
+
+# Runtime files
+/uploads/
+/results/
+/logs/
+/custom_logs/
+*.log
+*.log.*
+.env
+.env.*
+
+# Editor and operating system files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
 __pycache__/
 *.py[cod]
 *$py.class
@@ -8,51 +32,19 @@ build/
 dist/
 *.egg-info/
 *.egg
-
-# Virtual Environment
 venv/
 env/
 ENV/
 .venv/
-
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-
-# Project specific
 uploads/
 results/
 logs/
 custom_logs/
-*.log
-*.log.*
 config.json
-
-# Environment variables
-.env
-.env.*
-
-# OS specific
-.DS_Store
-Thumbs.db
-
-# Cache and coverage
 .cache/
 .pytest_cache/
 .coverage
 htmlcov/
-
-# Temporary files
-*.tmp
-*.temp
-*.bak
-
-# Project specific
-dnspython/ 
-# Tooling caches
-.pytest_cache/
+dnspython/
 .ruff_cache/
 uv.lock
-.venv/
