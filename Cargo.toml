@@ -2,7 +2,7 @@
 name = "email-verifier"
 version = "1.0.0"
 edition = "2021"
-description = "SMTP email verification with DNS, catch-all detection and a bulk web interface"
+description = "Checks whether email addresses exist, one by one or in bulk."
 license = "MIT"
 authors = ["Jan Alexandr Kopřiva"]
 repository = "https://github.com/koprjaa/email-verifier"
