@@ -15,4 +15,3 @@
 from app.models.verification_state import VerificationState
 
 __all__ = ["VerificationState"]
-

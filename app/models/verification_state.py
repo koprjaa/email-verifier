@@ -98,4 +98,3 @@ class VerificationState:
         """Get state as dictionary (for JSON serialization)."""
         with self._lock:
             return self._state.copy()
-

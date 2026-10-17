@@ -34,9 +34,7 @@ def load_csv():
     try:
         with state.lock:
             if state.get("status") not in ["idle", "error", "completed", "stopped"]:
-                logger.warning(
-                    f"API /load_csv: Attempt to load CSV while in state '{state.get('status')}'."
-                )
+                logger.warning(f"API /load_csv: Attempt to load CSV while in state '{state.get('status')}'.")
                 return jsonify({"error": "Jiná operace již probíhá."}), 400
 
             state.reset()
@@ -65,9 +63,7 @@ def load_csv():
         try:
             uploaded_filepath = file_service.save_uploaded_file(file)
 
-            encoding, delimiter, headers = file_service.detect_csv_encoding_and_delimiter(
-                uploaded_filepath
-            )
+            encoding, delimiter, headers = file_service.detect_csv_encoding_and_delimiter(uploaded_filepath)
 
             if not headers:
                 if uploaded_filepath.exists():
@@ -75,9 +71,9 @@ def load_csv():
                 with state.lock:
                     state.set("status", "error")
                 logger.error("API /load_csv: Failed to read CSV headers.")
-                return jsonify({
-                    "error": "Nepodařilo se přečíst CSV soubor. Zkontrolujte kódování a oddělovač sloupců."
-                }), 400
+                return jsonify(
+                    {"error": "Nepodařilo se přečíst CSV soubor. Zkontrolujte kódování a oddělovač sloupců."}
+                ), 400
 
             suggested_column = file_service.suggest_email_column(headers)
 
@@ -88,11 +84,13 @@ def load_csv():
                 state.set("detected_delimiter", delimiter)
                 state.set("last_activity_time", time.time())
 
-            return jsonify({
-                "status": "select_column",
-                "columns": headers,
-                "suggested_email_column": suggested_column,
-            })
+            return jsonify(
+                {
+                    "status": "select_column",
+                    "columns": headers,
+                    "suggested_email_column": suggested_column,
+                }
+            )
 
         except Exception as e:
             logger.exception("API /load_csv: Error processing CSV")
@@ -141,7 +139,7 @@ def load_txt():
                 state.set("status", "error")
             return jsonify({"error": "Nebyl vybrán žádný soubor"}), 400
 
-        if not file.filename.lower().endswith('.txt'):
+        if not file.filename.lower().endswith(".txt"):
             with state.lock:
                 state.set("status", "error")
             return jsonify({"error": "Povoleny jsou pouze TXT soubory"}), 400
@@ -172,16 +170,18 @@ def load_txt():
                 state.set("status", "ready")
                 state.set("last_activity_time", time.time())
 
-            return jsonify({
-                "status": "ready",
-                "total_emails": len(emails),
-                "sample_emails": emails[:5],
-                "file_info": {
-                    "filename": file.filename,
-                    "encoding": encoding,
-                    "size_bytes": uploaded_filepath.stat().st_size
+            return jsonify(
+                {
+                    "status": "ready",
+                    "total_emails": len(emails),
+                    "sample_emails": emails[:5],
+                    "file_info": {
+                        "filename": file.filename,
+                        "encoding": encoding,
+                        "size_bytes": uploaded_filepath.stat().st_size,
+                    },
                 }
-            })
+            )
 
         except Exception as e:
             logger.exception("API /load_txt: Error processing TXT")
@@ -237,15 +237,15 @@ def select_column():
                 Path(uploaded_filepath_str),
                 selected_column,
                 state.get("detected_encoding", "utf-8"),
-                state.get("detected_delimiter", ";")
+                state.get("detected_delimiter", ";"),
             )
 
             if not unique_emails:
                 with state.lock:
                     state.set("status", "error")
-                return jsonify({
-                    "error": f"Ve sloupci '{selected_column}' nebyly nalezeny žádné platné emailové adresy."
-                }), 400
+                return jsonify(
+                    {"error": f"Ve sloupci '{selected_column}' nebyly nalezeny žádné platné emailové adresy."}
+                ), 400
 
             with state.lock:
                 state.set("selected_column", selected_column)
@@ -291,9 +291,7 @@ def download_results():
             result_path_resolved = result_path.resolve()
 
             if not str(result_path_resolved).startswith(str(results_folder)):
-                logger.error(
-                    f"Security check failed: {result_path_resolved} is not in {results_folder}"
-                )
+                logger.error(f"Security check failed: {result_path_resolved} is not in {results_folder}")
                 return jsonify({"error": "Invalid file path"}), 403
 
             filename = result_path.name
@@ -308,4 +306,3 @@ def download_results():
     except Exception:
         logger.exception("Error downloading results")
         return jsonify({"error": "Chyba při stahování výsledků."}), 500
-

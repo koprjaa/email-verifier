@@ -65,43 +65,44 @@ class VerificationService:
 
             # Generate new run ID and reset state
             new_run_id = int(time.time() * 1000)
-            self.state.update({
-                "status": "verifying",
-                "error_message": None,
-                "processed_emails": 0,
-                "valid_emails": 0,
-                "invalid_emails": 0,
-                "probable_emails": 0,
-                "unknown_emails": 0,
-                "results": {},
-                "verification_log": [{
-                    "timestamp": datetime.now().isoformat(),
-                    "status": "info",
-                    "action": "Spuštění verifikace",
-                    "details": f"Běh ID: {new_run_id}",
-                }],
-                "start_time": datetime.now().isoformat(),
-                "last_activity_time": time.time(),
-                "result_filepath": None,
-                "accept_all_domains_summary": {},
-                "stop_requested": False,
-                "verification_run_id": new_run_id,
-                "is_thread_active": False,
-            })
+            self.state.update(
+                {
+                    "status": "verifying",
+                    "error_message": None,
+                    "processed_emails": 0,
+                    "valid_emails": 0,
+                    "invalid_emails": 0,
+                    "probable_emails": 0,
+                    "unknown_emails": 0,
+                    "results": {},
+                    "verification_log": [
+                        {
+                            "timestamp": datetime.now().isoformat(),
+                            "status": "info",
+                            "action": "Spuštění verifikace",
+                            "details": f"Běh ID: {new_run_id}",
+                        }
+                    ],
+                    "start_time": datetime.now().isoformat(),
+                    "last_activity_time": time.time(),
+                    "result_filepath": None,
+                    "accept_all_domains_summary": {},
+                    "stop_requested": False,
+                    "verification_run_id": new_run_id,
+                    "is_thread_active": False,
+                }
+            )
 
             # Calculate total batches
             batch_size = self.state.get("app_batch_size_for_ui", 20)
             total_emails = self.state.get("total_emails", 0)
-            self.state.set("total_batches", (
-                (total_emails + batch_size - 1) // batch_size
-                if total_emails > 0 else 0
-            ))
+            self.state.set(
+                "total_batches", ((total_emails + batch_size - 1) // batch_size if total_emails > 0 else 0)
+            )
 
             # Start verification thread
             self.verification_thread = threading.Thread(
-                target=self._run_bulk_verification,
-                name=f"BulkVerifyThread-{new_run_id}",
-                daemon=True
+                target=self._run_bulk_verification, name=f"BulkVerifyThread-{new_run_id}", daemon=True
             )
             self.verification_thread.start()
 
@@ -116,8 +117,9 @@ class VerificationService:
             run_id = self.state.get("verification_run_id")
             self.state.set("stop_requested", True)
             self.state.set("status", "stopping")
-            self._add_log("info", "Požadavek na zastavení",
-                         "Verifikace bude zastavena po dokončení aktuální dávky.")
+            self._add_log(
+                "info", "Požadavek na zastavení", "Verifikace bude zastavena po dokončení aktuální dávky."
+            )
 
             return run_id
 
@@ -144,8 +146,7 @@ class VerificationService:
 
             for i in range(0, total_emails, batch_size):
                 with self.state.lock:
-                    if (self.state.get("stop_requested") or
-                        self.state.get("verification_run_id") != run_id):
+                    if self.state.get("stop_requested") or self.state.get("verification_run_id") != run_id:
                         if self.state.get("verification_run_id") == run_id:
                             self.state.set("status", "stopped")
                             state_service.save_results(run_id, is_final_save=True)
@@ -154,7 +155,7 @@ class VerificationService:
                     self.state.set("last_activity_time", time.time())
                     self.state.set("current_batch_num", (i // batch_size) + 1)
 
-                batch = emails[i:i + batch_size]
+                batch = emails[i : i + batch_size]
                 logger.info(
                     f"Thread (ID: {run_id}): Processing batch "
                     f"{self.state.get('current_batch_num')}/{self.state.get('total_batches')} "
@@ -163,26 +164,26 @@ class VerificationService:
 
                 batch_results = []
                 try:
-                    batch_results = loop.run_until_complete(
-                        self.verifier.verify_emails_in_batch(batch)
-                    )
+                    batch_results = loop.run_until_complete(self.verifier.verify_emails_in_batch(batch))
                 except Exception:
                     logger.exception(f"Thread (ID: {run_id}): Error during batch verification")
 
                 if not batch_results and batch:
-                    batch_results = [{
-                        "email": email,
-                        "is_valid": None,
-                        "status_code": "batch_processing_error",
-                        "message": "Error processing batch in verification thread.",
-                        "is_catchall": False,
-                        "verification_steps": [],
-                        "smtp_code_internal": None,
-                    } for email in batch]
+                    batch_results = [
+                        {
+                            "email": email,
+                            "is_valid": None,
+                            "status_code": "batch_processing_error",
+                            "message": "Error processing batch in verification thread.",
+                            "is_catchall": False,
+                            "verification_steps": [],
+                            "smtp_code_internal": None,
+                        }
+                        for email in batch
+                    ]
 
                 with self.state.lock:
-                    if (self.state.get("verification_run_id") != run_id or
-                        self.state.get("stop_requested")):
+                    if self.state.get("verification_run_id") != run_id or self.state.get("stop_requested"):
                         break
 
                     state_service.process_batch_results(batch_results)
@@ -193,20 +194,15 @@ class VerificationService:
                     if self.state.get("status") == "verifying":
                         if self.state.get("processed_emails") >= total_emails:
                             self.state.set("status", "completed")
-                            logger.info(
-                                f"Thread (ID: {run_id}): Bulk verification completed successfully."
-                            )
+                            logger.info(f"Thread (ID: {run_id}): Bulk verification completed successfully.")
                         else:
                             self.state.set("status", "stopped")
-                            logger.info(
-                                f"Thread (ID: {run_id}): Bulk verification was stopped."
-                            )
+                            logger.info(f"Thread (ID: {run_id}): Bulk verification was stopped.")
                     state_service.save_results(run_id, is_final_save=True)
 
         finally:
             with self.state.lock:
-                if (self.state.get("verification_run_id") == run_id or
-                    not self.state.get("is_thread_active")):
+                if self.state.get("verification_run_id") == run_id or not self.state.get("is_thread_active"):
                     self.state.set("is_thread_active", False)
                     logger.info(f"Thread (ID: {run_id}): Thread cleanup completed.")
             loop.close()
@@ -223,4 +219,3 @@ class VerificationService:
             self.state["verification_log"].append(log_entry)
             if len(self.state["verification_log"]) > 1000:
                 self.state["verification_log"] = self.state["verification_log"][-1000:]
-

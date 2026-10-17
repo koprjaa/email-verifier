@@ -44,7 +44,6 @@ def create_app(config=None):
     # CORS intentionally not enabled: this is a same-origin local app.
     # (Previously `CORS(app)` opened all origins — removed for security.)
 
-
     # Setup logging
     setup_logging(app)
 
@@ -77,17 +76,13 @@ def create_app(config=None):
         sender_email_override=verifier_config.get("sender_email_override", None),
         default_sender_email_config=verifier_config.get("sender_emails", {}).get("default"),
         sender_emails_by_domain_config={
-            k: v
-            for k, v in verifier_config.get("sender_emails", {}).items()
-            if k != "default"
+            k: v for k, v in verifier_config.get("sender_emails", {}).items() if k != "default"
         },
     )
     app_logger.info("Global EmailVerifier instance created and configured.")
 
     # Initialize services
-    app.verification_service = VerificationService(
-        app.email_verifier, app.verification_state, app_config
-    )
+    app.verification_service = VerificationService(app.email_verifier, app.verification_state, app_config)
     app.file_service = FileService(app_config, app.verification_state)
 
     # Register routes
@@ -116,4 +111,3 @@ def create_app(config=None):
             return None
 
     return app
-

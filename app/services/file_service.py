@@ -35,8 +35,7 @@ class FileService:
         """Save uploaded file with timestamp prefix."""
         filename = secure_filename(file.filename)
         uploaded_filepath = (
-            Path(self.config.upload_folder)
-            / f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
+            Path(self.config.upload_folder) / f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
         )
 
         logger.info(f"Saving file to: {uploaded_filepath}")
@@ -58,9 +57,7 @@ class FileService:
                 if chunk_count % 100 == 0:
                     elapsed = time.time() - start_time
                     speed = total_size / (1024 * 1024 * elapsed) if elapsed > 0 else 0
-                    logger.info(
-                        f"Progress - {total_size/1024:.1f}KB written, {speed:.1f}MB/s"
-                    )
+                    logger.info(f"Progress - {total_size / 1024:.1f}KB written, {speed:.1f}MB/s")
 
         if not uploaded_filepath.exists():
             raise OSError(f"File was not saved correctly at {uploaded_filepath}")
@@ -71,9 +68,7 @@ class FileService:
 
         return uploaded_filepath
 
-    def detect_csv_encoding_and_delimiter(
-        self, filepath: Path
-    ) -> tuple[str | None, str | None, list[str]]:
+    def detect_csv_encoding_and_delimiter(self, filepath: Path) -> tuple[str | None, str | None, list[str]]:
         """Detect CSV encoding, delimiter, and read headers."""
         encodings_to_try = [
             "utf-8-sig",
@@ -128,9 +123,7 @@ class FileService:
         ]
 
         for header_item in headers:
-            normalized_header = (
-                header_item.lower().replace(" ", "").replace("_", "")
-            )
+            normalized_header = header_item.lower().replace(" ", "").replace("_", "")
             if normalized_header in common_email_headers:
                 logger.info(f"Found suggested email column: {header_item}")
                 return header_item
@@ -164,7 +157,7 @@ class FileService:
         with Path(filepath).open(encoding=encoding) as f:
             file_content = f.read()
 
-        email_pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        email_pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         lines = file_content.splitlines()
         emails_found = []
 
@@ -174,8 +167,8 @@ class FileService:
                 continue
 
             # Handle lines with multiple emails separated by delimiters
-            if any(sep in line for sep in [',', ';', '|', '\t']):
-                for sep in [',', ';', '|', '\t']:
+            if any(sep in line for sep in [",", ";", "|", "\t"]):
+                for sep in [",", ";", "|", "\t"]:
                     if sep in line:
                         parts = line.split(sep)
                         for part in parts:
@@ -252,4 +245,3 @@ class FileService:
                         logger.info(f"Deleted result file: {file_path}")
                     except Exception:
                         logger.exception(f"Error deleting file {file_path}")
-

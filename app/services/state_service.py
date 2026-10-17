@@ -49,15 +49,18 @@ class StateService:
                 self.state["unknown_emails"] = self.state.get("unknown_emails", 0) + 1
 
             log_status = (
-                "success" if result_item.get("is_valid")
+                "success"
+                if result_item.get("is_valid")
                 else ("warning" if result_item.get("is_catchall") else "error")
             )
-            self.state["verification_log"].append({
-                "timestamp": datetime.now().isoformat(),
-                "status": log_status,
-                "action": f"Ověřen email: {email_addr}",
-                "details": f"Výsledek: {result_item.get('status_code', 'N/A')}",
-            })
+            self.state["verification_log"].append(
+                {
+                    "timestamp": datetime.now().isoformat(),
+                    "status": log_status,
+                    "action": f"Ověřen email: {email_addr}",
+                    "details": f"Výsledek: {result_item.get('status_code', 'N/A')}",
+                }
+            )
 
             # Keep log size manageable
             if len(self.state["verification_log"]) > 100:
@@ -80,8 +83,7 @@ class StateService:
                 if not self.state.get("result_filepath"):
                     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
                     result_filepath = (
-                        Path(self.config.results_folder)
-                        / f"verification_results_{timestamp}.csv"
+                        Path(self.config.results_folder) / f"verification_results_{timestamp}.csv"
                     )
                     self.state.set("result_filepath", str(result_filepath))
                 else:
@@ -119,9 +121,7 @@ class StateService:
 
                     dns_records = ""
                     if result.get("mx_records"):
-                        dns_records = ", ".join(
-                            [host for prio, host in result.get("mx_records", [])]
-                        )
+                        dns_records = ", ".join([host for prio, host in result.get("mx_records", [])])
                     elif result.get("mx_record"):
                         dns_records = result.get("mx_record")
 
@@ -193,4 +193,3 @@ class StateService:
             self.state["verification_log"].append(log_entry)
             if len(self.state["verification_log"]) > 1000:
                 self.state["verification_log"] = self.state["verification_log"][-1000:]
-

@@ -52,9 +52,7 @@ REPUTATION_ERROR_PATTERNS = (
 )
 
 # Czech providers that tarpit an unknown sender rather than answer honestly.
-REPUTATION_SENSITIVE_DOMAINS = frozenset(
-    {"centrum.cz", "post.cz", "seznam.cz", "email.cz"}
-)
+REPUTATION_SENSITIVE_DOMAINS = frozenset({"centrum.cz", "post.cz", "seznam.cz", "email.cz"})
 
 # Senders these providers are most likely to accept a probe from.
 TRUSTED_SENDER_DOMAINS = ("gmail.com", "outlook.com", "yahoo.com")

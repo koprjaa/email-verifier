@@ -40,16 +40,16 @@ DISPOSABLE = {"mailinator.com", "10minutemail.com", "guerrillamail.com"}
 @pytest.mark.parametrize(
     "ip",
     [
-        "127.0.0.1",        # loopback
-        "::1",              # loopback, v6
-        "10.0.0.1",         # private
-        "172.16.0.1",       # private
-        "192.168.1.1",      # private
+        "127.0.0.1",  # loopback
+        "::1",  # loopback, v6
+        "10.0.0.1",  # private
+        "172.16.0.1",  # private
+        "192.168.1.1",  # private
         "169.254.169.254",  # link-local, the cloud metadata address
-        "fe80::1",          # link-local, v6
-        "224.0.0.1",        # multicast
-        "0.0.0.0",          # unspecified
-        "100.64.0.1",       # carrier-grade NAT
+        "fe80::1",  # link-local, v6
+        "224.0.0.1",  # multicast
+        "0.0.0.0",  # unspecified
+        "100.64.0.1",  # carrier-grade NAT
         "100.127.255.254",  # carrier-grade NAT, upper end
     ],
 )
@@ -147,7 +147,7 @@ def test_a_busy_message_reads_as_temporary_whatever_the_code(message):
 
 
 def test_the_message_match_is_a_substring_not_a_word():
-    """"temporarily" does not contain the pattern "temporary", so it is missed.
+    """ "temporarily" does not contain the pattern "temporary", so it is missed.
 
     A server that writes "temporarily unavailable" is refused as permanent.
     Widening the pattern is a judgement call about false positives, so the

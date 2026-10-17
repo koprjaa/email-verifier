@@ -94,6 +94,7 @@ MICROSOFT_MX_PATTERNS = [
     "*.hotmail.com",
 ]
 
+
 # Czech email providers that are sensitive to sender reputation
 class EmailVerifier:
     """Verifies email addresses using SMTP and DNS queries."""
@@ -129,27 +130,17 @@ class EmailVerifier:
         self.default_connect_port = connect_port
         self.rate_limit_delay_base = rate_limit_delay_base
         # Semaphore limits concurrent connections to different domains to avoid overwhelming servers
-        self.max_concurrent_domains_semaphore = asyncio.Semaphore(
-            max_concurrent_domains
-        )
+        self.max_concurrent_domains_semaphore = asyncio.Semaphore(max_concurrent_domains)
         # HELO hostname defaults to machine FQDN if not specified
-        self.helo_hostname = (
-            helo_hostname
-            or self.internal_config.get("helo_hostname")
-            or socket.getfqdn()
-        )
+        self.helo_hostname = helo_hostname or self.internal_config.get("helo_hostname") or socket.getfqdn()
         self.retry_attempts = retry_attempts
         self.retry_delay_base = retry_delay_base
         self.sender_email_override = sender_email_override
-        self.default_sender_email = (
-            default_sender_email_config
-            or self.internal_config.get(
-                "default_sender_email", f"verifier@{self.helo_hostname}"
-            )
+        self.default_sender_email = default_sender_email_config or self.internal_config.get(
+            "default_sender_email", f"verifier@{self.helo_hostname}"
         )
-        self.sender_emails_by_domain = (
-            sender_emails_by_domain_config
-            or self.internal_config.get("sender_emails_by_domain", {})
+        self.sender_emails_by_domain = sender_emails_by_domain_config or self.internal_config.get(
+            "sender_emails_by_domain", {}
         )
 
         _dns_servers_to_use = dns_servers or self.internal_config.get("dns_servers")
@@ -185,9 +176,7 @@ class EmailVerifier:
             logger.setLevel(logging.INFO)
             ch = logging.StreamHandler()
             ch.setLevel(logging.INFO)
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
+            formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
             ch.setFormatter(formatter)
             logger.addHandler(ch)
         return logger
@@ -247,9 +236,7 @@ class EmailVerifier:
         """Resets verification steps list for new email."""
         self.verification_steps = []
 
-    def _add_verification_step(
-        self, status: str, action: str, details: str = "", code: Any | None = None
-    ):
+    def _add_verification_step(self, status: str, action: str, details: str = "", code: Any | None = None):
         """Adds a step to verification trace for debugging and user feedback."""
         step = {
             "timestamp": datetime.now().isoformat(),
@@ -259,9 +246,7 @@ class EmailVerifier:
             "code": str(code) if code is not None else None,
         }
         self.verification_steps.append(step)
-        self.logger.debug(
-            f"Step: {action} - {details} (Status: {status}, Code: {code})"
-        )
+        self.logger.debug(f"Step: {action} - {details} (Status: {status}, Code: {code})")
 
     async def _resolve_mx_records(self, domain: str) -> list[tuple[int, str]]:
         """Resolves and sorts MX records for domain. Uses async DNS resolver with caching."""
@@ -270,9 +255,7 @@ class EmailVerifier:
         async with self.mx_cache_lock:
             if domain in self.mx_records_cache:
                 cached_records = self.mx_records_cache[domain]
-                self._add_verification_step(
-                    "info", "DNS MX query", f"Using cached MX records for {domain}"
-                )
+                self._add_verification_step("info", "DNS MX query", f"Using cached MX records for {domain}")
                 return cached_records
 
         try:
@@ -281,17 +264,12 @@ class EmailVerifier:
                 timeout=self.dns_timeout,
                 tries=self.internal_config.get("dns_resolver_tries", 2),
             )
-            if (
-                hasattr(self.async_dns_resolver, "nameservers")
-                and self.async_dns_resolver.nameservers
-            ):
+            if hasattr(self.async_dns_resolver, "nameservers") and self.async_dns_resolver.nameservers:
                 resolver.nameservers = self.async_dns_resolver.nameservers
 
             mx_records = await resolver.query(domain, "MX")
             # Sort by priority and remove trailing dot from hostname
-            sorted_mxs = sorted(
-                [(int(r.priority), str(r.host).rstrip(".")) for r in mx_records]
-            )
+            sorted_mxs = sorted([(int(r.priority), str(r.host).rstrip(".")) for r in mx_records])
             if not sorted_mxs:
                 msg = f"No MX records found for {domain}."
                 self._add_verification_step("error", "DNS MX query", msg)
@@ -304,9 +282,7 @@ class EmailVerifier:
             async with self.mx_cache_lock:
                 self.mx_records_cache[domain] = sorted_mxs
 
-            self._add_verification_step(
-                "success", "DNS MX query", f"Found MX: {sorted_mxs}"
-            )
+            self._add_verification_step("success", "DNS MX query", f"Found MX: {sorted_mxs}")
             return sorted_mxs
         except aiodns.error.DNSError as e:
             msg = f"DNS error (MX) for {domain}: {e.args[0]} (code: {e.args[1]})"
@@ -332,10 +308,7 @@ class EmailVerifier:
                 timeout=self.dns_timeout,
                 tries=self.internal_config.get("dns_resolver_tries", 2),
             )
-            if (
-                hasattr(self.async_dns_resolver, "nameservers")
-                and self.async_dns_resolver.nameservers
-            ):
+            if hasattr(self.async_dns_resolver, "nameservers") and self.async_dns_resolver.nameservers:
                 resolver.nameservers = self.async_dns_resolver.nameservers
             records_a = await resolver.query(hostname, "A")
             if records_a:
@@ -347,10 +320,7 @@ class EmailVerifier:
                 timeout=self.dns_timeout,
                 tries=self.internal_config.get("dns_resolver_tries", 2),
             )
-            if (
-                hasattr(self.async_dns_resolver, "nameservers")
-                and self.async_dns_resolver.nameservers
-            ):
+            if hasattr(self.async_dns_resolver, "nameservers") and self.async_dns_resolver.nameservers:
                 resolver.nameservers = self.async_dns_resolver.nameservers
             records_aaaa = await resolver.query(hostname, "AAAA")
             if records_aaaa:
@@ -370,10 +340,7 @@ class EmailVerifier:
                     timeout=self.dns_timeout,
                     tries=self.internal_config.get("dns_resolver_tries", 2),
                 )
-                if (
-                    hasattr(self.async_dns_resolver, "nameservers")
-                    and self.async_dns_resolver.nameservers
-                ):
+                if hasattr(self.async_dns_resolver, "nameservers") and self.async_dns_resolver.nameservers:
                     resolver.nameservers = self.async_dns_resolver.nameservers
                 records = await resolver.query(hostname, record_type)
                 ips.extend(str(r.host) for r in records)
@@ -397,9 +364,7 @@ class EmailVerifier:
         resolved_ips = await self._resolve_all_host_ips(mx_host)
         if not resolved_ips:
             msg = f"Could not resolve MX host {mx_host} to a public IP address."
-            self._add_verification_step(
-                "error", f"SSRF check (Port {port})", msg
-            )
+            self._add_verification_step("error", f"SSRF check (Port {port})", msg)
             raise NoConnectionException(
                 msg,
                 status_code="mx_host_unresolvable",
@@ -411,9 +376,7 @@ class EmailVerifier:
                     f"Refusing to connect to MX host {mx_host}: resolved IP "
                     f"{ip_str} is in a private/reserved range (SSRF protection)."
                 )
-                self._add_verification_step(
-                    "error", f"SSRF check (Port {port})", msg
-                )
+                self._add_verification_step("error", f"SSRF check (Port {port})", msg)
                 raise NoConnectionException(
                     msg,
                     status_code="mx_host_blocked",
@@ -426,9 +389,7 @@ class EmailVerifier:
         if not self.check_disposable_enabled:
             return False
         if is_disposable_domain(domain, self.disposable_domains):
-            self._add_verification_step(
-                "warning", "Domain check", f"Domain '{domain}' is disposable."
-            )
+            self._add_verification_step("warning", "Domain check", f"Domain '{domain}' is disposable.")
             return True
         return False
 
@@ -460,9 +421,7 @@ class EmailVerifier:
         # outbound connection is attempted. Raises NoConnectionException if blocked.
         safe_ips = await self._assert_mx_host_is_public(mx_host, port)
 
-        server_ip_for_log = await self._resolve_host_ip_for_log(
-            mx_host
-        )  # Get server IP address for logging
+        server_ip_for_log = await self._resolve_host_ip_for_log(mx_host)  # Get server IP address for logging
         self._add_verification_step(
             "info",
             f"SMTP Connect (Port {port})",
@@ -475,12 +434,8 @@ class EmailVerifier:
             async with self.max_concurrent_domains_semaphore:  # Limit concurrent connections
                 # Connect to the checked address, not the name. No TLS runs on
                 # this connection, so there is no certificate to mismatch.
-                smtp_client = aiosmtplib.SMTP(
-                    hostname=safe_ips[0], port=port, timeout=self.smtp_timeout
-                )
-                await smtp_client.connect(
-                    timeout=self.smtp_timeout
-                )  # Connect to server
+                smtp_client = aiosmtplib.SMTP(hostname=safe_ips[0], port=port, timeout=self.smtp_timeout)
+                await smtp_client.connect(timeout=self.smtp_timeout)  # Connect to server
             self._add_verification_step(
                 "success",
                 f"SMTP Connect (Port {port})",
@@ -497,13 +452,9 @@ class EmailVerifier:
 
             current_smtp_code = code
             msg_str = (
-                msg_bytes
-                if isinstance(msg_bytes, str)
-                else msg_bytes.decode(errors="ignore")
+                msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
             )  # Decode message
-            self._add_verification_step(
-                "info", "EHLO/HELO", f"Resp: {code} {msg_str}", code
-            )
+            self._add_verification_step("info", "EHLO/HELO", f"Resp: {code} {msg_str}", code)
             # Code 220 (ready) is also successful for EHLO/HELO
             if code not in SMTP_CODES_SUCCESS and code != 220:
                 raise UnexpectedResponseException(  # If EHLO/HELO fails
@@ -516,14 +467,8 @@ class EmailVerifier:
             self._add_verification_step("info", "MAIL FROM", f"Sender: {sender}")
             code, msg_bytes = await smtp_client.mail(sender)  # Send MAIL FROM
             current_smtp_code = code
-            msg_str = (
-                msg_bytes
-                if isinstance(msg_bytes, str)
-                else msg_bytes.decode(errors="ignore")
-            )
-            self._add_verification_step(
-                "info", "MAIL FROM", f"Resp: {code} {msg_str}", code
-            )
+            msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
+            self._add_verification_step("info", "MAIL FROM", f"Resp: {code} {msg_str}", code)
 
             # If reputation error is detected
             if self._is_reputation_error(code, msg_str):
@@ -545,18 +490,10 @@ class EmailVerifier:
                         "MAIL FROM",
                         f"Retrying with alternative sender: {alternative_sender}",
                     )
-                    code, msg_bytes = await smtp_client.mail(
-                        alternative_sender
-                    )  # Retry MAIL FROM
+                    code, msg_bytes = await smtp_client.mail(alternative_sender)  # Retry MAIL FROM
                     current_smtp_code = code
-                    msg_str = (
-                        msg_bytes
-                        if isinstance(msg_bytes, str)
-                        else msg_bytes.decode(errors="ignore")
-                    )
-                    self._add_verification_step(
-                        "info", "MAIL FROM", f"Resp: {code} {msg_str}", code
-                    )
+                    msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
+                    self._add_verification_step("info", "MAIL FROM", f"Resp: {code} {msg_str}", code)
 
             if code not in SMTP_CODES_SUCCESS:  # If MAIL FROM fails
                 if code in SMTP_CODES_TEMP_FAIL:  # Temporary error
@@ -574,14 +511,8 @@ class EmailVerifier:
             self._add_verification_step("info", "RCPT TO", f"Recipient: {email}")
             code, msg_bytes = await smtp_client.rcpt(email)  # Send RCPT TO
             current_smtp_code = code
-            msg_str = (
-                msg_bytes
-                if isinstance(msg_bytes, str)
-                else msg_bytes.decode(errors="ignore")
-            )
-            self._add_verification_step(
-                "info", "RCPT TO", f"Resp: {code} {msg_str}", code
-            )
+            msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
+            self._add_verification_step("info", "RCPT TO", f"Resp: {code} {msg_str}", code)
 
             with contextlib.suppress(aiosmtplib.SMTPException, OSError):
                 await smtp_client.rset()  # A failed reset does not change the verdict
@@ -659,14 +590,9 @@ class EmailVerifier:
         if domain in MICROSOFT_DOMAINS:  # Direct domain match
             return True
         # Check if MX host matches Microsoft patterns
-        return any(
-            mx_host.endswith(pattern.replace("*", ""))
-            for pattern in MICROSOFT_MX_PATTERNS
-        )
+        return any(mx_host.endswith(pattern.replace("*", "")) for pattern in MICROSOFT_MX_PATTERNS)
 
-    async def _is_catch_all_domain(
-        self, domain: str, mx_hosts_priority: list[tuple[int, str]]
-    ) -> bool:
+    async def _is_catch_all_domain(self, domain: str, mx_hosts_priority: list[tuple[int, str]]) -> bool:
         """
         Tests whether the domain is "catch-all" (accepts emails to non-existent addresses).
         :param domain: Domain to test.
@@ -676,12 +602,8 @@ class EmailVerifier:
         if not self.catchall_test_enabled:  # Skip if catch-all test is disabled
             self._add_verification_step("info", "Catch-all Test", "Skipped (config).")
             return False
-        if (
-            domain in KNOWN_FREEMAIL_DOMAINS
-        ):  # Freemail domains are not tested as catch-all
-            self._add_verification_step(
-                "info", "Catch-all Test", f"Skipped ('{domain}' is known freemail)."
-            )
+        if domain in KNOWN_FREEMAIL_DOMAINS:  # Freemail domains are not tested as catch-all
+            self._add_verification_step("info", "Catch-all Test", f"Skipped ('{domain}' is known freemail).")
             return False
         if domain in self.is_catchall_domain_cache:  # Check cache
             cached = self.is_catchall_domain_cache[domain]
@@ -692,29 +614,21 @@ class EmailVerifier:
             )
             return cached if cached is not None else False  # Return cached result
 
-        self._add_verification_step(
-            "info", "Catch-all Test", f"Starting test for '{domain}'."
-        )
+        self._add_verification_step("info", "Catch-all Test", f"Starting test for '{domain}'.")
         ts = int(time.time())  # Current timestamp
         # Generate unique test email addresses
         test_emails = [
             f"catchall-probe-{ts}-{random.getrandbits(16)}-{i}@{domain}"
             for i in range(2)  # Use 2 test emails for greater reliability
         ]
-        successful_tests = (
-            0  # Number of successful tests (when server accepted non-existent email)
-        )
-        inconclusive_tests = (
-            0  # Number of inconclusive tests (e.g., on Microsoft servers)
-        )
+        successful_tests = 0  # Number of successful tests (when server accepted non-existent email)
+        inconclusive_tests = 0  # Number of inconclusive tests (e.g., on Microsoft servers)
         mx_hosts = [host for _, host in mx_hosts_priority]  # List of MX hosts
 
         for test_email in test_emails:
             accepted = False  # Whether test email was accepted
             for mx_host in mx_hosts:
-                if (
-                    accepted
-                ):  # If email was already accepted by another MX, no need to continue
+                if accepted:  # If email was already accepted by another MX, no need to continue
                     break
                 smtp_client = None  # Explicit initialization
                 try:
@@ -735,32 +649,18 @@ class EmailVerifier:
                     except aiosmtplib.SMTPException:
                         code, msg_bytes = await smtp_client.helo()
 
-                    msg_str = (
-                        msg_bytes
-                        if isinstance(msg_bytes, str)
-                        else msg_bytes.decode(errors="ignore")
-                    )
+                    msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
                     if code not in SMTP_CODES_SUCCESS and code != 220:
                         continue  # Skip to next MX if EHLO/HELO fails
 
                     sender = self._get_sender_email(domain)  # Get sender
                     code, msg_bytes = await smtp_client.mail(sender)
-                    msg_str = (
-                        msg_bytes
-                        if isinstance(msg_bytes, str)
-                        else msg_bytes.decode(errors="ignore")
-                    )
+                    msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
                     if code not in SMTP_CODES_SUCCESS:
                         continue  # Skip to next MX if MAIL FROM fails
 
-                    code, msg_bytes = await smtp_client.rcpt(
-                        test_email
-                    )  # Send RCPT TO with test email
-                    msg_str = (
-                        msg_bytes
-                        if isinstance(msg_bytes, str)
-                        else msg_bytes.decode(errors="ignore")
-                    )
+                    code, msg_bytes = await smtp_client.rcpt(test_email)  # Send RCPT TO with test email
+                    msg_str = msg_bytes if isinstance(msg_bytes, str) else msg_bytes.decode(errors="ignore")
 
                     # Special handling for Microsoft domains
                     # Microsoft answers "Access denied" whether or not the
@@ -770,18 +670,16 @@ class EmailVerifier:
                         and code == 550
                         and "Access denied" in msg_str
                     ):
-                            self._add_verification_step(
-                                "warning",
-                                "Catch-all Test (Microsoft)",
-                                "Microsoft domain detected - Access denied response treated as inconclusive.",
-                            )
-                            inconclusive_tests += 1
-                            accepted = True  # Consider accepted for purposes of ending test on this MX
-                            break  # End test for this email on this MX
+                        self._add_verification_step(
+                            "warning",
+                            "Catch-all Test (Microsoft)",
+                            "Microsoft domain detected - Access denied response treated as inconclusive.",
+                        )
+                        inconclusive_tests += 1
+                        accepted = True  # Consider accepted for purposes of ending test on this MX
+                        break  # End test for this email on this MX
 
-                    if (
-                        code in SMTP_CODES_SUCCESS
-                    ):  # If server accepted test email
+                    if code in SMTP_CODES_SUCCESS:  # If server accepted test email
                         self._add_verification_step(
                             "warning",
                             "Catch-all Test (Attempt)",
@@ -790,7 +688,9 @@ class EmailVerifier:
                         successful_tests += 1
                         accepted = True
                         break  # End test for this email on this MX
-                except Exception as e:  # Ignore errors during catch-all testing to avoid affecting main verification
+                except (
+                    Exception
+                ) as e:  # Ignore errors during catch-all testing to avoid affecting main verification
                     self.logger.debug(f"Unexpected error in catch-all sub-test: {e}")
                 finally:
                     if smtp_client and smtp_client.is_connected:
@@ -807,9 +707,7 @@ class EmailVerifier:
         is_catchall = False
         if successful_tests > 0:  # If at least one test email was accepted
             is_catchall = True
-        elif (
-            inconclusive_tests > 0
-        ):  # If tests were inconclusive (typically Microsoft)
+        elif inconclusive_tests > 0:  # If tests were inconclusive (typically Microsoft)
             # For Microsoft domains with inconclusive results, mark as likely catch-all
             is_catchall = True
             self._add_verification_step(
@@ -838,9 +736,7 @@ class EmailVerifier:
         :return: Dictionary with verification results.
         """
         self._reset_steps_for_single_email()  # Reset steps for this email
-        self._add_verification_step(
-            "info", "Verification start", f"Email: {email}, Attempt: {attempt}"
-        )
+        self._add_verification_step("info", "Verification start", f"Email: {email}, Attempt: {attempt}")
         # Default result structure
         res = {
             "email": email,
@@ -858,16 +754,10 @@ class EmailVerifier:
                 email, check_deliverability=False
             )  # check_deliverability=False because we do it ourselves
             domain = val_res.domain.lower()  # Get domain from email
-            self._add_verification_step(
-                "success", "Syntax check", f"Email '{email}' syntax valid."
-            )
+            self._add_verification_step("success", "Syntax check", f"Email '{email}' syntax valid.")
         except EmailNotValidError as e:  # Syntax error
-            self._add_verification_step(
-                "error", "Syntax check", f"Invalid email format '{email}': {e}"
-            )
-            res.update(
-                {"is_valid": False, "status_code": "syntax_error", "message": str(e)}
-            )
+            self._add_verification_step("error", "Syntax check", f"Invalid email format '{email}': {e}")
+            res.update({"is_valid": False, "status_code": "syntax_error", "message": str(e)})
             return res  # End verification
 
         # Disposable domain check
@@ -885,9 +775,7 @@ class EmailVerifier:
         try:
             mx_records = await self._resolve_mx_records(domain)  # Get MX records
             if mx_records:
-                res["mx_record"] = mx_records[0][
-                    1
-                ]  # Store first (highest priority) MX record
+                res["mx_record"] = mx_records[0][1]  # Store first (highest priority) MX record
         except DNSError as e:  # Error getting MX records
             res.update(
                 {
@@ -898,9 +786,7 @@ class EmailVerifier:
             )
             return res
         except Exception as e:  # Unexpected error during DNS query
-            self._add_verification_step(
-                "error", "DNS MX query", f"Unexpected error: {e!s}"
-            )
+            self._add_verification_step("error", "DNS MX query", f"Unexpected error: {e!s}")
             res.update(
                 {
                     "is_valid": False,
@@ -948,18 +834,14 @@ class EmailVerifier:
                     f"Rate limit for {email} on {mx_host}:{self.default_connect_port} - {e.message}"
                 )
                 if attempt < self.retry_attempts:  # If retry is possible
-                    delay = self.retry_delay_base * (
-                        2**attempt
-                    )  # Exponential delay
+                    delay = self.retry_delay_base * (2**attempt)  # Exponential delay
                     self._add_verification_step(
                         "warning",
                         "Rate Limit Retry",
                         f"Attempt {attempt}/{self.retry_attempts}. Waiting {delay:.1f}s for {email}.",
                     )
                     await asyncio.sleep(delay)  # Wait before retry
-                    return await self.verify_single_email(
-                        email, attempt + 1
-                    )  # Recursive call for retry
+                    return await self.verify_single_email(email, attempt + 1)  # Recursive call for retry
                 # If retry attempts are exhausted
                 res.update(
                     {
@@ -979,33 +861,31 @@ class EmailVerifier:
                     self._is_temporary_error(e.code if hasattr(e, "code") else 0, e.message)
                     and attempt < self.retry_attempts
                 ):
-                        delay = self.retry_delay_base * (2**attempt)
-                        self._add_verification_step(
-                            "warning",
-                            "Temporary Error Retry",
-                            f"Attempt {attempt}/{self.retry_attempts}. Waiting {delay:.1f}s for {email}.",
-                        )
-                        await asyncio.sleep(delay)
-                        return await self.verify_single_email(email, attempt + 1)
+                    delay = self.retry_delay_base * (2**attempt)
+                    self._add_verification_step(
+                        "warning",
+                        "Temporary Error Retry",
+                        f"Attempt {attempt}/{self.retry_attempts}. Waiting {delay:.1f}s for {email}.",
+                    )
+                    await asyncio.sleep(delay)
+                    return await self.verify_single_email(email, attempt + 1)
                 # If error is not temporary or attempts exhausted, continue to next MX
                 continue
             except EmailVerifierException as e:  # Catch other custom exceptions
-                self.logger.warning(
-                    "Verifier error for %s on %s: %s", email, mx_host, e.message
-                )
+                self.logger.warning("Verifier error for %s on %s: %s", email, mx_host, e.message)
                 # Check if error is temporary (e.g., UnexpectedResponse, which may be temporary)
                 if (
                     self._is_temporary_error(e.code if hasattr(e, "code") else 0, e.message)
                     and attempt < self.retry_attempts
                 ):
-                        delay = self.retry_delay_base * (2**attempt)
-                        self._add_verification_step(
-                            "warning",
-                            "Temporary Error Retry",
-                            f"Attempt {attempt}/{self.retry_attempts}. Waiting {delay:.1f}s for {email}.",
-                        )
-                        await asyncio.sleep(delay)
-                        return await self.verify_single_email(email, attempt + 1)
+                    delay = self.retry_delay_base * (2**attempt)
+                    self._add_verification_step(
+                        "warning",
+                        "Temporary Error Retry",
+                        f"Attempt {attempt}/{self.retry_attempts}. Waiting {delay:.1f}s for {email}.",
+                    )
+                    await asyncio.sleep(delay)
+                    return await self.verify_single_email(email, attempt + 1)
                 # If error is not temporary or attempts exhausted, continue to next MX
                 continue
             except Exception as e:  # Catch unexpected errors during SMTP communication
@@ -1016,9 +896,7 @@ class EmailVerifier:
                 continue  # Continue to next MX server
 
         # If verification failed on all MX servers (all failed or returned temporary error)
-        self._add_verification_step(
-            "error", "SMTP Verification", "Failed to verify on any MX."
-        )
+        self._add_verification_step("error", "SMTP Verification", "Failed to verify on any MX.")
         res.update(
             {
                 "is_valid": None,  # Status is unknown
@@ -1034,9 +912,7 @@ class EmailVerifier:
         )
         return res
 
-    async def verify_emails_in_batch(
-        self, email_list: list[str]
-    ) -> list[dict[str, Any]]:
+    async def verify_emails_in_batch(self, email_list: list[str]) -> list[dict[str, Any]]:
         """
         Verifies a list of email addresses concurrently.
         :param email_list: List of email addresses to verify.
@@ -1059,8 +935,7 @@ class EmailVerifier:
                 # Get verification steps from exception if possible
                 steps = (
                     item.verification_steps
-                    if isinstance(item, EmailVerifierException)
-                    and item.verification_steps
+                    if isinstance(item, EmailVerifierException) and item.verification_steps
                     else []
                 )
                 # Create error result

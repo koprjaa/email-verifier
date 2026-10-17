@@ -23,11 +23,8 @@ def setup_logging(app):
     if not app_logger.handlers:
         flask_handler = logging.StreamHandler()
         flask_handler.setLevel(logging.DEBUG)
-        flask_formatter = logging.Formatter(
-            "%(asctime)s - %(threadName)s - %(levelname)s - %(message)s"
-        )
+        flask_formatter = logging.Formatter("%(asctime)s - %(threadName)s - %(levelname)s - %(message)s")
         flask_handler.setFormatter(flask_formatter)
         app_logger.addHandler(flask_handler)
 
     return app_logger
-

@@ -12,6 +12,7 @@
 # License: MIT
 #
 
+
 class EmailVerifierException(Exception):
     """Base for every error this package raises.
 
@@ -29,9 +30,7 @@ class EmailVerifierException(Exception):
         super().__init__(message)
         self.message = message
         self.status_code = status_code
-        self.verification_steps = (
-            verification_steps if verification_steps is not None else []
-        )
+        self.verification_steps = verification_steps if verification_steps is not None else []
 
 
 class TimeoutException(EmailVerifierException):

@@ -26,6 +26,7 @@ verification_bp = Blueprint("verification", __name__)
 def index():
     """Main page route."""
     from flask import render_template
+
     return render_template("index.html")
 
 
@@ -55,9 +56,7 @@ def verify_single_email():
             f"API /verify_single: Verification completed for {email_to_verify}. "
             f"Result: {result.get('status_code')}"
         )
-        logger.debug(
-            f"API /verify_single: Full verification result: {json.dumps(result, indent=2)}"
-        )
+        logger.debug(f"API /verify_single: Full verification result: {json.dumps(result, indent=2)}")
         return jsonify(result)
     except Exception:
         logger.exception(f"API /verify_single: Error during verification of {email_to_verify}")
@@ -73,11 +72,13 @@ def start_verification():
 
     try:
         run_id = verification_service.start_bulk_verification()
-        return jsonify({
-            "status": "verifying",
-            "message": "Verifikace byla spuštěna.",
-            "run_id": run_id,
-        })
+        return jsonify(
+            {
+                "status": "verifying",
+                "message": "Verifikace byla spuštěna.",
+                "run_id": run_id,
+            }
+        )
     except ValueError as e:
         logger.warning(f"API /start_verification: {e}")
         return jsonify({"error": str(e)}), 400
@@ -96,11 +97,13 @@ def stop_verification():
         run_id = verification_service.stop_verification()
 
         if not run_id:
-            return jsonify({
-                "status": state.get("status", "idle"),
-                "message": "No verification process is currently running",
-                "has_results": bool(state.get("result_filepath")),
-            })
+            return jsonify(
+                {
+                    "status": state.get("status", "idle"),
+                    "message": "No verification process is currently running",
+                    "has_results": bool(state.get("result_filepath")),
+                }
+            )
 
         # Wait for thread to finish (with timeout)
         if verification_service.verification_thread and verification_service.verification_thread.is_alive():
@@ -109,6 +112,7 @@ def stop_verification():
         with state.lock:
             if state.get("verification_run_id") == run_id:
                 from app.services.state_service import StateService
+
                 state_service = StateService(state, current_app.config_obj)
                 state_service.save_results(run_id, is_final_save=True)
                 state.set("status", "stopped")
@@ -118,18 +122,21 @@ def stop_verification():
                     "Proces verifikace byl úspěšně zastaven.",
                 )
 
-        return jsonify({
-            "status": state.get("status", "stopped"),
-            "message": "Verification process stopped",
-            "filepath": state.get("result_filepath"),
-            "has_results": bool(state.get("result_filepath")),
-        })
+        return jsonify(
+            {
+                "status": state.get("status", "stopped"),
+                "message": "Verification process stopped",
+                "filepath": state.get("result_filepath"),
+                "has_results": bool(state.get("result_filepath")),
+            }
+        )
 
     except Exception:
         logger.exception("Error stopping verification")
-        return jsonify({
-            "status": "error",
-            "message": "Error stopping verification.",
-            "has_results": bool(state.get("result_filepath")),
-        }), 500
-
+        return jsonify(
+            {
+                "status": "error",
+                "message": "Error stopping verification.",
+                "has_results": bool(state.get("result_filepath")),
+            }
+        ), 500

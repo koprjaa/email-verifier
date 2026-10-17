@@ -47,9 +47,7 @@ class Config:
             logger.info("Main config.json loaded successfully.")
             return config
         except FileNotFoundError:
-            logger.warning(
-                "Main config.json not found in root. Using default parameters."
-            )
+            logger.warning("Main config.json not found in root. Using default parameters.")
             return {}
         except json.JSONDecodeError:
             logger.exception("Error parsing main config.json, using default parameters")
@@ -70,4 +68,3 @@ class Config:
         if "batch_size" in config:
             del config["batch_size"]
         return config
-

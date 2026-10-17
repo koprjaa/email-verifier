@@ -24,4 +24,3 @@ def register_routes(app: Flask):
     app.register_blueprint(verification_bp)
     app.register_blueprint(file_upload_bp)
     app.register_blueprint(status_bp)
-

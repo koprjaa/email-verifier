@@ -22,9 +22,7 @@ logger = logging.getLogger(__name__)
 app = create_app()
 
 # Clean up unused files on exit
-atexit.register(
-    lambda: app.file_service.cleanup_files(clear_current_state_only=True)
-)
+atexit.register(lambda: app.file_service.cleanup_files(clear_current_state_only=True))
 
 if __name__ == "__main__":
     app.run(
@@ -34,4 +32,3 @@ if __name__ == "__main__":
         threaded=True,
         use_reloader=app.config_obj.flask_debug,
     )
-
