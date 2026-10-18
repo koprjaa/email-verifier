@@ -48,7 +48,10 @@ impl Settings {
                 .map(|v| v.as_f64().ok_or_else(|| format!("Invalid setting: {key}")))
                 .transpose()?
                 .unwrap_or(default);
-            if !n.is_finite() || n < 0.0 {
+            if !n.is_finite()
+                || n < 0.0
+                || (["smtp_timeout", "dns_timeout", "retry_delay"].contains(&key) && n > 86400.0)
+            {
                 Err(format!("Invalid setting: {key}"))
             } else {
                 Ok(n)
@@ -82,7 +85,10 @@ impl Settings {
         }
         for (key, max) in [
             ("connect_port", 65535_u64),
-            ("max_concurrent_domains", usize::MAX as u64),
+            (
+                "max_concurrent_domains",
+                tokio::sync::Semaphore::MAX_PERMITS as u64,
+            ),
             ("retry_attempts", usize::MAX as u64),
             ("ui_batch_size", usize::MAX as u64),
         ] {
@@ -112,9 +118,9 @@ impl Settings {
                 .or(v["check_catchall"].as_bool())
                 .unwrap_or(true),
             check_disposable: v["check_disposable"].as_bool().unwrap_or(true),
-            connect_port: number("connect_port", 25.)? as u16,
-            max_concurrent_domains: number("max_concurrent_domains", 5.)? as usize,
-            retry_attempts: number("retry_attempts", 2.)? as usize,
+            connect_port: v["connect_port"].as_u64().unwrap_or(25) as u16,
+            max_concurrent_domains: v["max_concurrent_domains"].as_u64().unwrap_or(5) as usize,
+            retry_attempts: v["retry_attempts"].as_u64().unwrap_or(2) as usize,
             retry_delay: number("retry_delay", 5.)?,
             default_sender: v["sender_emails"]["default"]
                 .as_str()
@@ -130,7 +136,7 @@ impl Settings {
                 .as_str()
                 .unwrap_or("data/disposable_domains.txt")
                 .into(),
-            ui_batch_size: number("ui_batch_size", 20.)? as usize,
+            ui_batch_size: v["ui_batch_size"].as_u64().unwrap_or(20) as usize,
         };
         if s.max_concurrent_domains == 0
             || s.ui_batch_size == 0
@@ -236,6 +242,17 @@ pub struct Verifier {
 }
 impl Verifier {
     pub fn new(settings: Settings, network: Arc<dyn Network>) -> Self {
+        if let Some(parent) = std::path::Path::new(&settings.disposable_path)
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+        {
+            if let Err(e) = std::fs::create_dir_all(parent) {
+                crate::log(
+                    "ERROR",
+                    &format!("Could not create disposable list directory: {e}"),
+                );
+            }
+        }
         let disposable = if settings.check_disposable {
             match std::fs::read_to_string(&settings.disposable_path) {
                 Ok(s) => s
@@ -555,8 +572,9 @@ impl Verifier {
                         if (e.retryable || classify::is_temporary_error(0, &e.message))
                             && attempt < self.settings.retry_attempts
                         {
-                            let delay =
-                                self.settings.retry_delay * 2_f64.powi(attempt.min(30) as i32);
+                            let delay = (self.settings.retry_delay
+                                * 2_f64.powi(attempt.min(30) as i32))
+                            .min(86400.0);
                             Step::add(
                                 &mut r.verification_steps,
                                 "warning",
@@ -651,9 +669,6 @@ pub fn validate_syntax(email: &str) -> Result<String, String> {
     if domain.is_empty() {
         return Err("There must be something after the @-sign.".into());
     }
-    if local.len() > 64 {
-        return Err("The email address is too long before the @-sign.".into());
-    }
     if local.starts_with('.') {
         return Err("An email address cannot start with a period.".into());
     }
@@ -663,11 +678,47 @@ pub fn validate_syntax(email: &str) -> Result<String, String> {
     if local.contains("..") || domain.contains("..") {
         return Err("An email address cannot have two periods in a row.".into());
     }
+    if local.starts_with('"') && local.ends_with('"') {
+        return Err("Quoting the part before the @-sign is not allowed here.".into());
+    }
     if local
         .chars()
         .any(|c| c.is_control() || c.is_whitespace() || "@(),:;<>[\\]\"".contains(c))
     {
         return Err("The email address contains invalid characters before the @-sign.".into());
+    }
+    static UNSAFE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"[\p{C}\p{Z}]|^\p{M}").expect("constant Unicode categories")
+    });
+    for part in [local, domain] {
+        if let Some(m) = UNSAFE.find(part) {
+            let c = m.as_str().chars().next().expect("nonempty match");
+            let name = match c {
+                '\u{200b}' => "ZERO WIDTH SPACE".into(),
+                '\u{202e}' => "RIGHT-TO-LEFT OVERRIDE".into(),
+                '\u{ad}' => "SOFT HYPHEN".into(),
+                _ => format!("U+{:04X}", c as u32),
+            };
+            return Err(format!(
+                "The email address contains unsafe characters: {name}."
+            ));
+        }
+    }
+    if local.starts_with('"') && local.ends_with('"') {
+        return Err("Quoting the part before the @-sign is not allowed here.".into());
+    }
+    if domain.ends_with('.') {
+        return Err("An email address cannot end with a period.".into());
+    }
+    if domain.contains(".-") || domain.contains("-.") {
+        return Err(
+            "An email address cannot have a period and a hyphen next to each other.".into(),
+        );
+    }
+    if domain.split('.').any(|label| {
+        label.as_bytes().get(2..4) == Some(b"--") && !label.to_ascii_lowercase().starts_with("xn--")
+    }) {
+        return Err("An email address cannot have two letters followed by two dashes immediately after the @-sign or after a period, except Punycode.".into());
     }
     let domain: String = domain.nfc().collect::<String>().to_lowercase();
     let ascii = idna::domain_to_ascii(&domain)
@@ -675,8 +726,14 @@ pub fn validate_syntax(email: &str) -> Result<String, String> {
     if !ascii.contains('.') {
         return Err("The part after the @-sign is not valid. It should have a period.".into());
     }
+    if ascii
+        .split('.')
+        .any(|label| label.as_bytes().get(2..4) == Some(b"--") && !label.starts_with("xn--"))
+    {
+        return Err("The part after the @-sign contains an invalid hyphen label.".into());
+    }
     if ascii.len() > 253
-        || email.len() > 254
+        || format!("{}@{ascii}", local.nfc().collect::<String>()).len() > 254
         || ascii.split('.').any(|s| {
             s.is_empty()
                 || s.len() > 63
@@ -705,5 +762,48 @@ pub fn validate_syntax(email: &str) -> Result<String, String> {
                 .into(),
         );
     }
-    Ok(ascii)
+    let (unicode, result) = idna::domain_to_unicode(&ascii);
+    result.map_err(|_| "The part after the @-sign contains invalid characters.")?;
+    static DOMAIN_SYMBOL: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"[\p{S}\p{P}]").expect("constant Unicode categories")
+    });
+    if unicode
+        .chars()
+        .any(|c| DOMAIN_SYMBOL.is_match(&c.to_string()) && !".-·͵׳״・".contains(c))
+    {
+        return Err("The part after the @-sign contains invalid IDNA characters.".into());
+    }
+    static GREEK: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"^\p{Greek}$").expect("constant script"));
+    static HEBREW: std::sync::LazyLock<regex::Regex> =
+        std::sync::LazyLock::new(|| regex::Regex::new(r"^\p{Hebrew}$").expect("constant script"));
+    static JAPANESE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+        regex::Regex::new(r"[\p{Hiragana}\p{Katakana}\p{Han}]").expect("constant scripts")
+    });
+    // UTS-46 accepts characters whose IDNA2008 validity depends on their neighbors.
+    for label in unicode.split('.') {
+        let chars: Vec<_> = label.chars().collect();
+        for (i, c) in chars.iter().enumerate() {
+            let previous = i.checked_sub(1).and_then(|i| chars.get(i));
+            let next = chars.get(i + 1);
+            let valid = match c {
+                '·' => previous == Some(&'l') && next == Some(&'l'),
+                '͵' => next.is_some_and(|c| GREEK.is_match(&c.to_string())),
+                '׳' | '״' => previous.is_some_and(|c| HEBREW.is_match(&c.to_string())),
+                '・' => JAPANESE.is_match(label),
+                _ => true,
+            };
+            if !valid {
+                return Err(
+                    "The part after the @-sign contains invalid contextual IDNA characters.".into(),
+                );
+            }
+        }
+        if chars.iter().any(|c| ('\u{660}'..='\u{669}').contains(c))
+            && chars.iter().any(|c| ('\u{6f0}'..='\u{6f9}').contains(c))
+        {
+            return Err("The part after the @-sign mixes incompatible Arabic digits.".into());
+        }
+    }
+    Ok(unicode)
 }

@@ -1,0 +1,2 @@
+﻿email,status,error_details,domain_type,smtp_response_full,mx_servers,verification_duration_ms,raw_status_code,is_catchall_domain,smtp_internal_code
+a@example.com,valid,Status: valid,unknown,Code: 250,,,valid,False,250

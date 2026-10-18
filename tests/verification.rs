@@ -179,3 +179,50 @@ async fn exponential_retry_delay_is_applied() {
     assert!(started.elapsed() >= Duration::from_millis(60));
     assert_eq!(mock.calls.lock().unwrap().len(), 3);
 }
+
+#[tokio::test]
+async fn microsoft_access_denied_is_inconclusive_catchall() {
+    let mock = MockNetwork::new();
+    *mock.catchall_reply.lock().unwrap() = Some(Reply {
+        valid: false,
+        status: "invalid_mailbox".into(),
+        message: "Access denied".into(),
+        code: 550,
+    });
+    let v = verifier(mock, json!({"catchall_test":true}));
+    let result = v.verify("a@office365.com").await;
+    assert!(result.is_catchall);
+    assert!(result
+        .verification_steps
+        .iter()
+        .any(|s| s.action == "Catch-all Test (Microsoft)"));
+}
+
+#[test]
+fn missing_disposable_list_parent_is_created_even_when_check_is_disabled() {
+    let dir = Directory::new();
+    let path = dir.0.join("nested/list.txt");
+    let _verifier = verifier(
+        MockNetwork::new(),
+        json!({"check_disposable":false,"disposable_domains_file_path":path}),
+    );
+    assert!(path.parent().unwrap().is_dir());
+    assert!(!path.exists());
+}
+
+#[tokio::test]
+async fn unicode_blocklist_is_checked_before_dns() {
+    let dir = Directory::new();
+    let path = dir.0.join("domains.txt");
+    std::fs::write(&path, "háčky.cz\n").unwrap();
+    let mock = MockNetwork::new();
+    let v = verifier(
+        mock.clone(),
+        json!({"check_disposable":true,"disposable_domains_file_path":path}),
+    );
+    assert_eq!(
+        v.verify("a@háčky.cz").await.status_code,
+        "disposable_domain"
+    );
+    assert_eq!(mock.mx_calls.load(Ordering::SeqCst), 0);
+}

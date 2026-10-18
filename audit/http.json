@@ -1,0 +1,214 @@
+[
+  {
+    "method": "GET",
+    "path": "/status",
+    "body": null,
+    "python_status": 200,
+    "python": {
+      "current_batch": 0,
+      "error_message": null,
+      "has_results": false,
+      "invalid_emails": 0,
+      "last_activity_time": null,
+      "probable_emails": 0,
+      "processed_emails": 0,
+      "result_filepath": null,
+      "start_time": null,
+      "status": "idle",
+      "total_batches": 0,
+      "total_emails": 0,
+      "unknown_emails": 0,
+      "valid_emails": 0,
+      "verification_log_batch": []
+    },
+    "rust_status": 200,
+    "rust": {
+      "status": "idle",
+      "error_message": null,
+      "total_emails": 0,
+      "processed_emails": 0,
+      "valid_emails": 0,
+      "invalid_emails": 0,
+      "probable_emails": 0,
+      "unknown_emails": 0,
+      "current_batch": 0,
+      "total_batches": 0,
+      "start_time": null,
+      "last_activity_time": null,
+      "result_filepath": null,
+      "has_results": false,
+      "verification_log_batch": []
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/verify_single",
+    "body": {},
+    "python_status": 400,
+    "python": {
+      "error": "Chybí email v požadavku"
+    },
+    "rust_status": 400,
+    "rust": {
+      "error": "Missing email in request"
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/verify_single",
+    "body": {
+      "email": "bad"
+    },
+    "python_status": 200,
+    "python": {
+      "email": "bad",
+      "is_catchall": false,
+      "is_valid": false,
+      "message": "An email address must have an @-sign.",
+      "mx_record": null,
+      "smtp_code_internal": null,
+      "status_code": "syntax_error",
+      "verification_steps": [
+        {
+          "action": "Verification start",
+          "code": null,
+          "details": "Email: bad, Attempt: 1",
+          "status": "info",
+          "timestamp": "2026-10-18T05:44:46.919900"
+        },
+        {
+          "action": "Syntax check",
+          "code": null,
+          "details": "Invalid email format 'bad': An email address must have an @-sign.",
+          "status": "error",
+          "timestamp": "2026-10-18T05:44:46.920420"
+        }
+      ]
+    },
+    "rust_status": 200,
+    "rust": {
+      "email": "bad",
+      "is_valid": false,
+      "status_code": "syntax_error",
+      "message": "An email address must have an @-sign.",
+      "is_catchall": false,
+      "mx_record": null,
+      "smtp_code_internal": null,
+      "verification_steps": [
+        {
+          "timestamp": "2026-10-18T05:44:46.922506",
+          "status": "info",
+          "action": "Verification start",
+          "details": "Email: bad, Attempt: 1",
+          "code": null
+        },
+        {
+          "timestamp": "2026-10-18T05:44:46.922521",
+          "status": "error",
+          "action": "Syntax check",
+          "details": "Invalid email format 'bad': An email address must have an @-sign.",
+          "code": null
+        }
+      ]
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/verify_single",
+    "body": {
+      "email": 7
+    },
+    "python_status": 500,
+    "python": {
+      "error": "Interní chyba serveru."
+    },
+    "rust_status": 400,
+    "rust": {
+      "error": "Missing email in request"
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/verify_single",
+    "body": [],
+    "python_status": 500,
+    "python": "<!doctype html>\n<html lang=en>\n<title>500 Internal Server Error</title>\n<h1>Internal Server Error</h1>\n<p>The server encountered an internal error and was unable to complete your request. Either the server is overloaded or there is an error in the application.</p>\n",
+    "rust_status": 400,
+    "rust": {
+      "error": "Missing email in request"
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/download_results",
+    "body": null,
+    "python_status": 404,
+    "python": {
+      "error": "No results file available"
+    },
+    "rust_status": 404,
+    "rust": {
+      "error": "No results file available"
+    }
+  },
+  {
+    "method": "GET",
+    "path": "/start_verification",
+    "body": null,
+    "python_status": 400,
+    "python": {
+      "error": "No emails to verify"
+    },
+    "rust_status": 400,
+    "rust": {
+      "error": "No emails to verify"
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/stop_verification",
+    "body": {},
+    "python_status": 200,
+    "python": {
+      "has_results": false,
+      "message": "No verification process is currently running",
+      "status": "idle"
+    },
+    "rust_status": 200,
+    "rust": {
+      "status": "idle",
+      "message": "No verification process is currently running",
+      "has_results": false
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/cleanup",
+    "body": {},
+    "python_status": 200,
+    "python": {
+      "message": "Cleanup completed",
+      "status": "success"
+    },
+    "rust_status": 200,
+    "rust": {
+      "status": "success",
+      "message": "Cleanup completed"
+    }
+  },
+  {
+    "method": "POST",
+    "path": "/select_column",
+    "body": null,
+    "python_status": 200,
+    "python": {
+      "status": "ready",
+      "total_emails": 1
+    },
+    "rust_status": 200,
+    "rust": {
+      "status": "ready",
+      "total_emails": 1
+    }
+  }
+]

@@ -244,3 +244,143 @@ async fn semaphore_limits_full_smtp_sessions() {
     task.join().unwrap();
     assert_eq!(observed.load(Ordering::SeqCst), 1);
 }
+
+#[tokio::test]
+async fn malformed_multiline_and_reply_separators_are_refused() {
+    for response in [
+        "250Xinvalid\r\n",
+        "250-first\r\n550 last\r\n",
+        "999 Invalid\r\n",
+    ] {
+        let (port, task) = server(vec![
+            ("EHLO probe.example.com", response),
+            ("QUIT", "221 Bye\r\n"),
+        ]);
+        let result = smtp_session(
+            "127.0.0.1".parse().unwrap(),
+            port,
+            "a@example.com",
+            "example.com",
+            &settings(),
+            &mut vec![],
+            false,
+        )
+        .await;
+        assert_eq!(result.unwrap_err().status, "unknown_smtp_error");
+        task.join().unwrap();
+    }
+}
+
+#[tokio::test]
+async fn greeting_timeout_and_oversized_reply_are_bounded() {
+    for oversized in [false, true] {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let task = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            if oversized {
+                let _ = stream.write_all(&vec![b'x'; 65537]);
+            } else {
+                thread::sleep(Duration::from_millis(100));
+            }
+        });
+        let mut s = settings();
+        s.smtp_timeout = 0.02;
+        let result = tokio::time::timeout(
+            Duration::from_secs(1),
+            smtp_session(
+                "127.0.0.1".parse().unwrap(),
+                port,
+                "a@example.com",
+                "example.com",
+                &s,
+                &mut vec![],
+                false,
+            ),
+        )
+        .await
+        .unwrap();
+        assert!(result.is_err());
+        task.join().unwrap();
+    }
+}
+
+#[tokio::test]
+async fn public_smtp_entry_rejects_injection_and_invalid_timeout_before_connecting() {
+    let mut s = settings();
+    let result = smtp_session(
+        "127.0.0.1".parse().unwrap(),
+        1,
+        "a@example.com\r\nQUIT",
+        "example.com",
+        &s,
+        &mut vec![],
+        false,
+    )
+    .await;
+    assert_eq!(result.unwrap_err().status, "smtp_invalid_input");
+    s.smtp_timeout = f64::INFINITY;
+    let result = smtp_session(
+        "127.0.0.1".parse().unwrap(),
+        1,
+        "a@example.com",
+        "example.com",
+        &s,
+        &mut vec![],
+        false,
+    )
+    .await;
+    assert_eq!(result.unwrap_err().status, "smtp_timeout");
+}
+
+#[tokio::test]
+async fn saved_python_smtp_dialogues_keep_documented_verdicts() {
+    let cases: Vec<serde_json::Value> =
+        serde_json::from_str(include_str!("fixtures/smtp-reference.json")).unwrap();
+    for case in cases {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let phase = case["phase"].as_str().unwrap().to_string();
+        let response = case["response"].as_str().unwrap().to_string();
+        let task = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            stream
+                .set_read_timeout(Some(Duration::from_secs(2)))
+                .unwrap();
+            stream.write_all(b"220 mock\r\n").unwrap();
+            let mut reader = BufReader::new(stream.try_clone().unwrap());
+            loop {
+                let mut line = String::new();
+                if reader.read_line(&mut line).unwrap() == 0 {
+                    break;
+                }
+                let reply = if line.starts_with(&phase) {
+                    format!("{response}\r\n")
+                } else if line.starts_with("QUIT") {
+                    "221 Bye\r\n".into()
+                } else {
+                    "250 OK\r\n".into()
+                };
+                if stream.write_all(reply.as_bytes()).is_err() || line.starts_with("QUIT") {
+                    break;
+                }
+            }
+        });
+        let result = smtp_session(
+            "127.0.0.1".parse().unwrap(),
+            port,
+            "a@example.com",
+            "example.com",
+            &settings(),
+            &mut vec![],
+            false,
+        )
+        .await;
+        let actual = match result {
+            Ok(r) => json!({"valid":r.valid,"status":r.status,"message":r.message,"code":r.code}),
+            Err(e) => json!({"error":e.status,"message":e.message,"retryable":e.retryable}),
+        };
+        task.join().unwrap();
+        assert_eq!(actual, case["rust"], "{case}");
+    }
+}

@@ -1,4 +1,4 @@
-# Build output
+# Rust build output
 /target/
 
 # Runtime files
@@ -11,7 +11,7 @@
 .env
 .env.*
 
-# Editor and operating system files
+# Editors and operating systems
 .idea/
 .vscode/
 *.swp
@@ -23,6 +23,7 @@ Thumbs.db
 *.tmp
 *.temp
 *.bak
+.cache/
 __pycache__/
 *.py[cod]
 *$py.class
@@ -41,7 +42,6 @@ results/
 logs/
 custom_logs/
 config.json
-.cache/
 .pytest_cache/
 .coverage
 htmlcov/

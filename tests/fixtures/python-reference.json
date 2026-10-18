@@ -1,0 +1,4720 @@
+[
+  {
+    "op": "txt",
+    "text": "́a@example.com",
+    "expected": [
+      "a@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.coḿ",
+    "expected": [
+      "a@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "‌a@example.com",
+    "expected": [
+      "a@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com‌",
+    "expected": [
+      "a@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "\u001fa@example.com;x@example.com",
+    "expected": [
+      "a@example.com",
+      "x@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "x@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com;z@example.com b@example.com;w@example.com",
+    "expected": [
+      "a@example.com",
+      "z@example.com",
+      "b@example.com",
+      "w@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "z@example.com",
+      "b@example.com",
+      "w@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "áa@example.com",
+    "expected": [],
+    "rust_observed": []
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\rb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\u000bb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\fb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\u001cb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.comb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com b@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com b@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\r\nb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "áa@example.com",
+    "expected": [],
+    "rust_observed": []
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com trailing; b@example.com",
+    "expected": [
+      "a@example.com trailing",
+      "b@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com trailing",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      0
+    ],
+    "expected": [
+      "\u0000",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0000",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      1
+    ],
+    "expected": [
+      "\u0001",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0001",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      2
+    ],
+    "expected": [
+      "\u0002",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0002",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      3
+    ],
+    "expected": [
+      "\u0003",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0003",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      4
+    ],
+    "expected": [
+      "\u0004",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0004",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      5
+    ],
+    "expected": [
+      "\u0005",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0005",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      6
+    ],
+    "expected": [
+      "\u0006",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0006",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      7
+    ],
+    "expected": [
+      "\u0007",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0007",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      8
+    ],
+    "expected": [
+      "\b",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\b",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      9
+    ],
+    "expected": [
+      "\t",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\t",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      10
+    ],
+    "expected": [
+      "\n",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\n",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      11
+    ],
+    "expected": [
+      "\u000b",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u000b",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      12
+    ],
+    "expected": [
+      "\f",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\f",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      13
+    ],
+    "expected": [
+      "\r",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\r",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      14
+    ],
+    "expected": [
+      "\u000e",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u000e",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      15
+    ],
+    "expected": [
+      "\u000f",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u000f",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      16
+    ],
+    "expected": [
+      "\u0010",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0010",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      17
+    ],
+    "expected": [
+      "\u0011",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0011",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      18
+    ],
+    "expected": [
+      "\u0012",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0012",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      19
+    ],
+    "expected": [
+      "\u0013",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0013",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      20
+    ],
+    "expected": [
+      "\u0014",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0014",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      21
+    ],
+    "expected": [
+      "\u0015",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0015",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      22
+    ],
+    "expected": [
+      "\u0016",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0016",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      23
+    ],
+    "expected": [
+      "\u0017",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0017",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      24
+    ],
+    "expected": [
+      "\u0018",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0018",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      25
+    ],
+    "expected": [
+      "\u0019",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u0019",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      26
+    ],
+    "expected": [
+      "\u001a",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u001a",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      27
+    ],
+    "expected": [
+      "\u001b",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u001b",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      28
+    ],
+    "expected": [
+      "\u001c",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u001c",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      29
+    ],
+    "expected": [
+      "\u001d",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u001d",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      30
+    ],
+    "expected": [
+      "\u001e",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u001e",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      31
+    ],
+    "expected": [
+      "\u001f",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\u001f",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      32
+    ],
+    "expected": [
+      " ",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      " ",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      33
+    ],
+    "expected": [
+      "!",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "!",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      34
+    ],
+    "expected": [
+      "\"",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\"",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      35
+    ],
+    "expected": [
+      "#",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "#",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      36
+    ],
+    "expected": [
+      "$",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "$",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      37
+    ],
+    "expected": [
+      "%",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "%",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      38
+    ],
+    "expected": [
+      "&",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "&",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      39
+    ],
+    "expected": [
+      "'",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "'",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      40
+    ],
+    "expected": [
+      "(",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "(",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      41
+    ],
+    "expected": [
+      ")",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      ")",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      42
+    ],
+    "expected": [
+      "*",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "*",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      43
+    ],
+    "expected": [
+      "+",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "+",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      44
+    ],
+    "expected": [
+      ",",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      ",",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      45
+    ],
+    "expected": [
+      "-",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "-",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      46
+    ],
+    "expected": [
+      ".",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      ".",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      47
+    ],
+    "expected": [
+      "/",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "/",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      48
+    ],
+    "expected": [
+      "0",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "0",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      49
+    ],
+    "expected": [
+      "1",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "1",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      50
+    ],
+    "expected": [
+      "2",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "2",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      51
+    ],
+    "expected": [
+      "3",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "3",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      52
+    ],
+    "expected": [
+      "4",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "4",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      53
+    ],
+    "expected": [
+      "5",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "5",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      54
+    ],
+    "expected": [
+      "6",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "6",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      55
+    ],
+    "expected": [
+      "7",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "7",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      56
+    ],
+    "expected": [
+      "8",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "8",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      57
+    ],
+    "expected": [
+      "9",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "9",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      58
+    ],
+    "expected": [
+      ":",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      ":",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      59
+    ],
+    "expected": [
+      ";",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      ";",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      60
+    ],
+    "expected": [
+      "<",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "<",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      61
+    ],
+    "expected": [
+      "=",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "=",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      62
+    ],
+    "expected": [
+      ">",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      ">",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      63
+    ],
+    "expected": [
+      "?",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "?",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      64
+    ],
+    "expected": [
+      "@",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "@",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      65
+    ],
+    "expected": [
+      "A",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "A",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      66
+    ],
+    "expected": [
+      "B",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "B",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      67
+    ],
+    "expected": [
+      "C",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "C",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      68
+    ],
+    "expected": [
+      "D",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "D",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      69
+    ],
+    "expected": [
+      "E",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "E",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      70
+    ],
+    "expected": [
+      "F",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "F",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      71
+    ],
+    "expected": [
+      "G",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "G",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      72
+    ],
+    "expected": [
+      "H",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "H",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      73
+    ],
+    "expected": [
+      "I",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "I",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      74
+    ],
+    "expected": [
+      "J",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "J",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      75
+    ],
+    "expected": [
+      "K",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "K",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      76
+    ],
+    "expected": [
+      "L",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "L",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      77
+    ],
+    "expected": [
+      "M",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "M",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      78
+    ],
+    "expected": [
+      "N",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "N",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      79
+    ],
+    "expected": [
+      "O",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "O",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      80
+    ],
+    "expected": [
+      "P",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "P",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      81
+    ],
+    "expected": [
+      "Q",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "Q",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      82
+    ],
+    "expected": [
+      "R",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "R",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      83
+    ],
+    "expected": [
+      "S",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "S",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      84
+    ],
+    "expected": [
+      "T",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "T",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      85
+    ],
+    "expected": [
+      "U",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "U",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      86
+    ],
+    "expected": [
+      "V",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "V",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      87
+    ],
+    "expected": [
+      "W",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "W",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      88
+    ],
+    "expected": [
+      "X",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "X",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      89
+    ],
+    "expected": [
+      "Y",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "Y",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      90
+    ],
+    "expected": [
+      "Z",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "Z",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      91
+    ],
+    "expected": [
+      "[",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "[",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      92
+    ],
+    "expected": [
+      "\\",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "\\",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      93
+    ],
+    "expected": [
+      "]",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "]",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      94
+    ],
+    "expected": [
+      "^",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "^",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      95
+    ],
+    "expected": [
+      "_",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "_",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      96
+    ],
+    "expected": [
+      "`",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "`",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      97
+    ],
+    "expected": [
+      "a",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "a",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      98
+    ],
+    "expected": [
+      "b",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "b",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      99
+    ],
+    "expected": [
+      "c",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "c",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      100
+    ],
+    "expected": [
+      "d",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "d",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      101
+    ],
+    "expected": [
+      "e",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "e",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      102
+    ],
+    "expected": [
+      "f",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "f",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      103
+    ],
+    "expected": [
+      "g",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "g",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      104
+    ],
+    "expected": [
+      "h",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "h",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      105
+    ],
+    "expected": [
+      "i",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "i",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      106
+    ],
+    "expected": [
+      "j",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "j",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      107
+    ],
+    "expected": [
+      "k",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "k",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      108
+    ],
+    "expected": [
+      "l",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "l",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      109
+    ],
+    "expected": [
+      "m",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "m",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      110
+    ],
+    "expected": [
+      "n",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "n",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      111
+    ],
+    "expected": [
+      "o",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "o",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      112
+    ],
+    "expected": [
+      "p",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "p",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      113
+    ],
+    "expected": [
+      "q",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "q",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      114
+    ],
+    "expected": [
+      "r",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "r",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      115
+    ],
+    "expected": [
+      "s",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "s",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      116
+    ],
+    "expected": [
+      "t",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "t",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      117
+    ],
+    "expected": [
+      "u",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "u",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      118
+    ],
+    "expected": [
+      "v",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "v",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      119
+    ],
+    "expected": [
+      "w",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "w",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      120
+    ],
+    "expected": [
+      "x",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "x",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      121
+    ],
+    "expected": [
+      "y",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "y",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      122
+    ],
+    "expected": [
+      "z",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "z",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      123
+    ],
+    "expected": [
+      "{",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "{",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      124
+    ],
+    "expected": [
+      "|",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "|",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      125
+    ],
+    "expected": [
+      "}",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "}",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      126
+    ],
+    "expected": [
+      "~",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "~",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      127
+    ],
+    "expected": [
+      "",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      128
+    ],
+    "expected": [
+      "€",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "€",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      129
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      130
+    ],
+    "expected": [
+      "‚",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "‚",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      131
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      132
+    ],
+    "expected": [
+      "„",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "„",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      133
+    ],
+    "expected": [
+      "…",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "…",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      134
+    ],
+    "expected": [
+      "†",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "†",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      135
+    ],
+    "expected": [
+      "‡",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "‡",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      136
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      137
+    ],
+    "expected": [
+      "‰",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "‰",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      138
+    ],
+    "expected": [
+      "Š",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Š",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      139
+    ],
+    "expected": [
+      "‹",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "‹",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      140
+    ],
+    "expected": [
+      "Ś",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ś",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      141
+    ],
+    "expected": [
+      "Ť",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ť",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      142
+    ],
+    "expected": [
+      "Ž",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ž",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      143
+    ],
+    "expected": [
+      "Ź",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ź",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      144
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      145
+    ],
+    "expected": [
+      "‘",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "‘",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      146
+    ],
+    "expected": [
+      "’",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "’",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      147
+    ],
+    "expected": [
+      "“",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "“",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      148
+    ],
+    "expected": [
+      "”",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "”",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      149
+    ],
+    "expected": [
+      "•",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "•",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      150
+    ],
+    "expected": [
+      "–",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "–",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      151
+    ],
+    "expected": [
+      "—",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "—",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      152
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      153
+    ],
+    "expected": [
+      "™",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "™",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      154
+    ],
+    "expected": [
+      "š",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "š",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      155
+    ],
+    "expected": [
+      "›",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "›",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      156
+    ],
+    "expected": [
+      "ś",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ś",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      157
+    ],
+    "expected": [
+      "ť",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ť",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      158
+    ],
+    "expected": [
+      "ž",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ž",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      159
+    ],
+    "expected": [
+      "ź",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ź",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      160
+    ],
+    "expected": [
+      " ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      " ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      161
+    ],
+    "expected": [
+      "ˇ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ˇ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      162
+    ],
+    "expected": [
+      "˘",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "˘",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      163
+    ],
+    "expected": [
+      "Ł",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ł",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      164
+    ],
+    "expected": [
+      "¤",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "¤",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      165
+    ],
+    "expected": [
+      "Ą",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ą",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      166
+    ],
+    "expected": [
+      "¦",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "¦",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      167
+    ],
+    "expected": [
+      "§",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "§",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      168
+    ],
+    "expected": [
+      "¨",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "¨",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      169
+    ],
+    "expected": [
+      "©",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "©",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      170
+    ],
+    "expected": [
+      "Ş",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ş",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      171
+    ],
+    "expected": [
+      "«",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "«",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      172
+    ],
+    "expected": [
+      "¬",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "¬",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      173
+    ],
+    "expected": [
+      "­",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "­",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      174
+    ],
+    "expected": [
+      "®",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "®",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      175
+    ],
+    "expected": [
+      "Ż",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ż",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      176
+    ],
+    "expected": [
+      "°",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "°",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      177
+    ],
+    "expected": [
+      "±",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "±",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      178
+    ],
+    "expected": [
+      "˛",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "˛",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      179
+    ],
+    "expected": [
+      "ł",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ł",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      180
+    ],
+    "expected": [
+      "´",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "´",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      181
+    ],
+    "expected": [
+      "µ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "µ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      182
+    ],
+    "expected": [
+      "¶",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "¶",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      183
+    ],
+    "expected": [
+      "·",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "·",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      184
+    ],
+    "expected": [
+      "¸",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "¸",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      185
+    ],
+    "expected": [
+      "ą",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ą",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      186
+    ],
+    "expected": [
+      "ş",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ş",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      187
+    ],
+    "expected": [
+      "»",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "»",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      188
+    ],
+    "expected": [
+      "Ľ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ľ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      189
+    ],
+    "expected": [
+      "˝",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "˝",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      190
+    ],
+    "expected": [
+      "ľ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ľ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      191
+    ],
+    "expected": [
+      "ż",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ż",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      192
+    ],
+    "expected": [
+      "Ŕ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ŕ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      193
+    ],
+    "expected": [
+      "Á",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Á",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      194
+    ],
+    "expected": [
+      "Â",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Â",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      195
+    ],
+    "expected": [
+      "Ă",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ă",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      196
+    ],
+    "expected": [
+      "Ä",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ä",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      197
+    ],
+    "expected": [
+      "Ĺ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ĺ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      198
+    ],
+    "expected": [
+      "Ć",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ć",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      199
+    ],
+    "expected": [
+      "Ç",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ç",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      200
+    ],
+    "expected": [
+      "Č",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Č",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      201
+    ],
+    "expected": [
+      "É",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "É",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      202
+    ],
+    "expected": [
+      "Ę",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ę",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      203
+    ],
+    "expected": [
+      "Ë",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ë",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      204
+    ],
+    "expected": [
+      "Ě",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ě",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      205
+    ],
+    "expected": [
+      "Í",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Í",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      206
+    ],
+    "expected": [
+      "Î",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Î",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      207
+    ],
+    "expected": [
+      "Ď",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ď",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      208
+    ],
+    "expected": [
+      "Đ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Đ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      209
+    ],
+    "expected": [
+      "Ń",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ń",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      210
+    ],
+    "expected": [
+      "Ň",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ň",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      211
+    ],
+    "expected": [
+      "Ó",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ó",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      212
+    ],
+    "expected": [
+      "Ô",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ô",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      213
+    ],
+    "expected": [
+      "Ő",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ő",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      214
+    ],
+    "expected": [
+      "Ö",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ö",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      215
+    ],
+    "expected": [
+      "×",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "×",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      216
+    ],
+    "expected": [
+      "Ř",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ř",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      217
+    ],
+    "expected": [
+      "Ů",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ů",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      218
+    ],
+    "expected": [
+      "Ú",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ú",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      219
+    ],
+    "expected": [
+      "Ű",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ű",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      220
+    ],
+    "expected": [
+      "Ü",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ü",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      221
+    ],
+    "expected": [
+      "Ý",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ý",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      222
+    ],
+    "expected": [
+      "Ţ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Ţ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      223
+    ],
+    "expected": [
+      "ß",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ß",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      224
+    ],
+    "expected": [
+      "ŕ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ŕ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      225
+    ],
+    "expected": [
+      "á",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "á",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      226
+    ],
+    "expected": [
+      "â",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "â",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      227
+    ],
+    "expected": [
+      "ă",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ă",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      228
+    ],
+    "expected": [
+      "ä",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ä",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      229
+    ],
+    "expected": [
+      "ĺ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ĺ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      230
+    ],
+    "expected": [
+      "ć",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ć",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      231
+    ],
+    "expected": [
+      "ç",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ç",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      232
+    ],
+    "expected": [
+      "č",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "č",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      233
+    ],
+    "expected": [
+      "é",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "é",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      234
+    ],
+    "expected": [
+      "ę",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ę",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      235
+    ],
+    "expected": [
+      "ë",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ë",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      236
+    ],
+    "expected": [
+      "ě",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ě",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      237
+    ],
+    "expected": [
+      "í",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "í",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      238
+    ],
+    "expected": [
+      "î",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "î",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      239
+    ],
+    "expected": [
+      "ď",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ď",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      240
+    ],
+    "expected": [
+      "đ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "đ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      241
+    ],
+    "expected": [
+      "ń",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ń",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      242
+    ],
+    "expected": [
+      "ň",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ň",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      243
+    ],
+    "expected": [
+      "ó",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ó",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      244
+    ],
+    "expected": [
+      "ô",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ô",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      245
+    ],
+    "expected": [
+      "ő",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ő",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      246
+    ],
+    "expected": [
+      "ö",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ö",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      247
+    ],
+    "expected": [
+      "÷",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "÷",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      248
+    ],
+    "expected": [
+      "ř",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ř",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      249
+    ],
+    "expected": [
+      "ů",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ů",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      250
+    ],
+    "expected": [
+      "ú",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ú",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      251
+    ],
+    "expected": [
+      "ű",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ű",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      252
+    ],
+    "expected": [
+      "ü",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ü",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      253
+    ],
+    "expected": [
+      "ý",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ý",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      254
+    ],
+    "expected": [
+      "ţ",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "ţ",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      255
+    ],
+    "expected": [
+      "˙",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "˙",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      129
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      131
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      136
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      144
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      152
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_observed": [
+      "",
+      "iso-8859-2"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      239,
+      187,
+      191,
+      104,
+      105
+    ],
+    "expected": [
+      "hi",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "hi",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      255,
+      254,
+      97,
+      0
+    ],
+    "expected": [
+      "˙ţa\u0000",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "˙ţa\u0000",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      97,
+      13,
+      10,
+      98,
+      13,
+      99
+    ],
+    "expected": [
+      "a\r\nb\rc",
+      "utf-8-sig"
+    ],
+    "rust_observed": [
+      "a\r\nb\rc",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      142,
+      157
+    ],
+    "expected": [
+      "Žť",
+      "cp1250"
+    ],
+    "rust_observed": [
+      "Žť",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\r\na@example.com,x\r\n",
+    "expected": [
+      "a@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na@example.com\n",
+    "expected": [
+      "a@example.com"
+    ],
+    "rust_observed": [
+      "a@example.com"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,email\na,b\n",
+    "expected": [
+      "b"
+    ],
+    "rust_observed": [
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\r\nb@example.com\",x\n",
+    "expected": [
+      "a\nb@example.com"
+    ],
+    "rust_observed": [
+      "a\nb@example.com"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\rb@example.com\",x\n",
+    "expected": [
+      "a\nb@example.com"
+    ],
+    "rust_observed": [
+      "a\nb@example.com"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n a ,x\n",
+    "expected": [
+      "a"
+    ],
+    "rust_observed": [
+      "a"
+    ]
+  },
+  {
+    "op": "syntax",
+    "text": "a@😀.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+1F600 at position 1 of '😀' not allowed)."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign contains invalid IDNA characters."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@☃.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+2603 at position 1 of '☃' not allowed)."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign contains invalid IDNA characters."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@♥.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+2665 at position 1 of '♥' not allowed)."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign contains invalid IDNA characters."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@©.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+00A9 at position 1 of '©' not allowed)."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign contains invalid IDNA characters."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a_b.com",
+    "expected": {
+      "error": "The part after the @-sign contains invalid characters: '_'."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is not valid."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@l·l.cat",
+    "expected": {
+      "domain": "l·l.cat"
+    },
+    "rust_observed": {
+      "domain": "l·l.cat"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a‍b.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: ZERO WIDTH JOINER."
+    },
+    "rust_observed": {
+      "error": "The email address contains unsafe characters: U+200D."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a​b.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: ZERO WIDTH SPACE."
+    },
+    "rust_observed": {
+      "error": "The email address contains unsafe characters: ZERO WIDTH SPACE."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@ß.de",
+    "expected": {
+      "domain": "ß.de"
+    },
+    "rust_observed": {
+      "domain": "ß.de"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@xn--e28h.com",
+    "expected": {
+      "error": "The part after the @-sign is not valid IDNA (Codepoint U+1F600 at position 1 of '😀' not allowed)."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign contains invalid IDNA characters."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a.１２com",
+    "expected": {
+      "domain": "a.12com"
+    },
+    "rust_observed": {
+      "domain": "a.12com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a.1a",
+    "expected": {
+      "domain": "a.1a"
+    },
+    "rust_observed": {
+      "domain": "a.1a"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a.Ⅳ",
+    "expected": {
+      "domain": "a.iv"
+    },
+    "rust_observed": {
+      "domain": "a.iv"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a.½",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+2044 at position 2 of '1⁄2' not allowed)."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign contains invalid IDNA characters."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a.²",
+    "expected": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a.💩",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+1F4A9 at position 1 of '💩' not allowed)."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign contains invalid IDNA characters."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "́a@example.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: COMBINING ACUTE ACCENT."
+    },
+    "rust_observed": {
+      "error": "The email address contains unsafe characters: U+0301."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@háčky.cz",
+    "expected": {
+      "domain": "háčky.cz"
+    },
+    "rust_observed": {
+      "domain": "háčky.cz"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@例子.中国",
+    "expected": {
+      "domain": "例子.中国"
+    },
+    "rust_observed": {
+      "domain": "例子.中国"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a​@example.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: ZERO WIDTH SPACE."
+    },
+    "rust_observed": {
+      "error": "The email address contains unsafe characters: ZERO WIDTH SPACE."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "á@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a‮@example.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: RIGHT-TO-LEFT OVERRIDE."
+    },
+    "rust_observed": {
+      "error": "The email address contains unsafe characters: RIGHT-TO-LEFT OVERRIDE."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "😀@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a­@example.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: SOFT HYPHEN."
+    },
+    "rust_observed": {
+      "error": "The email address contains unsafe characters: SOFT HYPHEN."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a͏@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a!#$%&'*+-/=?^_`{|}~@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@ｅｘａｍｐｌｅ.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.１２",
+    "expected": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.c",
+    "expected": {
+      "domain": "x.c"
+    },
+    "rust_observed": {
+      "domain": "x.c"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.1com",
+    "expected": {
+      "domain": "x.1com"
+    },
+    "rust_observed": {
+      "domain": "x.1com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.123",
+    "expected": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.i2p",
+    "expected": {
+      "domain": "x.i2p"
+    },
+    "rust_observed": {
+      "domain": "x.i2p"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.home.arpa",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.onion",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.test",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.local",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.localhost",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.invalid",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.internal",
+    "expected": {
+      "domain": "x.internal"
+    },
+    "rust_observed": {
+      "domain": "x.internal"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@127.0.0.1",
+    "expected": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    },
+    "rust_observed": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@xn--.com",
+    "expected": {
+      "error": "An email address cannot have a period and a hyphen next to each other."
+    },
+    "rust_observed": {
+      "error": "An email address cannot have a period and a hyphen next to each other."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@ab--cd.com",
+    "expected": {
+      "error": "An email address cannot have two letters followed by two dashes immediately after the @-sign or after a period, except Punycode."
+    },
+    "rust_observed": {
+      "error": "An email address cannot have two letters followed by two dashes immediately after the @-sign or after a period, except Punycode."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x。com",
+    "expected": {
+      "domain": "x.com"
+    },
+    "rust_observed": {
+      "domain": "x.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.ß",
+    "expected": {
+      "domain": "x.ß"
+    },
+    "rust_observed": {
+      "domain": "x.ß"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a\u001c@example.com",
+    "expected": {
+      "error": "The email address contains invalid characters before the @-sign: U+001C."
+    },
+    "rust_observed": {
+      "error": "The email address contains invalid characters before the @-sign."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.com.",
+    "expected": {
+      "error": "An email address cannot end with a period."
+    },
+    "rust_observed": {
+      "error": "An email address cannot end with a period."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": " a@example.com",
+    "expected": {
+      "error": "The email address contains invalid characters before the @-sign: SPACE."
+    },
+    "rust_observed": {
+      "error": "The email address contains invalid characters before the @-sign."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "\"a\"@example.com",
+    "expected": {
+      "error": "Quoting the part before the @-sign is not allowed here."
+    },
+    "rust_observed": {
+      "error": "Quoting the part before the @-sign is not allowed here."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "ééééééééééééééééééééééééééééééééé@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_observed": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "ip",
+    "text": "192.0.0.8",
+    "expected": true,
+    "rust_observed": true
+  },
+  {
+    "op": "ip",
+    "text": "192.0.0.9",
+    "expected": false,
+    "rust_observed": false
+  },
+  {
+    "op": "ip",
+    "text": "192.0.0.10",
+    "expected": false,
+    "rust_observed": false
+  },
+  {
+    "op": "ip",
+    "text": "192.0.0.11",
+    "expected": true,
+    "rust_observed": true
+  },
+  {
+    "op": "ip",
+    "text": "192.88.99.1",
+    "expected": false,
+    "rust_observed": false
+  },
+  {
+    "op": "ip",
+    "text": "2001:1::1",
+    "expected": false,
+    "rust_observed": false
+  },
+  {
+    "op": "ip",
+    "text": "2001:3::1",
+    "expected": false,
+    "rust_observed": false
+  },
+  {
+    "op": "ip",
+    "text": "2001:20::1",
+    "expected": false,
+    "rust_observed": false
+  },
+  {
+    "op": "ip",
+    "text": "2002::1",
+    "expected": true,
+    "rust_observed": true
+  },
+  {
+    "op": "ip",
+    "text": "64:ff9b::1",
+    "expected": true,
+    "rust_observed": true
+  },
+  {
+    "op": "ip",
+    "text": "64:ff9b:1::1",
+    "expected": true,
+    "rust_observed": true
+  },
+  {
+    "op": "ip",
+    "text": "::ffff:8.8.8.8",
+    "expected": true,
+    "rust_observed": false
+  },
+  {
+    "op": "ip",
+    "text": "3fff::1",
+    "expected": false,
+    "rust_observed": false
+  },
+  {
+    "op": "ip",
+    "text": "2001:4860::8888",
+    "expected": false,
+    "rust_observed": false
+  },
+  {
+    "op": "headers",
+    "text": "﻿email,name\na@example.com,x\n",
+    "expected": [
+      "﻿email",
+      "name"
+    ],
+    "rust_observed": [
+      "﻿email",
+      "name"
+    ]
+  },
+  {
+    "op": "headers",
+    "text": "email,name\r\na@example.com,x\r\n",
+    "expected": [
+      "email",
+      "name"
+    ],
+    "rust_observed": [
+      "email",
+      "name"
+    ]
+  },
+  {
+    "op": "syntax",
+    "text": "a@a·b.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+00B7 not allowed at position 2 in 'a·b')."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@l·l.cat",
+    "expected": {
+      "domain": "l·l.cat"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a͵b.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+0375 not allowed at position 2 in 'a͵b')."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@͵α.com",
+    "expected": {
+      "domain": "͵α.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@א׳.com",
+    "expected": {
+      "domain": "א׳.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a׳.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+05F3 not allowed at position 2 in 'a׳')."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a・b.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+30FB not allowed at position 2 in 'a・b')."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@カ・ナ.jp",
+    "expected": {
+      "domain": "カ・ナ.jp"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a١۲.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+0661 not allowed at position 2 in 'a١۲')."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@١۲.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (Codepoint U+0661 not allowed at position 1 in '١۲')."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@١٢.com",
+    "expected": {
+      "error": "The part after the @-sign is invalid (First codepoint in label '١٢' must be directionality L, R or AL)."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@ab－－cd.com",
+    "expected": {
+      "error": "An email address cannot have two letters followed by two dashes immediately after the @-sign or after a period, except Punycode."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a.１２com",
+    "expected": {
+      "domain": "a.12com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a。com",
+    "expected": {
+      "domain": "a.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@xn--ls8h.com",
+    "expected": {
+      "error": "The part after the @-sign is not valid IDNA (Codepoint U+1F4A9 at position 1 of '💩' not allowed)."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a‌b.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: ZERO WIDTH NON-JOINER."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@a‍b.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: ZERO WIDTH JOINER."
+    }
+  }
+]

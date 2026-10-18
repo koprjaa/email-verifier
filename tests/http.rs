@@ -383,3 +383,103 @@ async fn download_refuses_sibling_directory_with_matching_prefix() {
         StatusCode::FORBIDDEN
     );
 }
+
+#[tokio::test]
+async fn txt_column_confirmation_does_not_require_json() {
+    let (_dir, _app, r) = app(None, json!({}));
+    assert_eq!(
+        upload(&r, "/load_txt", "a.txt", b"a@example.com").await.0,
+        200
+    );
+    let response = r
+        .oneshot(
+            Request::builder()
+                .uri("/select_column")
+                .method("POST")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), 200);
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    assert_eq!(
+        serde_json::from_slice::<Value>(&bytes).unwrap()["total_emails"],
+        1
+    );
+}
+
+#[tokio::test]
+async fn saved_http_reference_scenarios() {
+    let (_dir, _app, r) = app(None, json!({}));
+    let cases: Vec<Value> =
+        serde_json::from_str(include_str!("fixtures/http-reference.json")).unwrap();
+    for case in cases {
+        let path = case["path"].as_str().unwrap();
+        if path == "/select_column" {
+            continue;
+        }
+        let (status, value) = request(
+            &r,
+            path,
+            case["method"].as_str().unwrap(),
+            case["body"].clone(),
+        )
+        .await;
+        let expected_status = if path == "/verify_single"
+            && (case["body"].is_array() || case["body"]["email"].is_number())
+        {
+            400
+        } else {
+            case["python_status"].as_u64().unwrap() as u16
+        };
+        assert_eq!(status.as_u16(), expected_status, "{case}");
+        if let Some(expected) = case["python"].as_object() {
+            for (key, expected) in expected {
+                if key != "error" && key != "verification_steps" {
+                    assert_eq!(&value[key], expected, "{case}: {key}");
+                }
+            }
+        }
+    }
+}
+
+#[tokio::test]
+async fn slow_upload_does_not_lock_status_or_allow_cleanup() {
+    use tokio::io::AsyncWriteExt;
+    let (_dir, app, r) = app(None, json!({}));
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let address = listener.local_addr().unwrap();
+    let served = r.clone();
+    let server = tokio::spawn(async move {
+        axum::serve(listener, served).await.unwrap();
+    });
+    let mut client = tokio::net::TcpStream::connect(address).await.unwrap();
+    client.write_all(b"POST /load_txt HTTP/1.1\r\nHost: localhost\r\nContent-Type: multipart/form-data; boundary=fixture\r\nContent-Length: 1000\r\n\r\n--fixture\r\nContent-Disposition: form-data; name=\"file\"; filename=\"slow.txt\"\r\n\r\na@example.com").await.unwrap();
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            if let Ok(job) = app.job.try_lock() {
+                if job.status == "loading_txt" {
+                    break;
+                }
+            }
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let (_, value) = tokio::time::timeout(
+        Duration::from_secs(1),
+        request(&r, "/status", "GET", Value::Null),
+    )
+    .await
+    .unwrap();
+    assert_eq!(value["status"], "loading_txt");
+    assert_eq!(request(&r, "/cleanup", "POST", json!({})).await.0, 400);
+    assert_eq!(
+        upload(&r, "/load_txt", "new.txt", b"b@example.com").await.0,
+        400
+    );
+    drop(client);
+    server.abort();
+}

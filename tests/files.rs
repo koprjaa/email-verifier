@@ -95,7 +95,7 @@ fn configuration_defaults_and_precedence() {
 #[test]
 fn syntax_idna_and_injection() {
     assert_eq!(validate_syntax("a@EXAMPLE.COM").unwrap(), "example.com");
-    assert!(validate_syntax("a@háčky.cz").unwrap().starts_with("xn--"));
+    assert!(validate_syntax("a@háčky.cz").unwrap() == "háčky.cz");
     for s in [
         "bad",
         "@example.com",
@@ -120,4 +120,40 @@ fn invalid_integer_settings_are_rejected() {
     ] {
         assert!(Settings::from_value(&value).is_err());
     }
+}
+
+#[test]
+fn csv_empty_smtp_message_uses_python_fallbacks() {
+    let r: VerificationResult = serde_json::from_value(json!({"email":"a@example.com","is_valid":true,"status_code":"valid","message":"","is_catchall":false,"mx_record":null,"smtp_code_internal":250,"verification_steps":[]})).unwrap();
+    assert_eq!(
+        result_csv(&[r]).unwrap(),
+        include_bytes!("fixtures/empty-message.csv")
+    );
+}
+
+#[test]
+fn txt_ascii_punctuation_keeps_original_word_boundaries() {
+    assert_eq!(txt_emails("+a@example.com"), ["a@example.com"]);
+    assert_eq!(txt_emails(".a@example.com"), ["a@example.com"]);
+    assert_eq!(txt_emails("á+a@example.com"), ["+a@example.com"]);
+}
+
+#[test]
+fn csv_large_fields_are_supported_within_upload_limit() {
+    let field = "a".repeat(131073);
+    assert_eq!(
+        csv_emails(&format!("email,name\n{field},x\n"), b',', "email").unwrap(),
+        [field]
+    );
+}
+
+#[test]
+fn only_one_utf8_bom_is_removed() {
+    let (text, _) = decode(b"\xef\xbb\xbf\xef\xbb\xbfemail,name\na@example.com,x\n").unwrap();
+    let (delimiter, headers) = csv_headers(&text).unwrap();
+    assert_eq!(headers, ["\u{feff}email", "name"]);
+    assert_eq!(
+        csv_emails(&text, delimiter, &headers[0]).unwrap(),
+        ["a@example.com"]
+    );
 }

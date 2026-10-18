@@ -79,7 +79,13 @@ impl RealNetwork {
                 }
             }
         }
-        opts.timeout = Duration::from_secs_f64(settings.dns_timeout);
+        opts.timeout =
+            Duration::try_from_secs_f64(settings.dns_timeout).map_err(|_| "Invalid DNS timeout")?;
+        if settings.max_concurrent_domains == 0
+            || settings.max_concurrent_domains > Semaphore::MAX_PERMITS
+        {
+            return Err("Invalid SMTP concurrency limit".into());
+        }
         opts.attempts = settings.dns_tries;
         opts.cache_size = 0;
         Ok(Self {
@@ -157,6 +163,7 @@ impl Session {
         tokio::time::timeout(timeout, async {
             let mut messages = vec![];
             let mut total = 0;
+            let mut first_code = None;
             loop {
                 let mut bytes = Vec::new();
                 let n = (&mut self.io)
@@ -178,6 +185,19 @@ impl Session {
                     .ok_or_else(|| {
                         ProbeError::new("unknown_smtp_error", "Malformed SMTP response")
                     })?;
+                if !(100..=599).contains(&code)
+                    || !matches!(
+                        line.as_bytes().get(3),
+                        Some(b' ' | b'-' | b'\r' | b'\n') | None
+                    )
+                    || first_code.is_some_and(|first| first != code)
+                {
+                    return Err(ProbeError::new(
+                        "unknown_smtp_error",
+                        "Malformed SMTP response",
+                    ));
+                }
+                first_code = Some(code);
                 messages.push(
                     line.get(4..)
                         .unwrap_or("")
@@ -230,7 +250,32 @@ pub async fn smtp_session(
     steps: &mut Vec<Step>,
     catchall: bool,
 ) -> Result<Reply, ProbeError> {
-    let timeout = Duration::from_secs_f64(settings.smtp_timeout);
+    let timeout = Duration::try_from_secs_f64(settings.smtp_timeout)
+        .map_err(|_| ProbeError::new("smtp_timeout", "Invalid SMTP timeout"))?;
+    if email.contains(['\r', '\n'])
+        || settings.helo_hostname.contains(['\r', '\n'])
+        || settings.default_sender.contains(['\r', '\n'])
+        || settings
+            .sender_override
+            .as_deref()
+            .is_some_and(|s| s.contains(['\r', '\n']))
+        || settings
+            .senders
+            .values()
+            .chain(settings.ordered_senders.iter().map(|(_, s)| s))
+            .any(|s| s.contains(['\r', '\n']))
+    {
+        return Err(ProbeError::new(
+            "smtp_invalid_input",
+            "SMTP input must not contain line breaks",
+        ));
+    }
+    if !email.is_ascii() {
+        return Err(ProbeError::new(
+            "smtp_encoding_error",
+            "SMTPUTF8 envelopes are not supported",
+        ));
+    }
     let stream = tokio::time::timeout(timeout, TcpStream::connect(SocketAddr::new(ip, port)))
         .await
         .map_err(|_| ProbeError::new("smtp_timeout", format!("Timeout on {ip}:{port}")))?

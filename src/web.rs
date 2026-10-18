@@ -10,7 +10,7 @@ use crate::{
 };
 use axum::{
     body::Body,
-    extract::{DefaultBodyLimit, Multipart, Request, State},
+    extract::{rejection::JsonRejection, DefaultBodyLimit, Multipart, Request, State},
     http::{header, StatusCode},
     middleware::{self, Next},
     response::{Html, IntoResponse, Response},
@@ -159,7 +159,7 @@ impl App {
             finished: Notify::new(),
         }))
     }
-    fn save(&self, job: &mut Job) -> Result<(), String> {
+    async fn save(&self, job: &mut Job) -> Result<(), String> {
         if job.results.is_empty() {
             return Ok(());
         }
@@ -172,9 +172,15 @@ impl App {
                 ))
             })
             .clone();
-        let bytes = files::result_csv(&job.results).map_err(|e| e.to_string())?;
-        // Rewrite a snapshot so incremental saves never duplicate earlier rows.
-        std::fs::write(self.root.join(&path), bytes).map_err(|e| e.to_string())?;
+        let results = job.results.clone();
+        let destination = self.root.join(&path);
+        // CSV serialization and disk I/O must not occupy an async worker.
+        tokio::task::spawn_blocking(move || {
+            let bytes = files::result_csv(&results).map_err(|e| e.to_string())?;
+            std::fs::write(destination, bytes).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(|e| e.to_string())??;
         crate::log(
             "INFO",
             &format!("Results saved to {} (final save)", path.display()),
@@ -192,14 +198,15 @@ impl App {
     pub async fn cleanup_unused(&self) -> std::io::Result<()> {
         let job = self.job.lock().await;
         for folder in ["uploads", "results"] {
-            for entry in std::fs::read_dir(self.root.join(folder))? {
-                let path = entry?.path();
+            let mut entries = tokio::fs::read_dir(self.root.join(folder)).await?;
+            while let Some(entry) = entries.next_entry().await? {
+                let path = entry.path();
                 let relative = path.strip_prefix(&self.root).unwrap_or(&path);
                 if job.uploaded.as_deref() != Some(relative)
                     && job.result_path.as_deref() != Some(relative)
-                    && path.is_file()
+                    && entry.file_type().await?.is_file()
                 {
-                    std::fs::remove_file(path)?;
+                    tokio::fs::remove_file(path).await?;
                 }
             }
         }
@@ -289,8 +296,20 @@ async fn upload(app: Arc<App>, mut multipart: Multipart, kind: &str) -> ApiRespo
     *job = Job::default();
     job.status = format!("loading_{kind}");
     job.last_activity = Some(now());
+    drop(job);
+    let deadline = tokio::time::Instant::now() + std::time::Duration::from_secs(60);
     loop {
-        let field = match multipart.next_field().await {
+        // A slow client must not hold the job mutex while sending its body.
+        let field = tokio::time::timeout_at(deadline, multipart.next_field()).await;
+        let mut job = app.job.lock().await;
+        let field = match field {
+            Err(_) => {
+                job.status = "error".into();
+                return error(StatusCode::REQUEST_TIMEOUT, "Upload timed out");
+            }
+            Ok(result) => result,
+        };
+        let field = match field {
             Ok(Some(f)) => f,
             Ok(None) => {
                 job.status = "error".into();
@@ -302,6 +321,7 @@ async fn upload(app: Arc<App>, mut multipart: Multipart, kind: &str) -> ApiRespo
             }
         };
         if field.name() != Some("file") {
+            drop(job);
             continue;
         }
         let filename = field.file_name().unwrap_or("").to_string();
@@ -313,7 +333,17 @@ async fn upload(app: Arc<App>, mut multipart: Multipart, kind: &str) -> ApiRespo
             job.status = "error".into();
             return bad(format!("Only {} files are allowed", kind.to_uppercase()));
         }
-        let bytes = match field.bytes().await {
+        drop(job);
+        let bytes = tokio::time::timeout_at(deadline, field.bytes()).await;
+        let mut job = app.job.lock().await;
+        let bytes = match bytes {
+            Err(_) => {
+                job.status = "error".into();
+                return error(StatusCode::REQUEST_TIMEOUT, "Upload timed out");
+            }
+            Ok(result) => result,
+        };
+        let bytes = match bytes {
             Ok(b) => b,
             Err(e) => {
                 job.status = "error".into();
@@ -333,25 +363,35 @@ async fn upload(app: Arc<App>, mut multipart: Multipart, kind: &str) -> ApiRespo
             chrono::Local::now().format("%Y%m%d%H%M%S"),
             files::secure_filename(&filename)
         ));
-        if let Err(e) = std::fs::write(app.root.join(&path), &bytes) {
+        if let Err(e) = tokio::fs::write(app.root.join(&path), &bytes).await {
             job.status = "error".into();
             job.error = Some(e.to_string());
             return error(StatusCode::INTERNAL_SERVER_ERROR, "Error saving upload");
         }
-        let (text, encoding) = match files::decode(&bytes) {
+        let decode_bytes = bytes.clone();
+        let decoded = tokio::task::spawn_blocking(move || files::decode(&decode_bytes))
+            .await
+            .map_err(|e| e.to_string())
+            .and_then(|r| r);
+        let (text, encoding) = match decoded {
             Ok(t) => t,
             Err(e) => {
                 job.status = "error".into();
-                let _ = std::fs::remove_file(app.root.join(path));
+                let _ = tokio::fs::remove_file(app.root.join(path)).await;
                 return bad(e);
             }
         };
         if kind == "csv" {
-            let (delimiter, headers) = match files::csv_headers(&text) {
+            let header_text = text.clone();
+            let parsed = tokio::task::spawn_blocking(move || files::csv_headers(&header_text))
+                .await
+                .map_err(|e| e.to_string())
+                .and_then(|r| r);
+            let (delimiter, headers) = match parsed {
                 Ok(h) => h,
                 Err(e) => {
                     job.status = "error".into();
-                    let _ = std::fs::remove_file(app.root.join(path));
+                    let _ = tokio::fs::remove_file(app.root.join(path)).await;
                     return bad(e);
                 }
             };
@@ -364,10 +404,17 @@ async fn upload(app: Arc<App>, mut multipart: Multipart, kind: &str) -> ApiRespo
                 json!({"status":"select_column","suggested_email_column":files::suggest_column(&headers),"columns":headers}),
             );
         }
-        let emails = files::txt_emails(&text);
+        let txt = text.clone();
+        let emails = match tokio::task::spawn_blocking(move || files::txt_emails(&txt)).await {
+            Ok(emails) => emails,
+            Err(e) => {
+                job.status = "error".into();
+                return error(StatusCode::INTERNAL_SERVER_ERROR, e.to_string());
+            }
+        };
         if emails.is_empty() {
             job.status = "error".into();
-            let _ = std::fs::remove_file(app.root.join(path));
+            let _ = tokio::fs::remove_file(app.root.join(path)).await;
             return bad("No valid email addresses found in the file");
         }
         job.file_type = "txt".into();
@@ -381,24 +428,42 @@ async fn upload(app: Arc<App>, mut multipart: Multipart, kind: &str) -> ApiRespo
         );
     }
 }
-async fn select_column(State(app): State<Arc<App>>, Json(data): Json<Value>) -> ApiResponse {
+async fn select_column(
+    State(app): State<Arc<App>>,
+    data: Result<Json<Value>, JsonRejection>,
+) -> ApiResponse {
     let mut job = app.job.lock().await;
     if !["selecting_column", "ready"].contains(&job.status.as_str()) {
         return bad("Invalid state for column selection.");
     }
     job.last_activity = Some(now());
-    if !job
-        .uploaded
-        .as_ref()
-        .is_some_and(|p| app.root.join(p).exists())
-    {
+    let exists = match &job.uploaded {
+        Some(path) => tokio::fs::try_exists(app.root.join(path))
+            .await
+            .unwrap_or(false),
+        None => false,
+    };
+    if !exists {
         return bad("Upload a file first");
     }
     if job.file_type != "txt" {
+        let data = match data {
+            Ok(Json(v)) => v,
+            Err(e) => return error(e.status(), e.body_text()),
+        };
         let Some(column) = data["column"].as_str().filter(|s| !s.is_empty()) else {
             return bad("No column selected");
         };
-        match files::csv_emails(&job.text, job.delimiter, column) {
+        let csv_text = job.text.clone();
+        let delimiter = job.delimiter;
+        let csv_column = column.to_string();
+        let parsed = tokio::task::spawn_blocking(move || {
+            files::csv_emails(&csv_text, delimiter, &csv_column)
+        })
+        .await
+        .map_err(|e| e.to_string())
+        .and_then(|r| r);
+        match parsed {
             Ok(emails) => {
                 job.emails = emails;
                 job.selected_column = Some(column.into());
@@ -481,7 +546,7 @@ async fn run_bulk(app: Arc<App>, run_id: u64, emails: Vec<String>) {
         }
         // Completed work is retained when a stop arrives during the batch.
         job.process(results);
-        if let Err(e) = app.save(&mut job) {
+        if let Err(e) = app.save(&mut job).await {
             job.error = Some(e);
             job.status = "error".into();
             break;
@@ -495,7 +560,7 @@ async fn run_bulk(app: Arc<App>, run_id: u64, emails: Vec<String>) {
         if job.status != "error" {
             job.status = if job.stop { "stopped" } else { "completed" }.into();
         }
-        if let Err(e) = app.save(&mut job) {
+        if let Err(e) = app.save(&mut job).await {
             job.error = Some(e);
             job.status = "error".into();
         }
@@ -547,16 +612,16 @@ async fn download(State(app): State<Arc<App>>) -> Response {
         return error(StatusCode::NOT_FOUND, "No results file available").into_response();
     };
     let full = app.root.join(path);
-    let Ok(resolved) = full.canonicalize() else {
+    let Ok(resolved) = tokio::fs::canonicalize(&full).await else {
         return error(StatusCode::NOT_FOUND, "Results file not found").into_response();
     };
-    let Ok(folder) = app.root.join("results").canonicalize() else {
+    let Ok(folder) = tokio::fs::canonicalize(app.root.join("results")).await else {
         return error(StatusCode::FORBIDDEN, "Invalid file path").into_response();
     };
     if !resolved.starts_with(folder) {
         return error(StatusCode::FORBIDDEN, "Invalid file path").into_response();
     }
-    match std::fs::read(full) {
+    match tokio::fs::read(full).await {
         Ok(bytes) => Response::builder()
             .header(header::CONTENT_TYPE, "text/csv; charset=utf-8")
             .header(
@@ -577,19 +642,20 @@ async fn download(State(app): State<Arc<App>>) -> Response {
 }
 async fn cleanup(State(app): State<Arc<App>>) -> ApiResponse {
     let mut job = app.job.lock().await;
-    if job.active {
-        return bad("Cannot clean files while verification is running");
+    if job.active || job.status.starts_with("loading_") {
+        return bad("Cannot clean files while an operation is running");
     }
     for folder in ["uploads", "results"] {
-        let result = (|| -> std::io::Result<()> {
-            for entry in std::fs::read_dir(app.root.join(folder))? {
-                let path = entry?.path();
-                if path.is_file() {
-                    std::fs::remove_file(path)?;
+        let result: std::io::Result<()> = async {
+            let mut entries = tokio::fs::read_dir(app.root.join(folder)).await?;
+            while let Some(entry) = entries.next_entry().await? {
+                if entry.file_type().await?.is_file() {
+                    tokio::fs::remove_file(entry.path()).await?;
                 }
             }
             Ok(())
-        })();
+        }
+        .await;
         if let Err(e) = result {
             return error(
                 StatusCode::INTERNAL_SERVER_ERROR,

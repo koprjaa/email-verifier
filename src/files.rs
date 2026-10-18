@@ -6,7 +6,14 @@
 
 use crate::verifier::VerificationResult;
 use serde_json::Value;
-use std::collections::HashSet;
+use std::{collections::HashSet, sync::LazyLock};
+
+fn python_space(c: char) -> bool {
+    c.is_whitespace() || ('\u{1c}'..='\u{1f}').contains(&c)
+}
+fn strip(s: &str) -> &str {
+    s.trim_matches(python_space)
+}
 
 pub fn decode(bytes: &[u8]) -> Result<(String, &'static str), String> {
     if let Ok(s) = std::str::from_utf8(bytes) {
@@ -15,24 +22,35 @@ pub fn decode(bytes: &[u8]) -> Result<(String, &'static str), String> {
             "utf-8-sig",
         ));
     }
-    for (enc, name) in [
-        (encoding_rs::WINDOWS_1250, "cp1250"),
-        (encoding_rs::ISO_8859_2, "iso-8859-2"),
-    ] {
-        let (text, _, bad) = enc.decode(bytes);
-        if !bad {
-            return Ok((text.into_owned(), name));
-        }
-    }
-    Err("Could not read file with a supported encoding".into())
+    // WHATWG maps undefined CP1250 bytes to controls; Python rejects them.
+    let undefined = [0x81, 0x83, 0x88, 0x90, 0x98];
+    let (enc, name) = if bytes.iter().any(|b| undefined.contains(b)) {
+        (encoding_rs::ISO_8859_2, "iso-8859-2")
+    } else {
+        (encoding_rs::WINDOWS_1250, "cp1250")
+    };
+    let (text, _) = enc.decode_without_bom_handling(bytes);
+    Ok((text.into_owned(), name))
 }
+
+fn normalized_csv(text: &str) -> String {
+    let text = text.replace("\r\n", "\n").replace('\r', "\n");
+    // The CSV crate consumes a BOM itself; decoding has already consumed one.
+    if text.starts_with('\u{feff}') {
+        format!("\u{feff}{text}")
+    } else {
+        text
+    }
+}
+
 pub fn csv_headers(text: &str) -> Result<(u8, Vec<String>), String> {
-    let line = text.lines().next().unwrap_or("").trim();
+    let line = text.split(['\r', '\n']).next().unwrap_or("").trim();
     let delimiter = b",;\t|"
         .iter()
         .copied()
         .find(|c| line.contains(*c as char))
         .ok_or("Could not read CSV headers. Check the encoding and column delimiter.")?;
+    let text = normalized_csv(text);
     let mut reader = csv::ReaderBuilder::new()
         .delimiter(delimiter)
         .flexible(true)
@@ -63,6 +81,7 @@ pub fn unique(items: impl IntoIterator<Item = String>) -> Vec<String> {
         .collect()
 }
 pub fn csv_emails(text: &str, delimiter: u8, column: &str) -> Result<Vec<String>, String> {
+    let text = normalized_csv(text);
     let mut reader = csv::ReaderBuilder::new()
         .delimiter(delimiter)
         .flexible(true)
@@ -83,28 +102,62 @@ pub fn csv_emails(text: &str, delimiter: u8, column: &str) -> Result<Vec<String>
             row.map_err(|e| e.to_string())?
                 .get(index)
                 .unwrap_or("")
-                .trim()
+                .trim_matches(python_space)
                 .to_string(),
         );
     }
     Ok(unique(items))
 }
 pub fn txt_emails(text: &str) -> Vec<String> {
-    let pattern = regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
-        .expect("constant regex");
+    static PATTERN: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::Regex::new(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b")
+            .expect("constant regex")
+    });
+    static WORD: LazyLock<regex::Regex> = LazyLock::new(|| {
+        regex::Regex::new(r"^[\p{L}\p{N}_]$").expect("constant Unicode categories")
+    });
+    // Python's word boundaries exclude combining marks and join controls.
+    let matches = |part: &str| {
+        let mut shadow = String::new();
+        let mut offsets = Vec::new();
+        for (offset, c) in part.char_indices() {
+            let mapped = if !c.is_ascii() && !WORD.is_match(&c.to_string()) {
+                '\0'
+            } else {
+                c
+            };
+            shadow.push(mapped);
+            offsets.extend(std::iter::repeat_n(offset, mapped.len_utf8()));
+        }
+        offsets.push(part.len());
+        PATTERN
+            .find_iter(&shadow)
+            .map(|m| {
+                let start = offsets[m.start()];
+                (start, part[start..offsets[m.end()]].to_string())
+            })
+            .collect::<Vec<_>>()
+    };
     let mut emails = vec![];
-    for line in text.lines().map(str::trim).filter(|s| !s.is_empty()) {
+    for line in text
+        .split([
+            '\n', '\r', '\u{b}', '\u{c}', '\u{1c}', '\u{1d}', '\u{1e}', '\u{85}', '\u{2028}',
+            '\u{2029}',
+        ])
+        .map(strip)
+        .filter(|s| !s.is_empty())
+    {
         if let Some(sep) = [',', ';', '|', '\t']
             .into_iter()
             .find(|c| line.contains(*c))
         {
-            for part in line.split(sep).map(str::trim) {
-                if pattern.find(part).is_some_and(|m| m.start() == 0) {
+            for part in line.split(sep).map(strip) {
+                if matches(part).first().is_some_and(|(start, _)| *start == 0) {
                     emails.push(part.to_string());
                 }
             }
         } else {
-            emails.extend(pattern.find_iter(line).map(|m| m.as_str().to_string()));
+            emails.extend(matches(line).into_iter().map(|(_, email)| email));
         }
     }
     unique(emails)
@@ -123,7 +176,8 @@ pub fn secure_filename(name: &str) -> String {
         })
         .collect();
     let filename = normalized
-        .split_whitespace()
+        .split(python_space)
+        .filter(|s| !s.is_empty())
         .collect::<Vec<_>>()
         .join("_")
         .chars()
@@ -173,12 +227,24 @@ pub fn result_csv(results: &[VerificationResult]) -> Result<Vec<u8>, csv::Error>
         };
         let smtp = r
             .smtp_code_internal
-            .map(|c| format!("{c}: {}", r.message))
+            .filter(|c| *c != 0)
+            .map(|c| {
+                if r.message.is_empty() {
+                    format!("Code: {c}")
+                } else {
+                    format!("{c}: {}", r.message)
+                }
+            })
             .unwrap_or_default();
+        let message = if r.message.is_empty() {
+            format!("Status: {}", r.status_code)
+        } else {
+            r.message.clone()
+        };
         writer.write_record([
             r.email.as_str(),
             status,
-            r.message.as_str(),
+            message.as_str(),
             "unknown",
             smtp.as_str(),
             r.mx_record.as_deref().unwrap_or(""),

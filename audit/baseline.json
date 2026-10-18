@@ -1,0 +1,739 @@
+[
+  {
+    "op": "txt",
+    "text": "a@example.com\rb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\u000bb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\fb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\u001cb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.comb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com b@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com b@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com\r\nb@example.com",
+    "expected": [
+      "a@example.com",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "txt",
+    "text": "áa@example.com",
+    "expected": [],
+    "rust_before": []
+  },
+  {
+    "op": "txt",
+    "text": "a@example.com trailing; b@example.com",
+    "expected": [
+      "a@example.com trailing",
+      "b@example.com"
+    ],
+    "rust_before": [
+      "a@example.com trailing",
+      "b@example.com"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      129
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_before": [
+      "",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      131
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_before": [
+      "",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      136
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_before": [
+      "",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      144
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_before": [
+      "",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      152
+    ],
+    "expected": [
+      "",
+      "iso-8859-2"
+    ],
+    "rust_before": [
+      "",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      239,
+      187,
+      191,
+      104,
+      105
+    ],
+    "expected": [
+      "hi",
+      "utf-8-sig"
+    ],
+    "rust_before": [
+      "hi",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      255,
+      254,
+      97,
+      0
+    ],
+    "expected": [
+      "˙ţa\u0000",
+      "cp1250"
+    ],
+    "rust_before": [
+      "a",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      97,
+      13,
+      10,
+      98,
+      13,
+      99
+    ],
+    "expected": [
+      "a\r\nb\rc",
+      "utf-8-sig"
+    ],
+    "rust_before": [
+      "a\r\nb\rc",
+      "utf-8-sig"
+    ]
+  },
+  {
+    "op": "decode",
+    "bytes": [
+      142,
+      157
+    ],
+    "expected": [
+      "Žť",
+      "cp1250"
+    ],
+    "rust_before": [
+      "Žť",
+      "cp1250"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\r\na@example.com,x\r\n",
+    "expected": [
+      "a@example.com"
+    ],
+    "rust_before": [
+      "a@example.com"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na@example.com\n",
+    "expected": [
+      "a@example.com"
+    ],
+    "rust_before": [
+      "a@example.com"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,email\na,b\n",
+    "expected": [
+      "b"
+    ],
+    "rust_before": [
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\r\nb@example.com\",x\n",
+    "expected": [
+      "a\nb@example.com"
+    ],
+    "rust_before": [
+      "a\r\nb@example.com"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\rb@example.com\",x\n",
+    "expected": [
+      "a\nb@example.com"
+    ],
+    "rust_before": [
+      "a\rb@example.com"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n a ,x\n",
+    "expected": [
+      "a"
+    ],
+    "rust_before": [
+      "a"
+    ]
+  },
+  {
+    "op": "syntax",
+    "text": "a@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@háčky.cz",
+    "expected": {
+      "domain": "háčky.cz"
+    },
+    "rust_before": {
+      "domain": "xn--hky-ela4t.cz"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@例子.中国",
+    "expected": {
+      "domain": "例子.中国"
+    },
+    "rust_before": {
+      "domain": "xn--fsqu00a.xn--fiqs8s"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a​@example.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: ZERO WIDTH SPACE."
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "á@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a‮@example.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: RIGHT-TO-LEFT OVERRIDE."
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "😀@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a­@example.com",
+    "expected": {
+      "error": "The email address contains unsafe characters: SOFT HYPHEN."
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a͏@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a!#$%&'*+-/=?^_`{|}~@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@ｅｘａｍｐｌｅ.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.１２",
+    "expected": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.c",
+    "expected": {
+      "domain": "x.c"
+    },
+    "rust_before": {
+      "domain": "x.c"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.1com",
+    "expected": {
+      "domain": "x.1com"
+    },
+    "rust_before": {
+      "domain": "x.1com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.123",
+    "expected": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.i2p",
+    "expected": {
+      "domain": "x.i2p"
+    },
+    "rust_before": {
+      "domain": "x.i2p"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.home.arpa",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.onion",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.test",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.local",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.localhost",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.invalid",
+    "expected": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is a special-use or reserved name that cannot be used with email."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.internal",
+    "expected": {
+      "domain": "x.internal"
+    },
+    "rust_before": {
+      "domain": "x.internal"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@127.0.0.1",
+    "expected": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is not valid. It is not within a valid top-level domain."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@xn--.com",
+    "expected": {
+      "error": "An email address cannot have a period and a hyphen next to each other."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign contains invalid characters."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@ab--cd.com",
+    "expected": {
+      "error": "An email address cannot have two letters followed by two dashes immediately after the @-sign or after a period, except Punycode."
+    },
+    "rust_before": {
+      "domain": "ab--cd.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x。com",
+    "expected": {
+      "domain": "x.com"
+    },
+    "rust_before": {
+      "domain": "x.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.ß",
+    "expected": {
+      "domain": "x.ß"
+    },
+    "rust_before": {
+      "domain": "x.xn--zca"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a\u001c@example.com",
+    "expected": {
+      "error": "The email address contains invalid characters before the @-sign: U+001C."
+    },
+    "rust_before": {
+      "error": "The email address contains invalid characters before the @-sign."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "a@x.com.",
+    "expected": {
+      "error": "An email address cannot end with a period."
+    },
+    "rust_before": {
+      "error": "The part after the @-sign is not valid."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": " a@example.com",
+    "expected": {
+      "error": "The email address contains invalid characters before the @-sign: SPACE."
+    },
+    "rust_before": {
+      "error": "The email address contains invalid characters before the @-sign."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "\"a\"@example.com",
+    "expected": {
+      "error": "Quoting the part before the @-sign is not allowed here."
+    },
+    "rust_before": {
+      "error": "The email address contains invalid characters before the @-sign."
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_before": {
+      "domain": "example.com"
+    }
+  },
+  {
+    "op": "syntax",
+    "text": "ééééééééééééééééééééééééééééééééé@example.com",
+    "expected": {
+      "domain": "example.com"
+    },
+    "rust_before": {
+      "error": "The email address is too long before the @-sign."
+    }
+  },
+  {
+    "op": "ip",
+    "text": "192.0.0.8",
+    "expected": true,
+    "rust_before": true
+  },
+  {
+    "op": "ip",
+    "text": "192.0.0.9",
+    "expected": false,
+    "rust_before": false
+  },
+  {
+    "op": "ip",
+    "text": "192.0.0.10",
+    "expected": false,
+    "rust_before": false
+  },
+  {
+    "op": "ip",
+    "text": "192.0.0.11",
+    "expected": true,
+    "rust_before": true
+  },
+  {
+    "op": "ip",
+    "text": "192.88.99.1",
+    "expected": false,
+    "rust_before": false
+  },
+  {
+    "op": "ip",
+    "text": "2001:1::1",
+    "expected": false,
+    "rust_before": false
+  },
+  {
+    "op": "ip",
+    "text": "2001:3::1",
+    "expected": false,
+    "rust_before": false
+  },
+  {
+    "op": "ip",
+    "text": "2001:20::1",
+    "expected": false,
+    "rust_before": false
+  },
+  {
+    "op": "ip",
+    "text": "2002::1",
+    "expected": true,
+    "rust_before": true
+  },
+  {
+    "op": "ip",
+    "text": "64:ff9b::1",
+    "expected": true,
+    "rust_before": true
+  },
+  {
+    "op": "ip",
+    "text": "64:ff9b:1::1",
+    "expected": true,
+    "rust_before": true
+  },
+  {
+    "op": "ip",
+    "text": "::ffff:8.8.8.8",
+    "expected": true,
+    "rust_before": false
+  },
+  {
+    "op": "ip",
+    "text": "3fff::1",
+    "expected": false,
+    "rust_before": false
+  },
+  {
+    "op": "ip",
+    "text": "2001:4860::8888",
+    "expected": false,
+    "rust_before": false
+  }
+]

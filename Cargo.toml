@@ -1,7 +1,14 @@
+# Project: email-verifier
+# File: Cargo.toml
+# Description: Rust application dependencies and test adapters.
+# Author: Jan Alexandr Kopřiva
+# License: MIT
+
 [package]
 name = "email-verifier"
 version = "1.0.0"
 edition = "2021"
+rust-version = "1.88"
 description = "Checks whether email addresses exist, one by one or in bulk."
 license = "MIT"
 authors = ["Jan Alexandr Kopřiva"]
@@ -9,7 +16,7 @@ repository = "https://github.com/koprjaa/email-verifier"
 
 [dependencies]
 axum = { version = "0.8", features = ["multipart"] }
-tokio = { version = "1", features = ["io-util", "net", "rt-multi-thread", "sync", "time", "signal", "macros"] }
+tokio = { version = "1", features = ["fs", "io-util", "net", "rt-multi-thread", "sync", "time", "signal", "macros"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 csv = "1"

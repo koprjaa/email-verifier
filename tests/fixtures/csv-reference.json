@@ -1,0 +1,4616 @@
+[
+  {
+    "op": "csv",
+    "text": "email,name\n\"a﻿\",x\n",
+    "expected": [
+      "a﻿"
+    ],
+    "rust": [
+      "a﻿"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r \n,\r\r\n\n abb\n\"  \ra,,\",b,\"b\rab\r ,\r\rb  \",b",
+    "expected": [
+      "abb",
+      "a,,"
+    ],
+    "rust": [
+      "abb",
+      "a,,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n b\" \nb\"\na\r\"\" \n,,,\" ,\r,\" aba\n\", ,  b b\na",
+    "expected": [
+      "b\"",
+      "a",
+      ", ,  b b\na"
+    ],
+    "rust": [
+      "b\"",
+      "a",
+      ", ,  b b\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nbbab\r\",\n aa\n\rbba \n\nba\r, a\"b,\n\n,a\n\"a\n baa",
+    "expected": [
+      "bbab",
+      ",\n aa\n\nbba \n\nba\n, ab",
+      "a\n baa"
+    ],
+    "rust": [
+      "bbab",
+      ",\n aa\n\nbba \n\nba\n, ab",
+      "a\n baa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\"\"  \"\n\"b, ,\r\r a\n \r\n\r ,b,  \n,\n\" \r \rb\r\"a\r",
+    "expected": [
+      "\"",
+      "b, ,\n\n a\n \n\n ,b,  \n,",
+      "b",
+      "a"
+    ],
+    "rust": [
+      "\"",
+      "b, ,\n\n a\n \n\n ,b,  \n,",
+      "b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nab\"ab ,a\" ,\rbb\"\nb\"ab\r\n,,\" b bb,\", \ra,\n  ",
+    "expected": [
+      "ab\"ab",
+      "bb\"",
+      "b\"ab",
+      "a"
+    ],
+    "rust": [
+      "ab\"ab",
+      "bb\"",
+      "b\"ab",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\na\naa\"b,b,\r\r\"\nb\rb\"a\"\r \nb\n\"\na,\"b\n\"abbb \n",
+    "expected": [
+      "a",
+      "aa\"b",
+      "b\nba\"",
+      "b",
+      "a,b",
+      "abbb"
+    ],
+    "rust": [
+      "a",
+      "aa\"b",
+      "b\nba\"",
+      "b",
+      "a,b",
+      "abbb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\n\n bba\" \n  \n,,, \r\",b,\"\",bba,ab, b\n\r\rb\r\n",
+    "expected": [
+      "bba\"",
+      ",b,\",bba,ab, b\n\n\nb"
+    ],
+    "rust": [
+      "bba\"",
+      ",b,\",bba,ab, b\n\n\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\ra\"\",, ba,,\n,a\r,,,\nb\n\"aa\n\", ,a\"a\"\ra,aa\"b",
+    "expected": [
+      "a\"\"",
+      "b",
+      "aa",
+      "a"
+    ],
+    "rust": [
+      "a\"\"",
+      "b",
+      "aa",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\rb\",\",\rb\na ,\n aa aba\r\r,\n\"\r\"\"\"\na ,\rb\n\n, ",
+    "expected": [
+      "b\"",
+      "\"\na ,\nb\n\n,"
+    ],
+    "rust": [
+      "b\"",
+      "\"\na ,\nb\n\n,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\"\n\n\n\"b,  \"a,a   \n     \r\",b\rb\" aba,\r, ,a",
+    "expected": [
+      "b",
+      ",b\nb aba"
+    ],
+    "rust": [
+      "b",
+      ",b\nb aba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\na\nb,\"a\nbb \"\raa\n\n\"\r\"  a,\"\n,\n\r,a\"  \n  \nba",
+    "expected": [
+      "a",
+      "b",
+      "aa",
+      "ba"
+    ],
+    "rust": [
+      "a",
+      "b",
+      "aa",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\r\r ,, ab,a,\na\"\"\"a,    \" \n\"\n b\r\r\r\na,\n,ba",
+    "expected": [
+      "b",
+      "a\"\"\"a",
+      "b\n\n\na,\n,ba"
+    ],
+    "rust": [
+      "b",
+      "a\"\"\"a",
+      "b\n\n\na,\n,ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\na\rbb\ra,\nb,a \r\"b \rb\",ab\"\ra\"b \r,\r,,\"\r\na ",
+    "expected": [
+      "b",
+      "a",
+      "bb",
+      "b \nb",
+      "a\"b"
+    ],
+    "rust": [
+      "b",
+      "a",
+      "bb",
+      "b \nb",
+      "a\"b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nba\ra\"b \"\na\nb ba,\rba\rb\na\rbb\"\",\"\"\"b\n\n  a,a",
+    "expected": [
+      "ba",
+      "a\"b \"",
+      "a",
+      "b ba",
+      "b",
+      "bb\"\""
+    ],
+    "rust": [
+      "ba",
+      "a\"b \"",
+      "a",
+      "b ba",
+      "b",
+      "bb\"\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\na\na,\r ,\n \" ,,\"\n b,b\rb\r,\",a,\n\na\n\r \n,\ra,",
+    "expected": [
+      "a",
+      "\""
+    ],
+    "rust": [
+      "a",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \n,\r,\r\",\",a\r\"b \"a\r\r\",\"a\r\n\n\r\n\na\n \r,\r,a\n  ",
+    "expected": [
+      ",",
+      "b a",
+      ",a",
+      "a"
+    ],
+    "rust": [
+      ",",
+      "b a",
+      ",a",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \rb\n\r\ra,,,b,a\r\nba\r ba \nb\ra  bb\ra \rb\r  \n,",
+    "expected": [
+      "b",
+      "a",
+      "ba",
+      "a  bb"
+    ],
+    "rust": [
+      "b",
+      "a",
+      "ba",
+      "a  bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n a\r, \nba,a\n,\r,\r\"  \r,\",\n\"\" \r\",\r,b ab \"a\r",
+    "expected": [
+      "a",
+      "ba",
+      ",",
+      ",\n,b ab a"
+    ],
+    "rust": [
+      "a",
+      "ba",
+      ",",
+      ",\n,b ab a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \r, ab \nbb\n\",\" b,bb\r,,\raa\naa\"\r \"b\n\"b \r\n ",
+    "expected": [
+      "bb",
+      ", b",
+      "aa",
+      "aa\"",
+      "\"b",
+      "b"
+    ],
+    "rust": [
+      "bb",
+      ", b",
+      "aa",
+      "aa\"",
+      "\"b",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\r\n\n\r\"\rb\"aab,a \",a,  \", b,b, \ra\ra\r\rb \n\n\"",
+    "expected": [
+      "baab",
+      "a",
+      "b"
+    ],
+    "rust": [
+      "baab",
+      "a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n, \n\n\n\n\ra\n\na\",\nb,\"\n,b\"aa\"\r\"\n\r,bb,\na,\r\n\"b ",
+    "expected": [
+      "a",
+      "a\"",
+      "b",
+      ",bb,\na,\nb"
+    ],
+    "rust": [
+      "a",
+      "a\"",
+      "b",
+      ",bb,\na,\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\r\r,b\"\nb,ba \ra\r\r\n,\ra\n\n \rb, \"ab\r\n\" a\n\"\nb ",
+    "expected": [
+      "a",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a bb\n,, \"\" b,, a,\nbbaa , \nab,\n\" ,,b\n\"\na",
+    "expected": [
+      "a bb\n,, \" b,, a,\nbbaa , \nab,",
+      "a"
+    ],
+    "rust": [
+      "a bb\n,, \" b,, a,\nbbaa , \nab,",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\na,\nb\" \n\n\" \"b \"a,\ra\n,  aa \"\" b\rb\r\"\n\"\"\n\r\"",
+    "expected": [
+      "a",
+      "b\"",
+      "b \"a",
+      "b",
+      "\""
+    ],
+    "rust": [
+      "a",
+      "b\"",
+      "b \"a",
+      "b",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\na,a\ra b\n  \r\rab,  a,b\n,,b\n\"\r,\"\n\n b\n\"a\r a",
+    "expected": [
+      "a",
+      "a b",
+      "ab",
+      ",",
+      "b",
+      "a\n a"
+    ],
+    "rust": [
+      "a",
+      "a b",
+      "ab",
+      ",",
+      "b",
+      "a\n a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ,\n\"ab ab,\ra\"b ,\n \r\n\r\n\n\"\n, ,\"\r\",\n\r\"b \n\rb",
+    "expected": [
+      "ab ab,\nab",
+      ", ,",
+      ",\n\nb",
+      "b"
+    ],
+    "rust": [
+      "ab ab,\nab",
+      ", ,",
+      ",\n\nb",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na  ,\n\ra\n  b ,\n a,\r\"\"b\r\n\"b,\r,\raba \n \" b\n,",
+    "expected": [
+      "a",
+      "b",
+      "b,\n,\naba \n  b"
+    ],
+    "rust": [
+      "a",
+      "b",
+      "b,\n,\naba \n  b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n  aaa, ab\r,\n\"a\", \r\na\n, b\n\r aa\n,\"b \r,baa\r",
+    "expected": [
+      "aaa",
+      "a",
+      "aa"
+    ],
+    "rust": [
+      "aaa",
+      "a",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \r  \",\rb\n ,,\rab\"\n,b,\"a,\n\n\n\r\r\rb\n,\nb bb\nbb",
+    "expected": [
+      "\"",
+      "b",
+      "ab\""
+    ],
+    "rust": [
+      "\"",
+      "b",
+      "ab\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,a\",,a\"a\n \n b ,abba\r \rb\",b,,\"ba\n, \rba\"a,",
+    "expected": [
+      "b",
+      "b\""
+    ],
+    "rust": [
+      "b",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\"\n\"baa,b\",,\n\n,\r\"a\n ba,\n, aa,,,bb\nb\n\"\",b",
+    "expected": [
+      "baa",
+      "a\n ba,\n, aa,,,bb\nb\n\",b"
+    ],
+    "rust": [
+      "baa",
+      "a\n ba,\n, aa,,,bb\nb\n\",b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"baba,b\n\"\r\"a\n,\"b,bb\" ,\r,\"\r\n\"\r\r\"ba  a,,\" ",
+    "expected": [
+      "baba,b",
+      "a\n,b",
+      "ba  a,,"
+    ],
+    "rust": [
+      "baba,b",
+      "a\n,b",
+      "ba  a,,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n ,\r\"\" a\r\rb\"a\n\raa \"a\",a,\rbb\"\ra\"b\n\"b\n,\ra ",
+    "expected": [
+      "a",
+      "b\"a",
+      "aa \"a\"",
+      "bb\"",
+      "a\"b",
+      "b\n,\na"
+    ],
+    "rust": [
+      "a",
+      "b\"a",
+      "aa \"a\"",
+      "bb\"",
+      "a\"b",
+      "b\n,\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nbb\"baa,b\ra,,\nb\r \"\nb,\n  \rb\r\"\"b \r\nb   \"\" \"",
+    "expected": [
+      "bb\"baa",
+      "a",
+      "b",
+      "\"",
+      "b   \"\" \""
+    ],
+    "rust": [
+      "bb\"baa",
+      "a",
+      "b",
+      "\"",
+      "b   \"\" \""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\"a,,\n\n\r\n\n\r\n\" b\n,\"\"\n\ra,,b  aa\raa\r\n\r,  \n,",
+    "expected": [
+      "a,,\n\n\n\n\n b",
+      "a",
+      "aa"
+    ],
+    "rust": [
+      "a,,\n\n\n\n\n b",
+      "a",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\ra\"aba,\r \"\n\n \"\nba \r \r\r,b \" \r\r\n\r,a,, ,\r\r",
+    "expected": [
+      "b",
+      "a\"aba",
+      "\"",
+      "ba"
+    ],
+    "rust": [
+      "b",
+      "a\"aba",
+      "\"",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\rba\"\n\ra\rba,b\"b\"\"\ra\"\r\nbaa\n\r, aa\nba, ,a\n b",
+    "expected": [
+      "ba\"",
+      "a",
+      "ba",
+      "a\"",
+      "baa",
+      "b"
+    ],
+    "rust": [
+      "ba\"",
+      "a",
+      "ba",
+      "a\"",
+      "baa",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\nb\"\r baa\nbaa\naa \n\nb  \rb, aaab,\n\r\"b\n\nbb ",
+    "expected": [
+      "b\"",
+      "baa",
+      "aa",
+      "b",
+      "b\n\nbb"
+    ],
+    "rust": [
+      "b\"",
+      "baa",
+      "aa",
+      "b",
+      "b\n\nbb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\"\r,\n  ,\"\n\r\n\r,b\n, aaaa,\n\na\r\" ,,,\na\n\n\",\rb",
+    "expected": [
+      "b\"",
+      "a",
+      ",\nb"
+    ],
+    "rust": [
+      "b\"",
+      "a",
+      ",\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\r\" a\ra\r,a\r ,\"\",\"\n\n \"\n,a\n\rbaa\"\n,\"\rab,,b\n",
+    "expected": [
+      "a\na\n,a\n ,\",",
+      "\"",
+      "baa\""
+    ],
+    "rust": [
+      "a\na\n,a\n ,\",",
+      "\"",
+      "baa\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \",\r,\nb\n,,a\"b,a ab b\" \n,\ra  \r\r,, \rb\" ,\n\r",
+    "expected": [
+      "\"",
+      "b",
+      "a",
+      "b\""
+    ],
+    "rust": [
+      "\"",
+      "b",
+      "a",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,aa\"\r\" aa a \r\rba\n\r\",a\n  \",b\n,b\nb\rb\n\r\ra,\"",
+    "expected": [
+      "aa a \n\nba",
+      "\"",
+      "b",
+      "a"
+    ],
+    "rust": [
+      "aa a \n\nba",
+      "\"",
+      "b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ,a\r\",\nab\"\" a\n\n,\n,\rb,a\"\nb\n\rb\r\" \rb,,b\ra\r\"",
+    "expected": [
+      ",\nab\" a\n\n,\n,\nb,a",
+      "b",
+      "b,,b\na"
+    ],
+    "rust": [
+      ",\nab\" a\n\n,\n,\nb,a",
+      "b",
+      "b,,b\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \"\r \"\"\n\ra\ra, \",\r\nb b \na\n\n\r,ba\n \r\n\"\n,\",\r\r",
+    "expected": [
+      "\"",
+      "\"\"",
+      "a",
+      "b b",
+      ","
+    ],
+    "rust": [
+      "\"",
+      "\"\"",
+      "a",
+      "b b",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb,a\r\rb,\r\n ab\ra abb\"a,  \n b\n b\"\rb,ab,\"\"a\r",
+    "expected": [
+      "b",
+      "ab",
+      "a abb\"a",
+      "b\""
+    ],
+    "rust": [
+      "b",
+      "ab",
+      "a abb\"a",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nbaa\n,a\r\r\"\n\r aa\n\raaa\"\n\r \r\n,b\r\r\r,\r\"\"aa\r   ",
+    "expected": [
+      "baa",
+      "aa\n\naaa",
+      "aa"
+    ],
+    "rust": [
+      "baa",
+      "aa\n\naaa",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\"bb \n \r\r\r\r,  \r\na,,\r\"\"\"\"\"b\"b b\rab\ra\rba\"\"",
+    "expected": [
+      "bb",
+      "a",
+      "\"\"bb b",
+      "ab",
+      "ba\"\""
+    ],
+    "rust": [
+      "bb",
+      "a",
+      "\"\"bb b",
+      "ab",
+      "ba\"\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\raa,bb  ,\n\r,\ra \"\nba \n,\ra\r,\nb\n\n \n\rb\na\"ab",
+    "expected": [
+      "aa",
+      "a \"",
+      "ba",
+      "a",
+      "b",
+      "a\"ab"
+    ],
+    "rust": [
+      "aa",
+      "a \"",
+      "ba",
+      "a",
+      "b",
+      "a\"ab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\" \ra\r\nb\n\"\", \r\n\n,\nb\ra\ra\r\n\r\n b,\rbb  a\r\n\nb",
+    "expected": [
+      "b\"",
+      "a",
+      "b",
+      "bb  a"
+    ],
+    "rust": [
+      "b\"",
+      "a",
+      "b",
+      "bb  a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \n\n,\n\" \n \"\rb\ra\n\"\"\r\"\r\r, \na,\n,\nba b a\"a \r\"",
+    "expected": [
+      "b",
+      "a",
+      ", \na,\n,\nba b aa"
+    ],
+    "rust": [
+      "b",
+      "a",
+      ", \na,\n,\nba b aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nba,\"\r  \r \r \"a\"\rb\n,b\"\n\",b\r\"\r,\r\n\"\n\"b b\ra\n ",
+    "expected": [
+      "ba",
+      "b",
+      ",b",
+      "b b",
+      "a"
+    ],
+    "rust": [
+      "ba",
+      "b",
+      ",b",
+      "b b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,b\"b\r\"\"a,\na\r\"b\"a\r\n\",a, \nb  \r\r ,\n,\n,a\"\n \r",
+    "expected": [
+      "a",
+      "ba",
+      ",a, \nb  \n\n ,\n,\n,a"
+    ],
+    "rust": [
+      "a",
+      "ba",
+      ",a, \nb  \n\n ,\n,\n,a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na b,  ba b \"b\"a ,b\nb\n\",\n b\n\ra\r\"\r,,,\r\n\"\r,",
+    "expected": [
+      "a b",
+      "b",
+      ",\n b\n\na",
+      ","
+    ],
+    "rust": [
+      "a b",
+      "b",
+      ",\n b\n\na",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb,\n ,\rb\"a\",,\n baaba\"ab,a\ra,\r\r\"\n\"\n,  \r,\"\r",
+    "expected": [
+      "b",
+      "b\"a\"",
+      "baaba\"ab",
+      "a"
+    ],
+    "rust": [
+      "b",
+      "b\"a\"",
+      "baaba\"ab",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\n,\nb,,,b \na\r\n, \n,\rb\"a,\r \"\"\rbb\n \r ab,\",\r",
+    "expected": [
+      ",\nb,,,b \na\n, \n,\nba",
+      "\"\"",
+      "bb",
+      "ab"
+    ],
+    "rust": [
+      ",\nb,,,b \na\n, \n,\nba",
+      "\"\"",
+      "bb",
+      "ab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ,\"\n\n\"\",,\n\" a\r\",,a\naa,\rb\n\r,a\rba\n\"\nb\nb\"b\"",
+    "expected": [
+      ",,a\naa,\nb\n\n,a\nba",
+      "b",
+      "b\"b\""
+    ],
+    "rust": [
+      ",,a\naa,\nb\n\n,a\nba",
+      "b",
+      "b\"b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n,a ,aa\r\r,\r\"a\r,\r\r,\r\r\r \n,\",\"bb\rb\rb,,\r\nb ,",
+    "expected": [
+      "a\n,\n\n,\n\n\n \n,"
+    ],
+    "rust": [
+      "a\n,\n\n,\n\n\n \n,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb ba\n,\r\na  ,a\"\"\ra,,a  b\"\raa,\" \" \rb \nbb,a",
+    "expected": [
+      "b ba",
+      "a",
+      "aa",
+      "b",
+      "bb"
+    ],
+    "rust": [
+      "b ba",
+      "a",
+      "aa",
+      "b",
+      "bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,,\n\n\r\n, \" ,abbb\"\n \r \"\n\r\nb\" ab\"a\n b,,\"a\na",
+    "expected": [
+      "\"",
+      "b\" ab\"a",
+      "b"
+    ],
+    "rust": [
+      "\"",
+      "b\" ab\"a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n a \n\raa\",\"    \"  \n, \r,\"aa,,baab,  \"\n,b\"",
+    "expected": [
+      "a",
+      "aa\""
+    ],
+    "rust": [
+      "a",
+      "aa\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n b\r\" \r \r\" \"\"abab \rb\n\rb, \n\r,\"bba\"\"b\n\n\"\r\r\"",
+    "expected": [
+      "b",
+      "\"\"abab"
+    ],
+    "rust": [
+      "b",
+      "\"\"abab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,,\r,\r \n,\",\",  b,b\n,,ab  b,a\r\r\nba, \n,ba\n\"",
+    "expected": [
+      "ba"
+    ],
+    "rust": [
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,a,a\" \raab\ra,b a\nabbab \"\rb\n,,ab\n,\"bb\",a\"",
+    "expected": [
+      "aab",
+      "a",
+      "abbab \"",
+      "b"
+    ],
+    "rust": [
+      "aab",
+      "a",
+      "abbab \"",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n b, a,b\na\n,\"aa\"a\"\rb bbbbb\"\rb\"\n\"\n,\",\n\",\n,",
+    "expected": [
+      "b",
+      "a",
+      "b bbbbb\"",
+      "b\"",
+      ",",
+      ",\n,"
+    ],
+    "rust": [
+      "b",
+      "a",
+      "b bbbbb\"",
+      "b\"",
+      ",",
+      ",\n,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" a \"\"\r,\r \rb b\r\n\ra\"a\r,,a,,,\" ,\" ,\"ba,\" \r",
+    "expected": [
+      "a \"\n,\n \nb b\n\naa"
+    ],
+    "rust": [
+      "a \"\n,\n \nb b\n\naa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" ,a\"  a\"a\" \n\"\r\"\n , ,b,,\",\nb\"b\"\n\",\rbb,b,",
+    "expected": [
+      ",a  a\"a\"",
+      ",\nbb,b,"
+    ],
+    "rust": [
+      ",a  a\"a\"",
+      ",\nbb,b,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nbb\"\r\n\"\"\"ab\"b,\nb  b\"\nbb,b b   \"\r\",b\r\r,b\",",
+    "expected": [
+      "bb\"",
+      "\"abb",
+      "b  b\"",
+      "bb",
+      ",b\n\n,b"
+    ],
+    "rust": [
+      "bb\"",
+      "\"abb",
+      "b  b\"",
+      "bb",
+      ",b\n\n,b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\n\"b \raa\n \r \"\n\n \"a b ,a,\ra a\",a,\r\n\rbab\"\r",
+    "expected": [
+      "b \naa",
+      "\"a b",
+      "a a\"",
+      "bab\""
+    ],
+    "rust": [
+      "b \naa",
+      "\"a b",
+      "a a\"",
+      "bab\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,,a\",\n\n \",b, \r\n, \"a,a,,\r ,a\n\n\"ab\nb\n\"\r\",\n",
+    "expected": [
+      "\"",
+      "ab\nb",
+      ","
+    ],
+    "rust": [
+      "\"",
+      "ab\nb",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\"a,\r b,\"\r\",a\n,\n\r \"ba\"\n\"\"\nb\r\n,\n\r\"a\" \"\na\"",
+    "expected": [
+      "a",
+      "b",
+      "\"ba\"",
+      "a \"",
+      "a\""
+    ],
+    "rust": [
+      "a",
+      "b",
+      "\"ba\"",
+      "a \"",
+      "a\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nba,,\r\ra ,\na\r\ra\na\"\r\r\nba \r\r,\rb\rba,\" ,a\"\naa",
+    "expected": [
+      "ba",
+      "a",
+      "a\"",
+      "b",
+      "aa"
+    ],
+    "rust": [
+      "ba",
+      "a",
+      "a\"",
+      "b",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r \"\nb\n a a\"aab,a\"b\r\r\n\n\" \"b \r\r\n\na\"a\n\n  ,\r",
+    "expected": [
+      "\"",
+      "b",
+      "a a\"aab",
+      "a\"a"
+    ],
+    "rust": [
+      "\"",
+      "b",
+      "a a\"aab",
+      "a\"a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\"b\n,\r,a \"b\ra \"\"\n\n\n\"\"\nb \"\rb\n\r,a ,\n a\r\nb\"",
+    "expected": [
+      "a \"\"",
+      "b \"",
+      "b",
+      "a",
+      "b\""
+    ],
+    "rust": [
+      "a \"\"",
+      "b \"",
+      "b",
+      "a",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,,,\"bbb, \r ,\n  a,,b , \r\n,\"\n \" b,ab\r\rab\" ",
+    "expected": [
+      "\" b",
+      "ab\""
+    ],
+    "rust": [
+      "\" b",
+      "ab\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\n\nba,\r\r\r\r\r,aa b,\"\n \r  \n \rb,\r a \rabba\nb,",
+    "expected": [
+      "a",
+      "ba"
+    ],
+    "rust": [
+      "a",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \"\r \"\r\r\r,b\r  \raba\rab,\n\n,\r,b\n\na, ab\"aa\ra,",
+    "expected": [
+      "\"",
+      "aba",
+      "ab",
+      "a"
+    ],
+    "rust": [
+      "\"",
+      "aba",
+      "ab",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\n\r b,baa\ra\"b,bbb\" \na,b,\r,aa\naa\na\r\n ,,a ",
+    "expected": [
+      "b",
+      "a\"b",
+      "a",
+      "aa"
+    ],
+    "rust": [
+      "b",
+      "a\"b",
+      "a",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\na\r\n\n \n\r\n,bbab,a\"\r\rb\r,a\n\n\r\r\n\"\r\n\rb,\r \" \"\r",
+    "expected": [
+      "a",
+      "b",
+      "b,\n  \""
+    ],
+    "rust": [
+      "a",
+      "b",
+      "b,\n  \""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"b a bbaa,\r,aba  a\",\rab\"b,bb\nb\"a\r \"  bab",
+    "expected": [
+      "b a bbaa,\n,aba  a",
+      "ab\"b",
+      "b\"a",
+      "\"  bab"
+    ],
+    "rust": [
+      "b a bbaa,\n,aba  a",
+      "ab\"b",
+      "b\"a",
+      "\"  bab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\"bb ,b\"a\"\"\n \rb,\r\r abaaabbb\r\rb\r\n\r   \r,b,",
+    "expected": [
+      "a\"bb",
+      "b",
+      "abaaabbb"
+    ],
+    "rust": [
+      "a\"bb",
+      "b",
+      "abaaabbb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\r\r b \"\r\n\",  \",b\"ab\"a  \naa \"\nb\n a\nba\n ba",
+    "expected": [
+      "b",
+      ",",
+      "aa \"",
+      "a",
+      "ba"
+    ],
+    "rust": [
+      "b",
+      ",",
+      "aa \"",
+      "a",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\n,,\rb\" ba,,a\r,\n\r \n\rbb\na ba  ,\rab \"\n\"aa ",
+    "expected": [
+      "b\" ba",
+      "bb",
+      "a ba",
+      "ab \"",
+      "aa"
+    ],
+    "rust": [
+      "b\" ba",
+      "bb",
+      "a ba",
+      "ab \"",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r ,,\"aa\r b\raab ab\r\ra\r,\n\n\n\"\n\"b\n\nb \" a \r,\r",
+    "expected": [
+      "b\n\nb  a"
+    ],
+    "rust": [
+      "b\n\nb  a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\n\rb\n \",\naa b\n\n\n \naab\rbab\na\raba\r\r\n ,\"\"a\"",
+    "expected": [
+      "b",
+      "\"",
+      "aa b",
+      "aab",
+      "bab",
+      "a",
+      "aba"
+    ],
+    "rust": [
+      "b",
+      "\"",
+      "aa b",
+      "aab",
+      "bab",
+      "a",
+      "aba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\" \raba\n\ra\n b\ra,\rb\"\nb\"a\rb,\na\r\r\n,b\"b\r\r\"\" ",
+    "expected": [
+      "aba\n\na\n b\na,\nb",
+      "b\"a",
+      "b",
+      "a"
+    ],
+    "rust": [
+      "aba\n\na\n b\na,\nb",
+      "b\"a",
+      "b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\"ab, \n \r\nb \n\r\"\r baaa ab\"a\r\r\na\"b\r,\nb\r\"b,",
+    "expected": [
+      "b\"ab",
+      "b",
+      "baaa aba",
+      "a\"b",
+      "b,"
+    ],
+    "rust": [
+      "b\"ab",
+      "b",
+      "baaa aba",
+      "a\"b",
+      "b,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\nba\",b\n\n\r,\rb\"b\r,bba\" bbb\n,\n \"\r,b\r\"\r\rb\"b ",
+    "expected": [
+      "ba\"",
+      "b\"b",
+      "\"",
+      "bb"
+    ],
+    "rust": [
+      "ba\"",
+      "b\"b",
+      "\"",
+      "bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\n\r\nb\r\nba\na , \n \r ,bb,\"b\n\r b \" a\"b  b\n,,",
+    "expected": [
+      "b",
+      "ba",
+      "a"
+    ],
+    "rust": [
+      "b",
+      "ba",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\"\n,a,b \n,a,\" ,,\r \"\nab\" b \r,ab ab,,\rb\"bb",
+    "expected": [
+      "a\"",
+      "ab\" b",
+      "b\"bb"
+    ],
+    "rust": [
+      "a\"",
+      "ab\" b",
+      "b\"bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n b\"\r \"\n\r, b \r, ,\r\"b \r,abbba\r\",\"b\n a\r\r \r,",
+    "expected": [
+      "b\"",
+      "\"",
+      "b \n,abbba"
+    ],
+    "rust": [
+      "b\"",
+      "\"",
+      "b \n,abbba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\",\r\r\n\n b\"\r,b \n\nbb\n\r\"\"\na b,a\n\ra\n\rb,a\nb,\n\r",
+    "expected": [
+      ",\n\n\n b",
+      "bb",
+      "a b",
+      "a",
+      "b"
+    ],
+    "rust": [
+      ",\n\n\n b",
+      "bb",
+      "a b",
+      "a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nab\"\r\r \"\"\"  b \naabbb \r\rb b\r  \r\r ,\rb b,baa",
+    "expected": [
+      "ab\"",
+      "\"\"\"  b",
+      "aabbb",
+      "b b"
+    ],
+    "rust": [
+      "ab\"",
+      "\"\"\"  b",
+      "aabbb",
+      "b b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\naa \raa\"\rb\r\nbb\"\n,a\r\n ,,\"\"\"\",b\r\n\r,,  bb,a\r",
+    "expected": [
+      "aa",
+      "aa\"",
+      "b",
+      "bb\""
+    ],
+    "rust": [
+      "aa",
+      "aa\"",
+      "b",
+      "bb\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" \r,\n\r bbb,b\ra \ra a\r\"\r \n\rb  ,\raba\"bb,\rb,",
+    "expected": [
+      ",\n\n bbb,b\na \na a",
+      "b",
+      "aba\"bb"
+    ],
+    "rust": [
+      ",\n\n bbb,b\na \na a",
+      "b",
+      "aba\"bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\" \ra \na\n\"\r\"aaa\n\n ,\n\nb\na,\n\rb, \"b\r \n,ba\n ",
+    "expected": [
+      "b\"",
+      "a",
+      "aaa",
+      "b"
+    ],
+    "rust": [
+      "b\"",
+      "a",
+      "aaa",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n,\" a\rb\naa aa  ab\",,bb,b \r,\"  \r,,ab\" \"  ",
+    "expected": [],
+    "rust": []
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n b\raba \r\r\r\r, ab,\"a,\r\"\"\"\", b\"a\nb\raab\nbb, ",
+    "expected": [
+      "b",
+      "aba",
+      "aab",
+      "bb"
+    ],
+    "rust": [
+      "b",
+      "aba",
+      "aab",
+      "bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\nb\r b,a\nb\r\"\n \"\ra \"\"\"\n aba\"a\rab,,,ab,\n\"a\"",
+    "expected": [
+      "b",
+      "a \"\"\"",
+      "aba\"a",
+      "ab",
+      "a"
+    ],
+    "rust": [
+      "b",
+      "a \"\"\"",
+      "aba\"a",
+      "ab",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" ,\n \n\", a,, \n\r\r,\r a\n\nab \" \rb\"a\r\r\r \"bb, ",
+    "expected": [
+      ",",
+      "a",
+      "ab \"",
+      "b\"a",
+      "\"bb"
+    ],
+    "rust": [
+      ",",
+      "a",
+      "ab \"",
+      "b\"a",
+      "\"bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r \n \r,,b,,,  b\"\r\r,bba  ab\"\"\n\"\r\",a\"\ra\n\n\rb",
+    "expected": [
+      "a",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n,\"a abb\"\na b \n,,ab a\n\nb\"\r\n\"\"\n, b,a\r\n\r\"a",
+    "expected": [
+      "a b",
+      "b\"",
+      "a"
+    ],
+    "rust": [
+      "a b",
+      "b\"",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \n,,\",aa\na,\n \"ba\"\"\r\"\" a\"\na\n\ra bab\na\"\"\"\",",
+    "expected": [
+      "a\"",
+      "a",
+      "a bab",
+      "a\"\"\"\""
+    ],
+    "rust": [
+      "a\"",
+      "a",
+      "a bab",
+      "a\"\"\"\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r ,\n, \"\r,\r\n,\r\"\n,b\"a,\r\n\rb\r\r\"\n\rbaa,b\"\"\",,b",
+    "expected": [
+      ",ba",
+      "b",
+      "baa,b\""
+    ],
+    "rust": [
+      ",ba",
+      "b",
+      "baa,b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\"a,,aa,,a\"\"\",  \r a\na\"\" a\"bba\r\" \r\"\"\"\n\n\r\r",
+    "expected": [
+      "a,,aa,,a\"",
+      "a",
+      "a\"\" a\"bba",
+      "\""
+    ],
+    "rust": [
+      "a,,aa,,a\"",
+      "a",
+      "a\"\" a\"bba",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\rb,abb  \",\"\n ,  \n\r,\n\n\"b\r\r\n\" \r ,\" \"\nba ba",
+    "expected": [
+      "b",
+      ", \"",
+      "ba ba"
+    ],
+    "rust": [
+      "b",
+      ", \"",
+      "ba ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"  \",  \"\n , \r ,\n\" \ra ,\ra\n\n\n,\"\rb\r\r\n\"\r\n\nbb",
+    "expected": [
+      "a ,\na\n\n\n,",
+      "b",
+      "bb"
+    ],
+    "rust": [
+      "a ,\na\n\n\n,",
+      "b",
+      "bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n  \"b\n \r\" b\" \"\",,ba\"ab\r\", \n,a  baa\r\naa\n,",
+    "expected": [
+      "\"b",
+      "b \"\"",
+      ", \n,a  baa\naa\n,"
+    ],
+    "rust": [
+      "\"b",
+      "b \"\"",
+      ", \n,a  baa\naa\n,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb \"b,\r\n\rb,\n\"b ,\"\n,b ,\"a\nba \"\r,, \"  \n\ra \n",
+    "expected": [
+      "b \"b",
+      "b",
+      "b ,",
+      "a"
+    ],
+    "rust": [
+      "b \"b",
+      "b",
+      "b ,",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\rba\nba, ,\r\n\"a\n a,b,\n\r,b\n,,, b,b\n,\naa, \n",
+    "expected": [
+      "ba",
+      "a\n a,b,\n\n,b\n,,, b,b\n,\naa,"
+    ],
+    "rust": [
+      "ba",
+      "a\n a,b,\n\n,b\n,,, b,b\n,\naa,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\nb ,\r\"b,\n,bb\" \r\"\n\"\" b\n \r\"\rb ,, \n\n\r\"ba\"b",
+    "expected": [
+      "b",
+      "b,\n,bb",
+      "\" b",
+      "bab"
+    ],
+    "rust": [
+      "b",
+      "b,\n,bb",
+      "\" b",
+      "bab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\n\rabb, \r, ,\nb\r ba,\"b\n a\r ,,\"a\n\"\r\rb \rb\r,",
+    "expected": [
+      "abb",
+      "b",
+      "ba",
+      "b \nb\n,"
+    ],
+    "rust": [
+      "abb",
+      "b",
+      "ba",
+      "b \nb\n,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ,, \n\ra\"aa\"\n,ba \"\n\r,\r\n ,b \n\"\"\"b\"b,\r\nb\rba",
+    "expected": [
+      "a\"aa\"",
+      "\"bb",
+      "b",
+      "ba"
+    ],
+    "rust": [
+      "a\"aa\"",
+      "\"bb",
+      "b",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\"bb,\r\na\"\"\n  bba\"\r,, \r\"\n \r \n\",\n\" \" a,b\n\n",
+    "expected": [
+      "bb",
+      "a\"\"",
+      "bba\"",
+      "a"
+    ],
+    "rust": [
+      "bb",
+      "a\"\"",
+      "bba\"",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\naa \"\n,,\n\r\r\n\n\r\na,  \r\",\n  a\n\r\r,\na\"bb\r aa,\"",
+    "expected": [
+      "aa \"",
+      "a",
+      ",\n  a\n\n\n,\nabb",
+      "aa"
+    ],
+    "rust": [
+      "aa \"",
+      "a",
+      ",\n  a\n\n\n,\nabb",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\",bba, ,,,\n,\"b,\"\na,\nb\n\r\n,ba\"\r\"  \rb \",\"b\r",
+    "expected": [
+      ",bba, ,,,\n,b",
+      "b"
+    ],
+    "rust": [
+      ",bba, ,,,\n,b",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\" \", \n ab\n ,,\n\r ,\r \rbb\r\n a ,a\n\"\"a\n\"\r\"b\r",
+    "expected": [
+      "ab",
+      "bb",
+      "a",
+      "b"
+    ],
+    "rust": [
+      "ab",
+      "bb",
+      "a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nba\r  a\"\"a\n\r \n\",,\r ba\n\" \nbb ,\r\",,a\n aa,a,",
+    "expected": [
+      "ba",
+      "a\"\"a",
+      ",,\n ba",
+      "bb",
+      ",,a\n aa,a,"
+    ],
+    "rust": [
+      "ba",
+      "a\"\"a",
+      ",,\n ba",
+      "bb",
+      ",,a\n aa,a,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\ra\rb\r  a\" \"\"\n\n  \"b \"\nb\nbb\",b\r\ra \r\nb,\r\",,",
+    "expected": [
+      "a",
+      "b",
+      "a\" \"\"",
+      "\"b \"",
+      "bb\"",
+      ",,"
+    ],
+    "rust": [
+      "a",
+      "b",
+      "a\" \"\"",
+      "\"b \"",
+      "bb\"",
+      ",,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\n\n\n  \nb\nb\r \"\nbba\r\"\nb a\n\n,\n \",, bba\r\nb\"\n",
+    "expected": [
+      "a",
+      "b",
+      "\"",
+      "bba",
+      "b a\n\n,",
+      "b\""
+    ],
+    "rust": [
+      "a",
+      "b",
+      "\"",
+      "bba",
+      "b a\n\n,",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\n \r  ,\" \r\",\r\"\r\"\r\n a\n\r\r\n,\"\ra\",  \"b\n\n\"\n a",
+    "expected": [
+      "a"
+    ],
+    "rust": [
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\"a\r\n  \ra\n\n\"\" aa\r,b\n\"\r, b \r\",\r \nb,b\ra b\n",
+    "expected": [
+      "a\n  \na\n\n\" aa\n,b",
+      ",\n \nb,b\na b"
+    ],
+    "rust": [
+      "a\n  \na\n\n\" aa\n,b",
+      ",\n \nb,b\na b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" a\rb a \n\na a\nb b\n,\nb\nb \"\raa\n a\rb b\n,\"  ",
+    "expected": [
+      "a\nb a \n\na a\nb b\n,\nb\nb",
+      "aa",
+      "a",
+      "b b"
+    ],
+    "rust": [
+      "a\nb a \n\na a\nb b\n,\nb\nb",
+      "aa",
+      "a",
+      "b b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\"\"b\n \rb \nb \r\raa\nab\r\"ab\"\nb, \r a ,b\r,\raa\n",
+    "expected": [
+      "b",
+      "aa",
+      "ab",
+      "a"
+    ],
+    "rust": [
+      "b",
+      "aa",
+      "ab",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" \r\na\n\r \n, b\n\r \",a\",,ab\n a\r,\r,,\raaa , b ",
+    "expected": [
+      "a\n\n \n, b",
+      "a",
+      "aaa"
+    ],
+    "rust": [
+      "a\n\n \n, b",
+      "a",
+      "aaa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\na \"\nbb\"baa \nba,a\n\"\r,ba\n,, ,\na\nbb\r aa\rb",
+    "expected": [
+      "a \"",
+      "bb\"baa",
+      "ba",
+      ",ba\n,, ,\na\nbb\n aa\nb"
+    ],
+    "rust": [
+      "a \"",
+      "bb\"baa",
+      "ba",
+      ",ba\n,, ,\na\nbb\n aa\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb,  \na\r \n\r \",babb\n, \n  ,,\",\",\"\r,b,b\"\r\n\"\r",
+    "expected": [
+      "b",
+      "a",
+      "\""
+    ],
+    "rust": [
+      "b",
+      "a",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n, \n,\",b, \",\n\",\r\n\n\"\"\" ,,\nb\r\r\",ab\rb,b b\n\na",
+    "expected": [
+      ",\n\n\"",
+      "b",
+      ",ab\nb,b b\n\na"
+    ],
+    "rust": [
+      ",\n\n\"",
+      "b",
+      ",ab\nb,b b\n\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\"a,\r\"\n \n\", \na a\r\r\"\ra\"a\nbb\r\r,\rbb\na  \rbba",
+    "expected": [
+      "b\"a",
+      "a a",
+      "aa",
+      "bb",
+      "a",
+      "bba"
+    ],
+    "rust": [
+      "b\"a",
+      "a a",
+      "aa",
+      "bb",
+      "a",
+      "bba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\n\r\n\"b\",a\rbaaa\r \n\"\"a\r\r b\", ba\n\", ,\na \n\rb",
+    "expected": [
+      "b",
+      "baaa",
+      "a",
+      "b\"",
+      ", ,\na \n\nb"
+    ],
+    "rust": [
+      "b",
+      "baaa",
+      "a",
+      "b\"",
+      ", ,\na \n\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\"\r\r\r\" b\r b a\r\n , \n\r\",\"  \r\nab   \"\r\rb\n\"\n",
+    "expected": [
+      "a",
+      "b\n b a\n ,",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "b\n b a\n ,",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n  b\",\ra\n\",\"\"ab\",\n\"\r\ra,\n\n,abba \" b\"\"\n \ra",
+    "expected": [
+      "b\"",
+      "a",
+      ",\"ab",
+      "a,\n\n,abba  b\"\""
+    ],
+    "rust": [
+      "b\"",
+      "a",
+      ",\"ab",
+      "a,\n\n,abba  b\"\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\r\rb\" \nb\rb,a\n, \n\r b \n\"\n b\"\nb\",\"\"\"\"b\ra   ",
+    "expected": [
+      "b\"",
+      "b",
+      "a"
+    ],
+    "rust": [
+      "b\"",
+      "b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\"\",\r\n\n ,bb,\"\r\n\n,\n\"\"\"\"\" \r b \n, b\"a\r\n\n\n \"",
+    "expected": [
+      "\",\n\n ,bb,",
+      "\"\" \n b \n, ba",
+      "\""
+    ],
+    "rust": [
+      "\",\n\n ,bb,",
+      "\"\" \n b \n, ba",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nba,aa\rb\rba\"\r\"bb \na\"\"\"\",\na,b\n\"\" \" \rb\"  \n,",
+    "expected": [
+      "ba",
+      "b",
+      "ba\"",
+      "bb \na\"\",\na,b\n\"",
+      "b\""
+    ],
+    "rust": [
+      "ba",
+      "b",
+      "ba\"",
+      "bb \na\"\",\na,b\n\"",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\"\" b\"\r\rb \r\nb\n\"a\"bbab, \r  \n \n,\"\"b\nb\na,\"a",
+    "expected": [
+      "b",
+      "abbab",
+      "a"
+    ],
+    "rust": [
+      "b",
+      "abbab",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\n\na aaa,\"\r\n\n\r\n\nb a\r \r\rbb,\"\"\n\r\"\nb,aab\ra,",
+    "expected": [
+      "a aaa",
+      "b",
+      "a"
+    ],
+    "rust": [
+      "a aaa",
+      "b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\" \"\r \n,\raba\",b ,a, aab\",ab, \n\n\n,\r\",\"\n\n\"",
+    "expected": [
+      "a\" \"",
+      "aba\"",
+      ","
+    ],
+    "rust": [
+      "a\" \"",
+      "aba\"",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\"b\r\n\n\" ab\nb,,\n\r ,\"bb,b ,\"\" \nb,,\n\r\r\nb \r\r",
+    "expected": [
+      "b"
+    ],
+    "rust": [
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,b\rba ba\n\n\r\n  , aaa\r\r, \"\n,a,a\na,ab\"\"bb\"a",
+    "expected": [
+      "ba ba",
+      "a"
+    ],
+    "rust": [
+      "ba ba",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"b\"\n\"b bbab\n\nb b , \"\r , bba \"b\"\r \ra\r\",,a",
+    "expected": [
+      "b",
+      "b bbab\n\nb b ,",
+      "a",
+      ",,a"
+    ],
+    "rust": [
+      "b",
+      "b bbab\n\nb b ,",
+      "a",
+      ",,a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n, \r\n\na \"ab\r,,\" \n\n b\"\n\nabb  ,\"\n\r,aa\n\"\n\r\rb",
+    "expected": [
+      "a \"ab",
+      "abb",
+      "b"
+    ],
+    "rust": [
+      "a \"ab",
+      "abb",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\" b\"\",\r \r\"b,,\"\rbb\n\r\"\"abaab\"\n\"\ra\" a\"\na\"",
+    "expected": [
+      "a b\"\"",
+      "b,,",
+      "bb",
+      "abaab\"",
+      "a a\"",
+      "a\""
+    ],
+    "rust": [
+      "a b\"\"",
+      "b,,",
+      "bb",
+      "abaab\"",
+      "a a\"",
+      "a\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\n,\n  ,\",\n\"\ra\"\r\n\n\"\n\n\rb\n\" \na\r  b, \"\n\" a\rb",
+    "expected": [
+      "a\"",
+      "b",
+      "a",
+      "a\nb"
+    ],
+    "rust": [
+      "a\"",
+      "b",
+      "a",
+      "a\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\r\r,  \"ab\"\n\n\na\n\na\n,,a\ra   ,\r a,\n\n \r  \"\nb",
+    "expected": [
+      "a",
+      "\"",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "\"",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,,\nb\n, b\r \r, \r\n\n\nb\r\r \raba\"\rb b\"\"\n \"\r \"ab",
+    "expected": [
+      "b",
+      "aba\"",
+      "b b\"\"",
+      "\"",
+      "\"ab"
+    ],
+    "rust": [
+      "b",
+      "aba\"",
+      "b b\"\"",
+      "\"",
+      "\"ab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\rbaa\"\r\n\rb\na  \"\n\r\"ab,\n\ra,\r,b\n, \n \"b\n \rab",
+    "expected": [
+      "b",
+      "baa\"",
+      "a  \"",
+      "ab,\n\na,\n,b\n, \n b",
+      "ab"
+    ],
+    "rust": [
+      "b",
+      "baa\"",
+      "a  \"",
+      "ab,\n\na,\n,b\n, \n b",
+      "ab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\n\rab\"b\r\nab ,\naa \rabbb aa,\"\r, b ,\n\rba\r\n\n",
+    "expected": [
+      "ab\"b",
+      "ab",
+      "aa",
+      "abbb aa"
+    ],
+    "rust": [
+      "ab\"b",
+      "ab",
+      "aa",
+      "abbb aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"b\"\r\r\"bb\"\"\",\n\nb a ab\na,,\"\n,b a\"\"\rb\r,b,aa",
+    "expected": [
+      "b",
+      "bb\"",
+      "b a ab",
+      "a"
+    ],
+    "rust": [
+      "b",
+      "bb\"",
+      "b a ab",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\r\n\n\n\n, \n\n\n\",a,\r\n\r,a\raa ,,a \n\" ,\n \",\r aa",
+    "expected": [
+      ",a,\n\n,a\naa ,,a",
+      "\"",
+      "aa"
+    ],
+    "rust": [
+      ",a,\n\n,a\naa ,,a",
+      "\"",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na b\rb\n\"\r\"aa\"\n\n ,\",\n\n\nb ,b ab\ra\"a\r, aa\r,\n",
+    "expected": [
+      "a b",
+      "b",
+      "aa\""
+    ],
+    "rust": [
+      "a b",
+      "b",
+      "aa\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \n\r\"b,abb \r\r,\"\"baa\r,\r,ab,\r\"ab\"\r\r\r\"\n\"\r \r,",
+    "expected": [
+      "b,abb \n\n,\"baa\n,\n,ab,\nab\""
+    ],
+    "rust": [
+      "b,abb \n\n,\"baa\n,\n,ab,\nab\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\n aa   baa,\rbb \"\n,,\r\"\" ba \",\"\"b\na  a\r\n,",
+    "expected": [
+      "aa   baa",
+      "bb \"",
+      "ba \"",
+      "a  a"
+    ],
+    "rust": [
+      "aa   baa",
+      "bb \"",
+      "ba \"",
+      "a  a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\n\" \r\r\"\r\"a  \ra\n\"\n\naa\ra\r,\"a,\ra,a \nab,a\rbb",
+    "expected": [
+      "a",
+      "aa\na\n,a",
+      "ab",
+      "bb"
+    ],
+    "rust": [
+      "a",
+      "aa\na\n,a",
+      "ab",
+      "bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\r\n\n\n \na ba\n\r\n\r\rb\"\n \n\n \rb\r,\n\r\n\rb\"baaa ,\n",
+    "expected": [
+      "a ba",
+      "b\"",
+      "b",
+      "b\"baaa"
+    ],
+    "rust": [
+      "a ba",
+      "b\"",
+      "b",
+      "b\"baaa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n,, ,b\na ,b \n\r,a,a\r\n,,a\n\r \n\"bb\n,a\"a \n\r,,",
+    "expected": [
+      "a",
+      "bb\n,aa"
+    ],
+    "rust": [
+      "a",
+      "bb\n,aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r,\"a\rb,a\", ,\"\rba\n \n ba\r ,\n b\ra,bb ,a,\nbb",
+    "expected": [],
+    "rust": []
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\n\r\r ,b,\"\"\"\nba\"bb \nb\n \"b\r\r\"  b\"a\r\" \nb\n\na",
+    "expected": [
+      ",b,\"",
+      "ba\"bb",
+      "b",
+      "\"b",
+      "ba",
+      "b\n\na"
+    ],
+    "rust": [
+      ",b,\"",
+      "ba\"bb",
+      "b",
+      "\"b",
+      "ba",
+      "b\n\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\rb \na\rab\r\n , \"\"\"\r bb\n\na a,a a\rb,a\r,\n\r\"\r\n",
+    "expected": [
+      "b",
+      "a",
+      "ab",
+      "bb",
+      "a a"
+    ],
+    "rust": [
+      "b",
+      "a",
+      "ab",
+      "bb",
+      "a a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na \"\n \nba  \r,\na\" a \"\n ,\n\"b\n ,\"\" \"\r\ra\naba ",
+    "expected": [
+      "a \"",
+      "ba",
+      "a\" a \"",
+      "b\n ,\"",
+      "a",
+      "aba"
+    ],
+    "rust": [
+      "a \"",
+      "ba",
+      "a\" a \"",
+      "b\n ,\"",
+      "a",
+      "aba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,,\",b\" \",a,,\",,ba\",\" \" , b\nb\r\",,\n\n  a,\nb",
+    "expected": [
+      "b",
+      ",,\n\n  a,\nb"
+    ],
+    "rust": [
+      "b",
+      ",,\n\n  a,\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\n\r\r\nbb  ba,a\ra\"b\r\rb\"\"\"a\"a,\" ,\r\"\r\" \"a\n\"\"",
+    "expected": [
+      "bb  ba",
+      "a\"b",
+      "b\"\"\"a\"a",
+      "a"
+    ],
+    "rust": [
+      "bb  ba",
+      "a\"b",
+      "b\"\"\"a\"a",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb a\"a\r \raab\"\r\n\r\r\n \"\rbaba,,a\n a\r\n\rbab  \r\"",
+    "expected": [
+      "b a\"a",
+      "aab\"",
+      "\"",
+      "baba",
+      "a",
+      "bab"
+    ],
+    "rust": [
+      "b a\"a",
+      "aab\"",
+      "\"",
+      "baba",
+      "a",
+      "bab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\naab\nba,\r\n\n \"\"\rba\n\n\raab\"\"\" bb\r,bb\", \n \ra ",
+    "expected": [
+      "aab",
+      "ba",
+      "\"\"",
+      "aab\"\"\" bb",
+      "a"
+    ],
+    "rust": [
+      "aab",
+      "ba",
+      "\"\"",
+      "aab\"\"\" bb",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\rb\r\rb\"a,\nbbb bb,\"\r\r, b ab\n\n\n \n \"aab\r\ra\n",
+    "expected": [
+      "b",
+      "b\"a",
+      "bbb bb",
+      "a"
+    ],
+    "rust": [
+      "b",
+      "b\"a",
+      "bbb bb",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\rb\r\"bb\"\n a\"\n\nbb\r\r\"a \"\rb \r\",ba\na ,a\r\ra\"\r",
+    "expected": [
+      "b",
+      "bb",
+      "a\"",
+      "a",
+      ",ba\na ,a\n\na"
+    ],
+    "rust": [
+      "b",
+      "bb",
+      "a\"",
+      "a",
+      ",ba\na ,a\n\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,a \"a \rb b,\"\nb,\"\rbb\",\"\"ba b,\nb \"\r,\r,aa\",",
+    "expected": [
+      "b b",
+      "bb\"",
+      "b \""
+    ],
+    "rust": [
+      "b b",
+      "bb\"",
+      "b \""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\n\"\rb\n\n\r\"\nb \r,\ra,\n\n \n \r\n\n\"a \"\r ba\n\n  \n\n ",
+    "expected": [
+      "b",
+      "a",
+      "ba"
+    ],
+    "rust": [
+      "b",
+      "a",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ,,\na\r\"\r\r ,,, \"\na,a \n, \n b,,\nb\"\r\r\"\"\n\",,,",
+    "expected": [
+      "a",
+      ",,,",
+      "b",
+      "b\""
+    ],
+    "rust": [
+      "a",
+      ",,,",
+      "b",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\r,, ,\",a\"\n\r\rb\n\" ,bb\n,aba\"\"b\r\"\n\"\rb\"a ab\"",
+    "expected": [
+      "b",
+      ",bb\n,aba\"b",
+      "ba ab\""
+    ],
+    "rust": [
+      "b",
+      ",bb\n,aba\"b",
+      "ba ab\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n, b\r\ra \r\nb\"\r\ra\n \na\n,b,,a  a\"ab  ,\"\"\n   a",
+    "expected": [
+      "a",
+      "b\""
+    ],
+    "rust": [
+      "a",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n \naa,baab\r a \n\n\n\r\n  \n\n\n\",b\"\r\rab\r\" b\r\n\rb",
+    "expected": [
+      "aa",
+      "a",
+      ",b",
+      "ab",
+      "b\n\nb"
+    ],
+    "rust": [
+      "aa",
+      "a",
+      ",b",
+      "ab",
+      "b\n\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\naa\r\n,,bb \r\n\" bab,a\n\r b\"\n,ba\n\"\ra\naa  a\na\"",
+    "expected": [
+      "aa",
+      "bab,a\n\n b",
+      "a\naa  a\na"
+    ],
+    "rust": [
+      "aa",
+      "bab,a\n\n b",
+      "a\naa  a\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\nb,\" \r,\nbb ,\r\r\nb,\"a\" b\n,\n\r\",\naa , \na\naa",
+    "expected": [
+      "b",
+      ",\naa , \na\naa"
+    ],
+    "rust": [
+      "b",
+      ",\naa , \na\naa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\r , ,aa\"\"\"\rbaaaa  bb,\" bba\nbb\nb \",\" ,\n ",
+    "expected": [
+      "baaaa  bb"
+    ],
+    "rust": [
+      "baaaa  bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\r,\"\n\ra\" bb,\r ,\nbb \n\"\n\r\"\"aa\"aa \"b\r\"\", a ",
+    "expected": [
+      "a",
+      "bb",
+      "\"aaaa \"b"
+    ],
+    "rust": [
+      "a",
+      "bb",
+      "\"aaaa \"b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n  a\n \r \rb,\"\rb\n\r\r,\"b\n\n\n ,\nbb\"\r,\ra ,\nb\"\r b",
+    "expected": [
+      "a",
+      "b",
+      "bb\"",
+      "b\""
+    ],
+    "rust": [
+      "a",
+      "b",
+      "bb\"",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb \"a\n,bb, , b,a\"\n  b\n\rb \r b\"\na\n\nba\nb\r\r\r\n",
+    "expected": [
+      "b \"a",
+      "b",
+      "b\"",
+      "a",
+      "ba"
+    ],
+    "rust": [
+      "b \"a",
+      "b",
+      "b\"",
+      "a",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nbb\r\r,\nba \n\"aa,,\r  ba\"\n\n\na,b\"aaa\n\r\n, \n\r\n,",
+    "expected": [
+      "bb",
+      "ba",
+      "aa,,\n  ba",
+      "a"
+    ],
+    "rust": [
+      "bb",
+      "ba",
+      "aa,,\n  ba",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ,\"\r\"\r\n\nb\r\rb\"\nb\r\ra \ra,\naa,\r,\na\n\r,\raa \na\n",
+    "expected": [
+      "b",
+      "b\"",
+      "a",
+      "aa"
+    ],
+    "rust": [
+      "b",
+      "b\"",
+      "a",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \n,\r,,,b,b,\"\rb\"a, \r, \r\n a, b,\" \nba,\n,a a",
+    "expected": [
+      "a"
+    ],
+    "rust": [
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\" \n ,\ra\r\n\"a b\"\r\n  \r\nb,\"\ra\ra,\rb\r\n\"\" a,\"\"",
+    "expected": [
+      "b\"",
+      "a",
+      "a b",
+      "b"
+    ],
+    "rust": [
+      "b\"",
+      "a",
+      "a b",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,a\" \"aa\"\"b,a\",\n,,\r\raa\" ba\n\"a,\ra,\"a\"a a\n ",
+    "expected": [
+      "aa\" ba",
+      "a,\na,a\"a a"
+    ],
+    "rust": [
+      "aa\" ba",
+      "a,\na,a\"a a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\n\"ab,ba\"b\n \nbb\"b,\"b\"\"a b b\ra\r\"\"\"\r\r,a,\na",
+    "expected": [
+      "ab,bab",
+      "bb\"b",
+      "a"
+    ],
+    "rust": [
+      "ab,bab",
+      "bb\"b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\rb,\"  \naabb\r\r\na\r \"\r \"\",\n\"\n\n\ra\"\rb \n\"\r,\r\r",
+    "expected": [
+      "b",
+      "\"\"",
+      "a",
+      ","
+    ],
+    "rust": [
+      "b",
+      "\"\"",
+      "a",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\n \r\n\n\",a,ab\n\ra,\r,\n\n\r\"\rb\n\"\n\n,\"\r\"\r\n\"bab ",
+    "expected": [
+      "a",
+      "b",
+      "bab"
+    ],
+    "rust": [
+      "a",
+      "b",
+      "bab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb,a,\nb\"\r\n\n   ba\n ,b,baa a,\n  \n\ra    b\raa",
+    "expected": [
+      "b",
+      "b\"",
+      "ba",
+      "a    b",
+      "aa"
+    ],
+    "rust": [
+      "b",
+      "b\"",
+      "ba",
+      "a    b",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\nb\"\n\"a,,\r,b\r,  \n\n\n,\n  a\ra\n\",\r\"\r,b b,\nb ",
+    "expected": [
+      "a",
+      "b\"",
+      "a,,\n,b\n,  \n\n\n,\n  a\na",
+      ",b b,\nb"
+    ],
+    "rust": [
+      "a",
+      "b\"",
+      "a,,\n,b\n,  \n\n\n,\n  a\na",
+      ",b b,\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ba \"\r \"a\r\r,\"b\na aa,\n\"\"abb ab\r\"\r \"ba, \r\n",
+    "expected": [
+      "ba \"",
+      "\"a",
+      "\"ba"
+    ],
+    "rust": [
+      "ba \"",
+      "\"a",
+      "\"ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\"\r\ra\"b\r \r\",,b,\rba\r ab\n\r b,\r\na\"\nb\"\r\"\r\n\n,",
+    "expected": [
+      "a\"",
+      "a\"b",
+      ",,b,\nba\n ab\n\n b,\na",
+      "b\"",
+      ","
+    ],
+    "rust": [
+      "a\"",
+      "a\"b",
+      ",,b,\nba\n ab\n\n b,\na",
+      "b\"",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\n\"aa\" ,\" ,\"\n\n\r\"ab\r\r\naa\r,\n  \n\nb\r\r,\"\rb\"ba",
+    "expected": [
+      "aa\"",
+      "ab\n\naa\n,\n  \n\nb\n\n,",
+      "b\"ba"
+    ],
+    "rust": [
+      "aa\"",
+      "ab\n\naa\n,\n  \n\nb\n\n,",
+      "b\"ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n b aa\"b  \" ,,\r ,\"\n,abb\",,  \n,, \"\"a\"a\"a\"",
+    "expected": [
+      "b aa\"b  \""
+    ],
+    "rust": [
+      "b aa\"b  \""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nab,a\r\nb\r,\"\r\"\r\na\r \rb \"b,\r\"\r\"b\" ,, \"\n\r\n\n\na",
+    "expected": [
+      "ab",
+      "b",
+      "a",
+      "b \"b",
+      "b\""
+    ],
+    "rust": [
+      "ab",
+      "b",
+      "a",
+      "b \"b",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\"\ra,a\na abbbbbb\r, \" bb\"\r  a\r\"\",,\r\na\"\nb\n",
+    "expected": [
+      "a\"",
+      "a",
+      "a abbbbbb",
+      "b"
+    ],
+    "rust": [
+      "a\"",
+      "a",
+      "a abbbbbb",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\"\r,\" a\nb\r,,aa\" \n ,a,\raa\r\n\na\" b\n\n\n,b\r,,\"",
+    "expected": [
+      "b",
+      "aa",
+      "a\" b"
+    ],
+    "rust": [
+      "b",
+      "aa",
+      "a\" b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\"a,\"\n ,\"\n a\n\nabab\rba,\r\r\"a\"bb\nb\r\rb\n\r\rb\na",
+    "expected": [
+      "b\"a",
+      "a",
+      "abab",
+      "ba",
+      "abb",
+      "b"
+    ],
+    "rust": [
+      "b\"a",
+      "a",
+      "abab",
+      "ba",
+      "abb",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\ra \"\"\r\"\",\rab\r\n\", \n\r,\"   b\r  ,b\n \ra \r,\" ",
+    "expected": [
+      "a",
+      "a \"\"",
+      "ab",
+      ", \n\n,   b"
+    ],
+    "rust": [
+      "a",
+      "a \"\"",
+      "ab",
+      ", \n\n,   b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\"bbb\n,ab ba\n,\na\n\naba\n\n\r\n b\ra\na\naa\r\"\n\n,a",
+    "expected": [
+      "a\"bbb",
+      "a",
+      "aba",
+      "b",
+      "aa",
+      ",a"
+    ],
+    "rust": [
+      "a\"bbb",
+      "a",
+      "aba",
+      "b",
+      "aa",
+      ",a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n  \n b\n\"\na  \"\n \r\", a\r\"a,aa\ra\" a\n\rb,a \r b\r",
+    "expected": [
+      "b",
+      "a",
+      ", a\na",
+      "a\" a"
+    ],
+    "rust": [
+      "b",
+      "a",
+      ", a\na",
+      "a\" a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n,\r \r,\" ,\",\"b,\nb\r\n\r,\",bb\nab\r\r\n\n \n ,b,\n\r ",
+    "expected": [
+      "ab"
+    ],
+    "rust": [
+      "ab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\"a \",\n ,\"\nb\nb \"b\"ba \n\"baa\r\" \r\"\",,\n ,\n\n ",
+    "expected": [
+      "baa"
+    ],
+    "rust": [
+      "baa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \nba\"a   \n\r,\r\n\n\",\n,\"\r\r bbb\rb\ra\n\ra,aa\", a",
+    "expected": [
+      "ba\"a",
+      ",\n,",
+      "bbb",
+      "b",
+      "a"
+    ],
+    "rust": [
+      "ba\"a",
+      ",\n,",
+      "bbb",
+      "b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\naba\na\"\n ,ba,a ,b\n\r\r\r ,b \r\r  \r\nb,bb ,a\ra,",
+    "expected": [
+      "aba",
+      "a\"",
+      "b",
+      "a"
+    ],
+    "rust": [
+      "aba",
+      "a\"",
+      "b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\r,\r\r\rbab\na ,a\nb\n\"b\rabaa, \r \n\"\rb,a \"bb\na",
+    "expected": [
+      "bab",
+      "a",
+      "b",
+      "b\nabaa,"
+    ],
+    "rust": [
+      "bab",
+      "a",
+      "b",
+      "b\nabaa,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\"\r\"\"\"\r\n  \nba\r\"\"b\" ,, \n\r\"b\n \n\r\rb\n\ra\r, \"\"",
+    "expected": [
+      "\"",
+      "ba",
+      "b\"",
+      "b\n \n\n\nb\n\na\n, \""
+    ],
+    "rust": [
+      "\"",
+      "ba",
+      "b\"",
+      "b\n \n\n\nb\n\na\n, \""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\rba,b\ra,a\"b\" \"\n\"\"\"a\"ba ,b\naba,\"  \ra\", a\"",
+    "expected": [
+      "ba",
+      "a",
+      "\"aba",
+      "aba"
+    ],
+    "rust": [
+      "ba",
+      "a",
+      "\"aba",
+      "aba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\raa, \"\ra a\ra\"a ,\r  \",,b,\r\",,a,\"abb\"a\n\r, ",
+    "expected": [
+      "aa",
+      "a a",
+      "a\"a",
+      "\"",
+      ",,a,abb\"a"
+    ],
+    "rust": [
+      "aa",
+      "a a",
+      "a\"a",
+      "\"",
+      ",,a,abb\"a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n, \n bba\"  ba aa\"ba\n\r ,\r\r\",\nbb \n\r\"\"\"\r\n \n",
+    "expected": [
+      "bba\"  ba aa\"ba",
+      ",\nbb \n\n\""
+    ],
+    "rust": [
+      "bba\"  ba aa\"ba",
+      ",\nbb \n\n\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\nb \"a \ra,\r,aa,\r\"\n\ra\"\"\r\rb\r\n,,\n\n , \"  \nb\r",
+    "expected": [
+      "a",
+      "b \"a",
+      "a\"\n\nb\n,,\n\n ,",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "b \"a",
+      "a\"\n\nb\n,,\n\n ,",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \n\"\raba,\"b\n \na\r \naa \"b,,\n b,bba\r\"b,\"a\"\"\r",
+    "expected": [
+      "aba,b",
+      "a",
+      "aa \"b",
+      "b",
+      "b,a\"\""
+    ],
+    "rust": [
+      "aba,b",
+      "a",
+      "aa \"b",
+      "b",
+      "b,a\"\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\rb\n a\"b a,\"b\"\"  a,b\ra,\n \ra\n\"\"  \n \n\r\n\n,b",
+    "expected": [
+      "b",
+      "a\"b a"
+    ],
+    "rust": [
+      "b",
+      "a\"b a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r,\"\ra \"a,b\rb b,a\rbaa\"\n,,\",\"\n\"\ra\n\"\", \"b\r\n",
+    "expected": [
+      "b b",
+      "baa\"",
+      "a\n\", b"
+    ],
+    "rust": [
+      "b b",
+      "baa\"",
+      "a\n\", b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\r \rb\na\n \"\naa a\na\ra\"ab aaa\"a, \"b\r ,b\"\r,\"",
+    "expected": [
+      "b",
+      "a",
+      "\"",
+      "aa a",
+      "a\"ab aaa\"a"
+    ],
+    "rust": [
+      "b",
+      "a",
+      "\"",
+      "aa a",
+      "a\"ab aaa\"a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\"a,  a\r\"a\"\raa,\r ,\r\"\n    \n,,a \n\"aa\" ,,\"\r",
+    "expected": [
+      "a\"a",
+      "a",
+      "aa",
+      ",,a \naa\""
+    ],
+    "rust": [
+      "a\"a",
+      "a",
+      "aa",
+      ",,a \naa\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\"b, \",,b\n\",\"\n \r\r\",,a\"\n\",\r\n \"\ra \",\n \nb\rb",
+    "expected": [
+      "a\"b",
+      ",",
+      ",,a",
+      "a \"",
+      "b"
+    ],
+    "rust": [
+      "a\"b",
+      ",",
+      ",,a",
+      "a \"",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\n\n \r\n\r\r\r\"\n ,b\r,\nb \" b, \",\n \"  \"  b,,\n\r ",
+    "expected": [
+      ",b\n,\nb  b",
+      "\"  \"  b"
+    ],
+    "rust": [
+      ",b\n,\nb  b",
+      "\"  \"  b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\"b\"aa ,\r ,ba,\na\n\"\n\r\rb \"a\r\n,\rb\",\r\n,\r\"  \r",
+    "expected": [
+      "a",
+      "b a",
+      "b\""
+    ],
+    "rust": [
+      "a",
+      "b a",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\r\rba\r\r \r\"\" ab\ra\r\"\"\"\rb\n\"\"\n\" ,,\n,\n\"\r ,\n,",
+    "expected": [
+      "a\n\nba\n\n \n\" ab\na\n\"",
+      "b",
+      ",,\n,"
+    ],
+    "rust": [
+      "a\n\nba\n\n \n\" ab\na\n\"",
+      "b",
+      ",,\n,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\" ab \n\nbb\nb \n\raa\" \n b a\nbaa\r\r\r,,\",ba,\ra",
+    "expected": [
+      "ab",
+      "bb",
+      "b",
+      "aa\"",
+      "b a",
+      "baa"
+    ],
+    "rust": [
+      "ab",
+      "bb",
+      "b",
+      "aa\"",
+      "b a",
+      "baa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n  b\r,b,\nb a\" \r\r\r\"\na b b\nba ,a a ab b\"\r\r",
+    "expected": [
+      "b",
+      "b a\"",
+      "a b b\nba ,a a ab b"
+    ],
+    "rust": [
+      "b",
+      "b a\"",
+      "a b b\nba ,a a ab b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\n\",b\r ,\"\n aa\rb\r\rb \r,   \"\r\n\na\n\"\r\na\"\nbb\"\n",
+    "expected": [
+      ",b\n ,",
+      "aa",
+      "b",
+      "a",
+      "bb\""
+    ],
+    "rust": [
+      ",b\n ,",
+      "aa",
+      "b",
+      "a",
+      "bb\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ,\ra,,\"\"b\r,,ba\r\r\nb,\n ,a\n, a\n    \r,  \nb\n,",
+    "expected": [
+      "a",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\r\"   \r\ra\"b,b,, \"b\"\n\rabb a\"\n,a\n\ra,b \r\n,\n",
+    "expected": [
+      "a\"b",
+      "abb a\"",
+      "a"
+    ],
+    "rust": [
+      "a\"b",
+      "abb a\"",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\"\r\"\"b\r,\n\r\"\n\"a\",\"a\r\",,,bb,a\n,\"\r\r \r,\" \",,",
+    "expected": [
+      "\"b\n,",
+      "a"
+    ],
+    "rust": [
+      "\"b\n,",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\n a \"\nb\"\" ,\n \n,\r,\"b \" ,b\rb\n\n\"\"\"\nb,a\" \n\n",
+    "expected": [
+      "a \"",
+      "b\"\"",
+      "b",
+      "\"\nb,a"
+    ],
+    "rust": [
+      "a \"",
+      "b\"\"",
+      "b",
+      "\"\nb,a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\ra\na\rba,\r baba \r a\n\rb\r,a\r\r\ra\n \" bb,a \r\"",
+    "expected": [
+      "a",
+      "ba",
+      "baba",
+      "b",
+      "\" bb"
+    ],
+    "rust": [
+      "a",
+      "ba",
+      "baba",
+      "b",
+      "\" bb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" a\n,\"\n\n,\r,\n\"a, \"\n\n \ra\r\r,\n\"\n\na,ba\r,\",\n,b",
+    "expected": [
+      "a\n,",
+      "a,",
+      "a",
+      "a,ba\n,"
+    ],
+    "rust": [
+      "a\n,",
+      "a,",
+      "a",
+      "a,ba\n,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\"\r ,b ,\rb,bb\",,a\n\r\n\nb,\r\r\"  \nb,aa  \n\rab\r",
+    "expected": [
+      "b\"",
+      "b",
+      "b,aa  \n\nab"
+    ],
+    "rust": [
+      "b\"",
+      "b",
+      "b,aa  \n\nab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb,\"bb\n,\" \n,a, ,bbb\nb,\n\r\r\n,\rab\r  \" ,\n\n\n,\n",
+    "expected": [
+      "b",
+      "ab",
+      "\""
+    ],
+    "rust": [
+      "b",
+      "ab",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ,b ,b\"\nb\"aa\r\na\na b\n\"   \r  ,  b\r\ra \nba\r\n",
+    "expected": [
+      "b\"aa",
+      "a",
+      "a b",
+      ",  b\n\na \nba"
+    ],
+    "rust": [
+      "b\"aa",
+      "a",
+      "a b",
+      ",  b\n\na \nba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na ab,b\",b\na ,, a\"\rbaa\na \"b\"\rb\r  \n \"\"\r\nba",
+    "expected": [
+      "a ab",
+      "a",
+      "baa",
+      "a \"b\"",
+      "b",
+      "\"\"",
+      "ba"
+    ],
+    "rust": [
+      "a ab",
+      "a",
+      "baa",
+      "a \"b\"",
+      "b",
+      "\"\"",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\n\"\r \n\"\r   ,a a\"\rb\n,\"b,b\ra ab\r\r, ,,a \",,",
+    "expected": [
+      ",a a",
+      "b"
+    ],
+    "rust": [
+      ",a a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" \n\r,,\nb,,\",a\n\r\r\r\r\n a  ,bbba a,\n\nb,\r,\n\na",
+    "expected": [
+      ",,\nb,,",
+      "a",
+      "b"
+    ],
+    "rust": [
+      ",,\nb,,",
+      "a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\"\n\r\n\r\na\"a\r\r\n\ra\n,aa\"ba \" \r\n,\",a\nbaa\ra,  ",
+    "expected": [
+      "b\"",
+      "a\"a",
+      "a"
+    ],
+    "rust": [
+      "b\"",
+      "a\"a",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\r\r \r\n\na \n \nbbb a b\r \",\"\r\"\"\n\rb\naab,a\"bbb",
+    "expected": [
+      "a",
+      "bbb a b",
+      "\""
+    ],
+    "rust": [
+      "a",
+      "bbb a b",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \r \",bb\nab\n\"ab\"  \"a\nbbb \"bb\n\n\"a\na\nbbb,,,",
+    "expected": [
+      "\"",
+      "ab",
+      "ab  \"a",
+      "bbb \"bb",
+      "a\na\nbbb,,,"
+    ],
+    "rust": [
+      "\"",
+      "ab",
+      "ab  \"a",
+      "bbb \"bb",
+      "a\na\nbbb,,,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nbaa,\ra\n\n\r,,\n\"\",bb\r  \n aa\r\r,\n,,\"a \nab\nbaa",
+    "expected": [
+      "baa",
+      "a",
+      "aa"
+    ],
+    "rust": [
+      "baa",
+      "a",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb ,,a\" \nb \ra\ra \",  b\",,,b,a\"\n\n\n\r,bb\n\" \"\"",
+    "expected": [
+      "b",
+      "a",
+      "a \"",
+      "\""
+    ],
+    "rust": [
+      "b",
+      "a",
+      "a \"",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\"\r \r\"\"\"\"\r, \",b\"\n\r,,\n\rb\ra\" ,\na,\r\n,a ,a\" ",
+    "expected": [
+      "b\"",
+      "\"",
+      "b",
+      "a\"",
+      "a"
+    ],
+    "rust": [
+      "b\"",
+      "\"",
+      "b",
+      "a\"",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\"\" a\ra,\na\n,\n\"\"\nb\r,\n \"\"b\rb bba\n\ra\ra\ra \r\n",
+    "expected": [
+      "b\"\" a",
+      "a",
+      "b",
+      "\"\"b",
+      "b bba"
+    ],
+    "rust": [
+      "b\"\" a",
+      "a",
+      "b",
+      "\"\"b",
+      "b bba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n a ,\r\n\r\r, a \r,ba\naaa\nb\r\n\r\"\rb\n \r\"a  \rabb\"",
+    "expected": [
+      "a",
+      "aaa",
+      "b",
+      "b\n \na",
+      "abb\""
+    ],
+    "rust": [
+      "a",
+      "aaa",
+      "b",
+      "b\n \na",
+      "abb\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nba \rb,\nb bba\"bb\n\"a a\"\n\"\",b\"\rb\"\r\n\n,a\n\" ab",
+    "expected": [
+      "ba",
+      "b",
+      "b bba\"bb",
+      "a a",
+      "b\"",
+      "ab"
+    ],
+    "rust": [
+      "ba",
+      "b",
+      "b bba\"bb",
+      "a a",
+      "b\"",
+      "ab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n ab\"\n\" ,a\" \r   b\r\n\rb,\"\"b\"b,\n b ab\ra ,\na\r",
+    "expected": [
+      "ab\"",
+      ",a",
+      "b",
+      "b ab",
+      "a"
+    ],
+    "rust": [
+      "ab\"",
+      ",a",
+      "b",
+      "b ab",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na  \nba a\",\r\n,\r\r\r, ,a\"\r\n,,b \n\r  ,\r\"\n \n \rb",
+    "expected": [
+      "a",
+      "ba a\"",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "ba a\"",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\"\r\"\n\n, a\n\n\r, \n\n\nb\" \r\n\"\r ,,\"\"\"\r\" a,, \n\n\n",
+    "expected": [
+      "b\"",
+      ",,\"",
+      "a,,"
+    ],
+    "rust": [
+      "b\"",
+      ",,\"",
+      "a,,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nab ba,ba\n\n\"\" b,a\r\r,\ra\r\n,,,\r,\ra  \"\"\r\raba\n",
+    "expected": [
+      "ab ba",
+      "b",
+      "a",
+      "a  \"\"",
+      "aba"
+    ],
+    "rust": [
+      "ab ba",
+      "b",
+      "a",
+      "a  \"\"",
+      "aba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb,\r\r\"a\na\nb\"\n\"a\r\"\n\" ,\"b\n\r,b\"a,a\r\na\n,\"ab\"\n",
+    "expected": [
+      "b",
+      "a\na\nb",
+      "a",
+      ",b"
+    ],
+    "rust": [
+      "b",
+      "a\na\nb",
+      "a",
+      ",b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\"\r\"\r\n\n,\" ,,\", \n\r, a\ra  \r\r\na\r\ra\"  a  ,\" ",
+    "expected": [
+      "a",
+      "a\"  a"
+    ],
+    "rust": [
+      "a",
+      "a\"  a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\r\n\n\"\"\r ,aaa  ,\",b\"\rb,a\"ab a\r \nb\n\r\rb\n\"\n,",
+    "expected": [
+      "b",
+      ","
+    ],
+    "rust": [
+      "b",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\ra \r\na  \"b\r\rb,\"\rb,\rb, \r ,\"\"a\n\n, \n\r a\"b ",
+    "expected": [
+      "a \na  b",
+      "b"
+    ],
+    "rust": [
+      "a \na  b",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nab\",\nb \r\r  \"a\r\n\"\r,aab\n\nb\n,, \"a,b\r\" \"\"\n\r,",
+    "expected": [
+      "ab\"",
+      "b",
+      "\"a",
+      ",aab\n\nb\n,, a",
+      "\"\n\n,"
+    ],
+    "rust": [
+      "ab\"",
+      "b",
+      "\"a",
+      ",aab\n\nb\n,, a",
+      "\"\n\n,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na, aaaa,, \rba,\"bb a\"\rbbaaab \n \"b\"a \n\r\"a\r",
+    "expected": [
+      "a",
+      "ba",
+      "bbaaab",
+      "\"b\"a"
+    ],
+    "rust": [
+      "a",
+      "ba",
+      "bbaaab",
+      "\"b\"a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\"b,b\n\n \"\"\"\na \r\"\n\n\r,\r\n\"b\n\rb\n,\",ab\r\n\nb\"\"\"",
+    "expected": [
+      "b",
+      "\"\"\"",
+      "a",
+      ",\nb"
+    ],
+    "rust": [
+      "b",
+      "\"\"\"",
+      "a",
+      ",\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\na\n\"ba,\" \r\n\n,\r\n,\n,aabbb\raaa\r \",b\ra\n\"\"\"\",",
+    "expected": [
+      "a",
+      "ba,",
+      "aaa",
+      "\""
+    ],
+    "rust": [
+      "a",
+      "ba,",
+      "aaa",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n, \r aa\"\n,\n,\na\"\"b a\"\ra\r,\r\r\"\nb\n ,\r  ,,\n,,a",
+    "expected": [
+      "aa\"",
+      "a\"\"b a\"",
+      "a",
+      "b\n ,\n  ,,\n,,a"
+    ],
+    "rust": [
+      "aa\"",
+      "a\"\"b a\"",
+      "a",
+      "b\n ,\n  ,,\n,,a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\na  a,,, b\r\"\"\"\r\"aba,\"b\n \r\",aa     \"\nb\rab",
+    "expected": [
+      "a  a",
+      "\"\naba",
+      "b",
+      "ab"
+    ],
+    "rust": [
+      "a  a",
+      "\"\naba",
+      "b",
+      "ab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n   ,\"\"a\r,\r \r,\n\"  \n  ,a b\n  , , \rab ,,,\ra",
+    "expected": [
+      ",a b\n  , , \nab ,,,\na"
+    ],
+    "rust": [
+      ",a b\n  , , \nab ,,,\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nabb,aa\"\rb\n\nb,\n\n\nb,a\" b\r ,ba\"\raab,\r \r\r,\r\r",
+    "expected": [
+      "abb",
+      "b",
+      "aab"
+    ],
+    "rust": [
+      "abb",
+      "b",
+      "aab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\ra\" \n\r \n\"\r ,a ,a  \ra,a,a\r\"\r b,\"\n\naa\n \ra\r",
+    "expected": [
+      "a\"",
+      ",a ,a  \na,a,a",
+      "b"
+    ],
+    "rust": [
+      "a\"",
+      ",a ,a  \na,a,a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,b\raa,\r\n\",\" ,,\r\raaa\n \"\nb\"  , a\r,\n\naa,\"\"b",
+    "expected": [
+      "aa",
+      ",",
+      "aaa",
+      "\"",
+      "b\""
+    ],
+    "rust": [
+      "aa",
+      ",",
+      "aaa",
+      "\"",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\nba\r \"bb ,,ab\na\r\"\n \" \"b\n  ,b\rb\" \na\" \n\r ",
+    "expected": [
+      "b",
+      "ba",
+      "\"bb",
+      "a",
+      "\"b",
+      "b\"",
+      "a\""
+    ],
+    "rust": [
+      "b",
+      "ba",
+      "\"bb",
+      "a",
+      "\"b",
+      "b\"",
+      "a\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\"\"b,\r, , \r,\n\rbb\rb\"\"\"a,\n b   ,a  a\"\" \n\" ",
+    "expected": [
+      "b",
+      "bb",
+      "b\"\"\"a"
+    ],
+    "rust": [
+      "b",
+      "bb",
+      "b\"\"\"a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n  b\nab  \nb,\r\n a\r  \"  baa\n\r\ra\r\",,\ra,ba\" a",
+    "expected": [
+      "b",
+      "ab",
+      "a",
+      "\"  baa",
+      ",,\na,ba a"
+    ],
+    "rust": [
+      "b",
+      "ab",
+      "a",
+      "\"  baa",
+      ",,\na,ba a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nba b\"b,\"a,,,,ab,b  b\r\r\n ,\n,\r\n \r, \n \r\"\" a",
+    "expected": [
+      "ba b\"b"
+    ],
+    "rust": [
+      "ba b\"b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\naa\"a\nba\n,b\"a b\n\r\n\"\r\r\n,\na\rba ,ba\r\r\" \"\r\",",
+    "expected": [
+      "aa\"a",
+      "ba",
+      ",\na\nba ,ba\n\n \"",
+      ","
+    ],
+    "rust": [
+      "aa\"a",
+      "ba",
+      ",\na\nba ,ba\n\n \"",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nabb\r\"a\naa\"a,\rb\rbb\"\r\"\n  ab\"\"a ,,b,a\r\n\na b",
+    "expected": [
+      "abb",
+      "a\naaa",
+      "b",
+      "bb\"",
+      "ab\"a ,,b,a\n\na b"
+    ],
+    "rust": [
+      "abb",
+      "a\naaa",
+      "b",
+      "bb\"",
+      "ab\"a ,,b,a\n\na b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nba\"b\nb \",,b ,\n\n,a,,a,a a\r\r\r\r\rb\rb,\n\r\",\n\"b",
+    "expected": [
+      "ba\"b",
+      "b \"",
+      "b",
+      ",\nb"
+    ],
+    "rust": [
+      "ba\"b",
+      "b \"",
+      "b",
+      ",\nb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na,abab\n\nb,,\rb,\"\rb,\ra\r,\n,aa\r\rab\" ,, \" \"\"b",
+    "expected": [
+      "a",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na,a\na\r\r,a,\ra ,b   \"aab \n, ,a\rb\"\n,\"\r\n bab",
+    "expected": [
+      "a",
+      "b\""
+    ],
+    "rust": [
+      "a",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n a\"\r\" \"\"b\rba\n\"\n,\ra\n\r b \" \"b\r\r \ra, ,\ra\n ",
+    "expected": [
+      "a\"",
+      "\"b\nba",
+      "a",
+      "b \" \"b"
+    ],
+    "rust": [
+      "a\"",
+      "\"b\nba",
+      "a",
+      "b \" \"b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r,a\r,b \"\na,\"\rb\n\"b,\nb\na,b\r   a\ra\", \n\n a\r,",
+    "expected": [
+      "a",
+      "b",
+      "a\""
+    ],
+    "rust": [
+      "a",
+      "b",
+      "a\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\",\rb\"\",\n\n\",\",a\n\r,bb \"abab \"ab\"\r \" \"\"\n\rb\r",
+    "expected": [
+      ",\nb\",",
+      "\" \"\"",
+      "b"
+    ],
+    "rust": [
+      ",\nb\",",
+      "\" \"\"",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\"\"\"ba,aba  b\na\r\"\na\"b\r\r\"\nb,\"\rba\n \",a\n,aa",
+    "expected": [
+      "a\"\"\"ba",
+      "a",
+      "ab",
+      "b,",
+      "ba",
+      "\""
+    ],
+    "rust": [
+      "a\"\"\"ba",
+      "a",
+      "ab",
+      "b,",
+      "ba",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r,\r\"\"b\",b\"\r\n\n,b \n,ba\ra,    ab,\rb a\"  b,\"",
+    "expected": [
+      "b\"",
+      "a",
+      "b a\"  b"
+    ],
+    "rust": [
+      "b\"",
+      "a",
+      "b a\"  b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\"abaab , \na,bb, b\r\r\nb\"\"\nb,\n\"\n\"\nabb\raba\n",
+    "expected": [
+      "abb\naba"
+    ],
+    "rust": [
+      "abb\naba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nbb\"\na  b  \r\n\n\"\nba\",b a\"\n\"\r\n\r\",\"\n\"\" \r\" a ",
+    "expected": [
+      "bb\"",
+      "a  b",
+      "ba"
+    ],
+    "rust": [
+      "bb\"",
+      "a  b",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nabbb\r a b\naa\rb\n, \n\"\"aa b\r,\"\"  \n\"\"ba\rb\r b",
+    "expected": [
+      "abbb",
+      "a b",
+      "aa",
+      "b",
+      "aa b",
+      "ba"
+    ],
+    "rust": [
+      "abbb",
+      "a b",
+      "aa",
+      "b",
+      "aa b",
+      "ba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nbb\r,b\r,\rb,,b a,b ,b,, \na aa \r \r \r,\n ,  \n",
+    "expected": [
+      "bb",
+      "b",
+      "a aa"
+    ],
+    "rust": [
+      "bb",
+      "b",
+      "a aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\r\rb \nab\r \"\r\r \"b,bbba\r\ra, \r,b\n,ba,,ba \"a",
+    "expected": [
+      "b",
+      "ab",
+      "\"",
+      "\"b",
+      "a"
+    ],
+    "rust": [
+      "b",
+      "ab",
+      "\"",
+      "\"b",
+      "a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\n\r\raa \r\n\r a,\"\r\rab\"\"\"\n b \n\"\r\rab\"\n\r, \n ab",
+    "expected": [
+      "b",
+      "aa",
+      "a",
+      "ab"
+    ],
+    "rust": [
+      "b",
+      "aa",
+      "a",
+      "ab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\na\"\r,a \"\r \na b,a\" a\"\n\r\"\n,\",\n\n\na\n\r\r\"\n\r\r\"\"",
+    "expected": [
+      "a\"",
+      "a b",
+      ",",
+      "a",
+      "\""
+    ],
+    "rust": [
+      "a\"",
+      "a b",
+      ",",
+      "a",
+      "\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\n,b\"\r \"b\n \n,\r ,a ,\r\raa\"\"\rbb,\r, \nb\n\"\r\r,\n",
+    "expected": [
+      "a",
+      "\"b",
+      "aa\"\"",
+      "bb",
+      "b",
+      ","
+    ],
+    "rust": [
+      "a",
+      "\"b",
+      "aa\"\"",
+      "bb",
+      "b",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\"a\"\r bbb\na\r\r\na,a,\"b\n\r,\r\r\r\"ab\"  a\r\"\"\r\r\",",
+    "expected": [
+      "bbb",
+      "a",
+      ","
+    ],
+    "rust": [
+      "bbb",
+      "a",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"\" , \r\rb \nb\" a\nb\n\n\r\"\"\n\" \"\"aa a\nbb aab \"\n",
+    "expected": [
+      "b",
+      "b\" a",
+      "\"aa a\nbb aab"
+    ],
+    "rust": [
+      "b",
+      "b\" a",
+      "\"aa a\nbb aab"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\",b\n  \"baa\" b \n\r\nab\"a\"\"\rb,\n\"b\"\n\"\"b \"\r\n,\"",
+    "expected": [
+      ",b\n  baa\" b",
+      "ab\"a\"\"",
+      "b",
+      "b \""
+    ],
+    "rust": [
+      ",b\n  baa\" b",
+      "ab\"a\"\"",
+      "b",
+      "b \""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\nb\n,,b \rab \nb\na b\"baaab\"\" ,\nb\"\"\n\"a\n ab \"b",
+    "expected": [
+      "b",
+      "ab",
+      "a b\"baaab\"\"",
+      "b\"\"",
+      "a\n ab b"
+    ],
+    "rust": [
+      "b",
+      "ab",
+      "a b\"baaab\"\"",
+      "b\"\"",
+      "a\n ab b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\" a\n\n\n\"\rbbb\r\ra\"b  b ,,,,a\naa\r\n\r\ra\n\naba\n,",
+    "expected": [
+      "a",
+      "bbb",
+      "a\"b  b",
+      "aa",
+      "aba"
+    ],
+    "rust": [
+      "a",
+      "bbb",
+      "a\"b  b",
+      "aa",
+      "aba"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n,\n,  \nab  \ra\"\r\r\r\"aa\n\n ab\n \n\n,\n,\"\r\nb\n\n\ra\"",
+    "expected": [
+      "ab",
+      "a\"",
+      "aa\n\n ab\n \n\n,\n,",
+      "b"
+    ],
+    "rust": [
+      "ab",
+      "a\"",
+      "aa\n\n ab\n \n\n,\n,",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r\"\" ,ba ,\n\nb\"\rb b\r\",\n\" \",\n\r \" ,,\"\" aaa\rb",
+    "expected": [
+      "b\"",
+      "b b",
+      ",\n \"",
+      "\"",
+      "b"
+    ],
+    "rust": [
+      "b\"",
+      "b b",
+      ",\n \"",
+      "\"",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \n\n\",,\ra\n\raaa,\raa\r\"b\", \nb  ba a, \r\",\"a a",
+    "expected": [
+      ",,\na\n\naaa,\naa\nb\"",
+      "b  ba a",
+      ",a a"
+    ],
+    "rust": [
+      ",,\na\n\naaa,\naa\nb\"",
+      "b  ba a",
+      ",a a"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\nb\" \ra\r\"b ,  ,,a\ra\"a ,  \n,aa\r\ra\n\r\r\na,b,,",
+    "expected": [
+      "b\"",
+      "a",
+      "b ,  ,,a\naa"
+    ],
+    "rust": [
+      "b\"",
+      "a",
+      "b ,  ,,a\naa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n a,a\"aa\r \"\nb\n\"b,\r\n\"\"\", \"b bb\r,\n\"b\n\r\na,\"\"",
+    "expected": [
+      "a",
+      "\"",
+      "b",
+      "b,\n\"",
+      "b\n\na,\""
+    ],
+    "rust": [
+      "a",
+      "\"",
+      "b",
+      "b,\n\"",
+      "b\n\na,\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\"a\ra\nb\na\"b\n\r\"\rb\"\na ,a\ra,\"a\"b  b \"a\r,\rb\"\r",
+    "expected": [
+      "a\na\nb\nab",
+      "b",
+      "a",
+      "b\""
+    ],
+    "rust": [
+      "a\na\nb\nab",
+      "b",
+      "a",
+      "b\""
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\r  b\n\"abb\"\r,\n\r \r,,,ab\r\n, \n\n \"a b,b\n \n\r\",",
+    "expected": [
+      "b",
+      "abb",
+      "\"a b",
+      ","
+    ],
+    "rust": [
+      "b",
+      "abb",
+      "\"a b",
+      ","
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\"b\ra  \"\n\n b, \r\"\na\"\r\"aa\n\",b a, b, b\r \r\n\r",
+    "expected": [
+      "b\na",
+      "b",
+      "a",
+      "aa"
+    ],
+    "rust": [
+      "b\na",
+      "b",
+      "a",
+      "aa"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n b\ra\r\n b a\r\n\"\r\n,\nab aa\r\rb \"aabbb,\"\na\n\rb\"",
+    "expected": [
+      "b",
+      "a",
+      "b a",
+      ",\nab aa\n\nb aabbb"
+    ],
+    "rust": [
+      "b",
+      "a",
+      "b a",
+      ",\nab aa\n\nb aabbb"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\na\r,b\r,\"\rbb\r\n\"\n   \r,\r\"a\r\rbb\n\" \r\nb,\n\r\"\",a\r",
+    "expected": [
+      "a",
+      "a\n\nbb",
+      "b"
+    ],
+    "rust": [
+      "a",
+      "a\n\nbb",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n, \" \nb\"a\na,, ,   \r\"\r\" a\rb,,a\"\n\"\n,\rb,\",\n",
+    "expected": [
+      "b\"a",
+      "a",
+      "b",
+      ",\nb,"
+    ],
+    "rust": [
+      "b\"a",
+      "a",
+      "b",
+      ",\nb,"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\"aab\rbb\n  bb\"b \" \n\n\r\n\n,\rb ab\"b\rb,bab ,,",
+    "expected": [
+      "aab\nbb\n  bbb \"",
+      "b ab\"b",
+      "b"
+    ],
+    "rust": [
+      "aab\nbb\n  bbb \"",
+      "b ab\"b",
+      "b"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n\n\r\n\n,\n\n\n\nb,,a,ba\n,a\"\n \n\na\r\" , \n,,,a\n,\n\na",
+    "expected": [
+      "b",
+      "a",
+      ", \n,,,a\n,\n\na"
+    ],
+    "rust": [
+      "b",
+      "a",
+      ", \n,,,a\n,\n\na"
+    ]
+  },
+  {
+    "op": "csv",
+    "text": "email,name\n \r \"\"\nbb,\r,\" \r\r b b \r,a,a\n\"\ra \n\"\n\n,\nb,\n\n",
+    "expected": [
+      "\"\"",
+      "bb",
+      "a",
+      ",\nb,"
+    ],
+    "rust": [
+      "\"\"",
+      "bb",
+      "a",
+      ",\nb,"
+    ]
+  }
+]

@@ -28,6 +28,7 @@ pub struct MockNetwork {
     pub delay: Mutex<Duration>,
     pub mx_error: Mutex<Option<ProbeError>>,
     pub catchall_accept: Mutex<bool>,
+    pub catchall_reply: Mutex<Option<Reply>>,
 }
 impl MockNetwork {
     pub fn new() -> Arc<Self> {
@@ -76,6 +77,9 @@ impl Network for MockNetwork {
                 Some(250),
             );
             if catchall {
+                if let Some(reply) = self.catchall_reply.lock().unwrap().clone() {
+                    return Ok(reply);
+                }
                 let valid = *self.catchall_accept.lock().unwrap();
                 return Ok(Reply {
                     valid,

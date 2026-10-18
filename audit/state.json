@@ -1,0 +1,77 @@
+{
+  "concurrent_traces": [
+    {
+      "email": "one@example.com",
+      "verification_steps": [
+        {
+          "timestamp": "2026-10-18T05:47:10.777406",
+          "status": "info",
+          "action": "Verification start",
+          "details": "Email: one@example.com, Attempt: 1",
+          "code": null
+        },
+        {
+          "timestamp": "2026-10-18T05:47:10.777686",
+          "status": "success",
+          "action": "Syntax check",
+          "details": "Email 'one@example.com' syntax valid.",
+          "code": null
+        }
+      ]
+    },
+    {
+      "email": "two@example.com",
+      "verification_steps": [
+        {
+          "timestamp": "2026-10-18T05:47:10.777715",
+          "status": "info",
+          "action": "Verification start",
+          "details": "Email: two@example.com, Attempt: 1",
+          "code": null
+        },
+        {
+          "timestamp": "2026-10-18T05:47:10.777798",
+          "status": "success",
+          "action": "Syntax check",
+          "details": "Email 'two@example.com' syntax valid.",
+          "code": null
+        },
+        {
+          "timestamp": "2026-10-18T05:47:10.788002",
+          "status": "info",
+          "action": "Catch-all Test",
+          "details": "Skipped (config).",
+          "code": null
+        },
+        {
+          "timestamp": "2026-10-18T05:47:10.788020",
+          "status": "info",
+          "action": "RCPT TO",
+          "details": "one@example.com",
+          "code": null
+        },
+        {
+          "timestamp": "2026-10-18T05:47:10.788041",
+          "status": "info",
+          "action": "Catch-all Test",
+          "details": "Skipped (config).",
+          "code": null
+        },
+        {
+          "timestamp": "2026-10-18T05:47:10.788044",
+          "status": "info",
+          "action": "RCPT TO",
+          "details": "two@example.com",
+          "code": null
+        }
+      ]
+    }
+  ],
+  "incremental_rows": [
+    1,
+    3,
+    6
+  ],
+  "stopped_batch_results": 0,
+  "stopped_batch_status": "stopping"
+}

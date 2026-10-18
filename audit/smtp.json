@@ -1,0 +1,174 @@
+[
+  {
+    "phase": "EHLO",
+    "response": "500 No EHLO",
+    "python": {
+      "valid": true,
+      "status": "valid",
+      "message": "OK",
+      "code": 250
+    },
+    "rust": {
+      "valid": true,
+      "status": "valid",
+      "message": "OK",
+      "code": 250
+    }
+  },
+  {
+    "phase": "MAIL",
+    "response": "550 User unknown",
+    "python": {
+      "valid": false,
+      "status": "unknown_smtp_error",
+      "message": "550 User unknown",
+      "code": 550
+    },
+    "rust": {
+      "error": "mail_from_perm_fail",
+      "message": "MAIL FROM perm error: 550 User unknown",
+      "retryable": false
+    }
+  },
+  {
+    "phase": "MAIL",
+    "response": "450 Busy",
+    "python": {
+      "valid": false,
+      "status": "unknown_smtp_error",
+      "message": "450 Busy",
+      "code": 450
+    },
+    "rust": {
+      "error": "mail_from_temp_fail",
+      "message": "MAIL FROM temp error: 450 Busy",
+      "retryable": true
+    }
+  },
+  {
+    "phase": "MAIL",
+    "response": "251 Forwarded",
+    "python": {
+      "valid": false,
+      "status": "unknown_smtp_error",
+      "message": "251 Forwarded",
+      "code": 251
+    },
+    "rust": {
+      "valid": true,
+      "status": "valid",
+      "message": "OK",
+      "code": 250
+    }
+  },
+  {
+    "phase": "RCPT",
+    "response": "550 User unknown",
+    "python": {
+      "valid": false,
+      "status": "unknown_smtp_error",
+      "message": "550 User unknown",
+      "code": 550
+    },
+    "rust": {
+      "valid": false,
+      "status": "invalid_mailbox",
+      "message": "User unknown",
+      "code": 550
+    }
+  },
+  {
+    "phase": "RCPT",
+    "response": "450 Busy",
+    "python": {
+      "valid": false,
+      "status": "unknown_smtp_error",
+      "message": "450 Busy",
+      "code": 450
+    },
+    "rust": {
+      "error": "rcpt_to_temp_fail",
+      "message": "RCPT TO temp error: 450 Busy",
+      "retryable": true
+    }
+  },
+  {
+    "phase": "RCPT",
+    "response": "252 Accepted",
+    "python": {
+      "valid": false,
+      "status": "unknown_smtp_error",
+      "message": "252 Accepted",
+      "code": 252
+    },
+    "rust": {
+      "valid": true,
+      "status": "valid",
+      "message": "Accepted",
+      "code": 252
+    }
+  },
+  {
+    "phase": "RCPT",
+    "response": "554 Blocked",
+    "python": {
+      "valid": false,
+      "status": "unknown_smtp_error",
+      "message": "554 Blocked",
+      "code": 554
+    },
+    "rust": {
+      "valid": false,
+      "status": "invalid_mailbox",
+      "message": "Blocked",
+      "code": 554
+    }
+  },
+  {
+    "phase": "RSET",
+    "response": "500 Reset failed",
+    "python": {
+      "valid": true,
+      "status": "valid",
+      "message": "OK",
+      "code": 250
+    },
+    "rust": {
+      "valid": true,
+      "status": "valid",
+      "message": "OK",
+      "code": 250
+    }
+  },
+  {
+    "phase": "RCPT",
+    "response": "xyz Bad",
+    "python": {
+      "valid": false,
+      "status": "unknown_smtp_error",
+      "message": "-1 Malformed SMTP response line: xyz Bad\r\n",
+      "code": -1
+    },
+    "rust": {
+      "error": "unknown_smtp_error",
+      "message": "Malformed SMTP response",
+      "retryable": false
+    }
+  },
+  {
+    "phase": "EHLO",
+    "response": "250-SMTPUTF8\r\n250 SIZE 100",
+    "python": {
+      "valid": true,
+      "status": "valid",
+      "message": "OK",
+      "code": 250
+    },
+    "rust": {
+      "valid": true,
+      "status": "valid",
+      "message": "OK",
+      "code": 250
+    }
+  }
+]
