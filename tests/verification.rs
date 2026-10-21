@@ -226,3 +226,64 @@ async fn unicode_blocklist_is_checked_before_dns() {
     );
     assert_eq!(mock.mx_calls.load(Ordering::SeqCst), 0);
 }
+
+#[tokio::test]
+async fn concurrent_addresses_of_one_domain_share_one_catchall_test_and_mx_lookup() {
+    let mock = MockNetwork::new();
+    *mock.delay.lock().unwrap() = Duration::from_millis(10);
+    let v = verifier(mock.clone(), json!({"catchall_test":true}));
+    let emails: Vec<String> = (0..8).map(|i| format!("u{i}@corp.example")).collect();
+    v.batch(&emails).await;
+    assert_eq!(mock.calls.lock().unwrap().iter().filter(|c| c.3).count(), 2);
+    assert_eq!(mock.mx_calls.load(Ordering::SeqCst), 1);
+}
+#[tokio::test]
+async fn catchall_without_a_single_answer_is_not_cached() {
+    let mock = MockNetwork::new();
+    *mock.catchall_down.lock().unwrap() = true;
+    let v = verifier(mock.clone(), json!({"catchall_test":true}));
+    assert!(!v.verify("a@example.com").await.is_catchall);
+    assert!(!v.verify("b@example.com").await.is_catchall);
+    assert_eq!(mock.calls.lock().unwrap().iter().filter(|c| c.3).count(), 4);
+}
+#[tokio::test]
+async fn idn_domain_is_sent_as_punycode() {
+    let mock = MockNetwork::new();
+    let v = verifier(mock.clone(), json!({}));
+    let r = v.verify("info@háčky.cz").await;
+    assert_eq!(r.is_valid, Some(true));
+    let sent = mock.calls.lock().unwrap()[0].2.clone();
+    assert!(sent.is_ascii() && sent.starts_with("info@xn--"), "{sent}");
+}
+#[tokio::test]
+async fn replies_without_a_verdict_are_unknown_not_invalid() {
+    for status in [
+        "rcpt_policy_reject",
+        "rcpt_temp_reject",
+        "smtputf8_unsupported",
+    ] {
+        let mock = MockNetwork::new();
+        mock.replies.lock().unwrap().push_back(Ok(Reply {
+            valid: false,
+            status: status.into(),
+            message: "x".into(),
+            code: 550,
+        }));
+        let v = verifier(mock, json!({}));
+        let r = v.verify("a@example.com").await;
+        assert_eq!((r.is_valid, r.status_code.as_str()), (None, status));
+    }
+}
+#[tokio::test]
+async fn connection_failure_falls_through_to_the_next_address_of_the_host() {
+    let mock = MockNetwork::new();
+    *mock.ips.lock().unwrap() = vec!["8.8.8.8".parse().unwrap(), "8.8.4.4".parse().unwrap()];
+    mock.replies
+        .lock()
+        .unwrap()
+        .push_back(Err(ProbeError::new("smtp_timeout", "Timeout")));
+    let v = verifier(mock.clone(), json!({}));
+    assert_eq!(v.verify("a@example.com").await.is_valid, Some(true));
+    let calls = mock.calls.lock().unwrap();
+    assert_eq!((calls.len(), calls[0].0 != calls[1].0), (2, true));
+}

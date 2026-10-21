@@ -121,6 +121,12 @@ impl Network for RealNetwork {
                 })
                 .collect();
             records.sort();
+            if records.len() == 1 && records[0].1.is_empty() {
+                return Err(ProbeError::new(
+                    "null_mx",
+                    format!("{domain} does not accept mail (null MX)."),
+                ));
+            }
             if records.is_empty() {
                 return Err(ProbeError::new("dns_resolver_failure",format!("Unexpected error during DNS MX query for {domain}: No MX records found for {domain}.")));
             }
@@ -130,17 +136,29 @@ impl Network for RealNetwork {
     fn ips<'a>(&'a self, host: &'a str) -> NetFuture<'a, Vec<IpAddr>> {
         Box::pin(async move {
             let mut ips = vec![];
-            if let Ok(answer) = self.resolver.ipv4_lookup(host).await {
-                ips.extend(answer.answers().iter().filter_map(|r| match &r.data {
+            let mut failure = None;
+            match self.resolver.ipv4_lookup(host).await {
+                Ok(answer) => ips.extend(answer.answers().iter().filter_map(|r| match &r.data {
                     RData::A(a) => Some(IpAddr::V4(a.0)),
                     _ => None,
-                }));
+                })),
+                Err(e) if !e.is_no_records_found() => failure = Some(e.to_string()),
+                Err(_) => {}
             }
-            if let Ok(answer) = self.resolver.ipv6_lookup(host).await {
-                ips.extend(answer.answers().iter().filter_map(|r| match &r.data {
+            match self.resolver.ipv6_lookup(host).await {
+                Ok(answer) => ips.extend(answer.answers().iter().filter_map(|r| match &r.data {
                     RData::AAAA(a) => Some(IpAddr::V6(a.0)),
                     _ => None,
-                }));
+                })),
+                Err(e) if !e.is_no_records_found() => failure = Some(e.to_string()),
+                Err(_) => {}
+            }
+            // a resolver failure is not an answer: "no address" would blame the MX host
+            if let (true, Some(failure)) = (ips.is_empty(), failure) {
+                return Err(ProbeError::new(
+                    "dns_resolver_failure",
+                    format!("DNS error (A/AAAA) for {host}: {failure}"),
+                ));
             }
             Ok(ips)
         })
@@ -284,12 +302,8 @@ pub async fn smtp_session(
             "SMTP input must not contain line breaks",
         ));
     }
-    if !email.is_ascii() {
-        return Err(ProbeError::new(
-            "smtp_encoding_error",
-            "SMTPUTF8 envelopes are not supported",
-        ));
-    }
+    // a non-ASCII local part needs SMTPUTF8; the domain arrives as punycode
+    let utf8 = !email.is_ascii();
     let stream = tokio::time::timeout(timeout, TcpStream::connect(SocketAddr::new(ip, port)))
         .await
         .map_err(|_| ProbeError::new("smtp_timeout", format!("Timeout on {ip}:{port}")))?
@@ -305,15 +319,19 @@ pub async fn smtp_session(
         if !success(code) && code!=220 {(code,message)=session.command(&format!("HELO {}",settings.helo_hostname)).await?;}
         trace(steps,"EHLO/HELO",code,&message);
         if !success(code) && code!=220 {return Err(ProbeError::new("ehlo_failed",format!("EHLO/HELO failed: {code} {message}")));}
+        if utf8 && !message.lines().skip(1).any(|l|l.trim().eq_ignore_ascii_case("SMTPUTF8")) {
+            return Ok(Reply{valid:false,status:"smtputf8_unsupported".into(),message:"The server does not advertise SMTPUTF8, so a non-ASCII address cannot be checked.".into(),code:0});
+        }
+        let parameter=if utf8 {" SMTPUTF8"} else {""};
         let sender=crate::classify::choose_sender(domain,&settings.senders,&settings.default_sender,settings.sender_override.as_deref());
         Step::add(steps,"info","MAIL FROM",format!("Sender: {sender}"),None);
-        (code,message)=session.command(&format!("MAIL FROM:<{sender}>" )).await?;
+        (code,message)=session.command(&format!("MAIL FROM:<{sender}>{parameter}")).await?;
         trace(steps,"MAIL FROM",code,&message);
         if !catchall && crate::classify::is_reputation_error(code,&message) {
             Step::add(steps,"warning","MAIL FROM","Reputation-based rejection detected. Will retry with different sender if available.",None);
             if let Some((_,alt))=settings.ordered_senders.iter().find(|(d,s)|d!=domain&&s!=&sender) {
                 Step::add(steps,"info","MAIL FROM",format!("Retrying with alternative sender: {alt}"),None);
-                (code,message)=session.command(&format!("MAIL FROM:<{alt}>" )).await?;
+                (code,message)=session.command(&format!("MAIL FROM:<{alt}>{parameter}")).await?;
                 trace(steps,"MAIL FROM",code,&message);
             }
         }
@@ -323,7 +341,9 @@ pub async fn smtp_session(
         trace(steps,"RCPT TO",code,&message);
         if !catchall {let _=session.command("RSET").await;}
         if [421,450,451,452].contains(&code) {return Err(ProbeError{status:"rcpt_to_temp_fail".into(),message:format!("RCPT TO temp error: {code} {message}"),retryable:true});}
-        Ok(Reply{valid:success(code),status:if success(code){"valid"}else{"invalid_mailbox"}.into(),message,code})
+        // only a plain mailbox refusal is a verdict; a 4xx or a policy refusal says nothing about the mailbox
+        let status=if success(code){"valid"}else if (400..500).contains(&code){"rcpt_temp_reject"}else if crate::classify::is_rcpt_policy_rejection(code,&message){"rcpt_policy_reject"}else{"invalid_mailbox"};
+        Ok(Reply{valid:success(code),status:status.into(),message,code})
     }.await;
     let _ = session.command("QUIT").await;
     let _ = session.io.get_mut().shutdown().await;

@@ -29,6 +29,7 @@ pub struct MockNetwork {
     pub mx_error: Mutex<Option<ProbeError>>,
     pub catchall_accept: Mutex<bool>,
     pub catchall_reply: Mutex<Option<Reply>>,
+    pub catchall_down: Mutex<bool>,
 }
 impl MockNetwork {
     pub fn new() -> Arc<Self> {
@@ -77,6 +78,9 @@ impl Network for MockNetwork {
                 Some(250),
             );
             if catchall {
+                if *self.catchall_down.lock().unwrap() {
+                    return Err(ProbeError::new("smtp_connect_error", "down"));
+                }
                 if let Some(reply) = self.catchall_reply.lock().unwrap().clone() {
                     return Ok(reply);
                 }

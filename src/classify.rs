@@ -41,6 +41,37 @@ pub fn is_reputation_error(code: u16, message: &str) -> bool {
         .iter()
         .any(|p| message.to_lowercase().contains(p))
 }
+/// Statuses of a reply that says nothing about the mailbox itself.
+pub fn is_unknown_status(status: &str) -> bool {
+    [
+        "smtputf8_unsupported",
+        "rcpt_temp_reject",
+        "rcpt_policy_reject",
+    ]
+    .contains(&status)
+}
+/// A permanent RCPT refusal caused by policy or reputation (5.7.x, blocklists), not by the mailbox.
+pub fn is_rcpt_policy_rejection(code: u16, message: &str) -> bool {
+    if !(500..600).contains(&code) {
+        return false;
+    }
+    let lower = message.to_lowercase();
+    let status = |prefix: &str| lower.split_whitespace().any(|t| t.starts_with(prefix));
+    if status("5.1.") {
+        return false;
+    }
+    status("5.7.")
+        || [
+            "reputation",
+            "blocked",
+            "blacklist",
+            "blocklist",
+            "spamhaus",
+            "spam",
+        ]
+        .iter()
+        .any(|p| lower.contains(p))
+}
 pub fn is_disposable_domain(domain: &str, domains: &HashSet<String>) -> bool {
     let domain = domain.to_lowercase();
     let parts: Vec<_> = domain.split('.').collect();
@@ -114,10 +145,26 @@ pub fn is_blocked_ip(value: &str) -> bool {
                 || n >> 96 == 0x20010db8
                 || n >> 32 == 0
                 || n >> 125 != 1
-                || n >> 100 == 0x200100
+                || (n >> 105 == 0x2001 << 7 && !protocol_exception(n))
                 || n >> 112 == 0x2002
         }
     }
+}
+
+/// Globally reachable parts of 2001::/23, the IETF protocol assignments block.
+fn protocol_exception(n: u128) -> bool {
+    use std::net::Ipv6Addr;
+    [
+        (Ipv6Addr::new(0x2001, 1, 0, 0, 0, 0, 0, 1), 128),
+        (Ipv6Addr::new(0x2001, 1, 0, 0, 0, 0, 0, 2), 128),
+        (Ipv6Addr::new(0x2001, 1, 0, 0, 0, 0, 0, 3), 128),
+        (Ipv6Addr::new(0x2001, 3, 0, 0, 0, 0, 0, 0), 32),
+        (Ipv6Addr::new(0x2001, 4, 0x112, 0, 0, 0, 0, 0), 48),
+        (Ipv6Addr::new(0x2001, 0x20, 0, 0, 0, 0, 0, 0), 28),
+        (Ipv6Addr::new(0x2001, 0x30, 0, 0, 0, 0, 0, 0), 28),
+    ]
+    .iter()
+    .any(|(net, bits)| n >> (128 - bits) == u128::from(*net) >> (128 - bits))
 }
 
 pub fn checked_ips(host: &str, ips: Vec<IpAddr>) -> Result<Vec<IpAddr>, String> {

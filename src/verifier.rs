@@ -15,7 +15,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, OnceCell};
 #[derive(Clone, Debug)]
 pub struct Settings {
     pub smtp_timeout: f64,
@@ -229,10 +229,12 @@ impl VerificationResult {
         self.message = message.into();
     }
 }
+type MxRecords = Vec<(u16, String)>;
 #[derive(Default)]
 pub struct RunCache {
-    mx: Mutex<HashMap<String, Vec<(u16, String)>>>,
-    catchall: Mutex<HashMap<String, bool>>,
+    // one cell per domain: concurrent addresses of a domain wait for a single lookup
+    mx: Mutex<HashMap<String, Arc<OnceCell<MxRecords>>>>,
+    catchall: Mutex<HashMap<String, Arc<OnceCell<bool>>>>,
 }
 pub struct Verifier {
     pub settings: Settings,
@@ -317,16 +319,28 @@ impl Verifier {
             );
             ProbeError::new("mx_host_blocked", message)
         })?;
-        Step::add(
-            steps,
-            "info",
-            &format!("SMTP Connect (Port {port})"),
-            format!("Attempting connect to {host} (IP: {})", ips[0]),
-            None,
-        );
-        self.network
-            .smtp(ips[0], port, email, domain, &self.settings, steps, catchall)
-            .await
+        let mut last = None;
+        for ip in ips.iter().take(4) {
+            Step::add(
+                steps,
+                "info",
+                &format!("SMTP Connect (Port {port})"),
+                format!("Attempting connect to {host} (IP: {ip})"),
+                None,
+            );
+            match self
+                .network
+                .smtp(*ip, port, email, domain, &self.settings, steps, catchall)
+                .await
+            {
+                // the next address of the same host may still answer
+                Err(e) if ["smtp_timeout", "smtp_connect_error"].contains(&e.status.as_str()) => {
+                    last = Some(e)
+                }
+                other => return other,
+            }
+        }
+        Err(last.expect("at least one address"))
     }
     async fn catchall(&self, domain: &str, mx: &[(u16, String)], steps: &mut Vec<Step>) -> bool {
         const FREEMAIL: &[&str] = &[
@@ -367,19 +381,47 @@ impl Verifier {
             );
             return false;
         }
-        if let Some(value) = self.cache.catchall.lock().await.get(domain).copied() {
-            Step::add(
-                steps,
-                "info",
-                "Catch-all Test (Cache)",
-                format!(
-                    "Result for '{domain}' from cache: {}",
-                    if value { "True" } else { "False" }
-                ),
-                None,
-            );
-            return value;
+        let cell = self
+            .cache
+            .catchall
+            .lock()
+            .await
+            .entry(domain.to_string())
+            .or_default()
+            .clone();
+        let mut ran = false;
+        let tested = cell
+            .get_or_try_init(|| async {
+                ran = true;
+                self.catchall_test(domain, mx, steps).await
+            })
+            .await;
+        match tested {
+            Ok(value) => {
+                if !ran {
+                    Step::add(
+                        steps,
+                        "info",
+                        "Catch-all Test (Cache)",
+                        format!(
+                            "Result for '{domain}' from cache: {}",
+                            if *value { "True" } else { "False" }
+                        ),
+                        None,
+                    );
+                }
+                *value
+            }
+            // nothing answered, so nothing is known and nothing is cached
+            Err(()) => false,
         }
+    }
+    async fn catchall_test(
+        &self,
+        domain: &str,
+        mx: &[(u16, String)],
+        steps: &mut Vec<Step>,
+    ) -> Result<bool, ()> {
         Step::add(
             steps,
             "info",
@@ -389,16 +431,18 @@ impl Verifier {
         );
         let mut successful = 0;
         let mut inconclusive = 0;
+        let mut answered = 0_usize;
         let ts = chrono::Local::now().timestamp();
         for i in 0..2 {
             let email = format!("catchall-probe-{ts}-{}-{i}@{domain}", rand::random::<u16>());
             let mut accepted = false;
             for (_, host) in mx {
                 let mut probe_steps = vec![];
-                match self
+                let outcome = self
                     .probe(&email, domain, host, 25, &mut probe_steps, true)
-                    .await
-                {
+                    .await;
+                answered += usize::from(outcome.is_ok());
+                match outcome {
                     Ok(r)
                         if is_microsoft(domain, host)
                             && r.code == 550
@@ -446,12 +490,10 @@ impl Verifier {
                 None,
             );
         }
-        self.cache
-            .catchall
-            .lock()
-            .await
-            .insert(domain.into(), result);
-        result
+        if answered == 0 {
+            return Err(());
+        }
+        Ok(result)
     }
     pub async fn verify(&self, email: &str) -> VerificationResult {
         let mut attempt = 1;
@@ -480,8 +522,16 @@ impl Verifier {
                     return r;
                 }
             };
+            // DNS and SMTP speak punycode; the local part stays as written
+            let unicode = domain.clone();
+            let domain = idna::domain_to_ascii(&domain).unwrap_or(domain);
+            let rcpt = match email.rsplit_once('@') {
+                Some((local, _)) => format!("{local}@{domain}"),
+                None => email.to_string(),
+            };
             if self.settings.check_disposable
-                && classify::is_disposable_domain(&domain, &self.disposable)
+                && (classify::is_disposable_domain(&unicode, &self.disposable)
+                    || classify::is_disposable_domain(&domain, &self.disposable))
             {
                 Step::add(
                     &mut r.verification_steps,
@@ -500,49 +550,62 @@ impl Verifier {
                 format!("Getting MX for {domain}"),
                 None,
             );
-            let cached = self.cache.mx.lock().await.get(&domain).cloned();
-            let mx = if let Some(mx) = cached {
-                Step::add(
-                    &mut r.verification_steps,
-                    "info",
-                    "DNS MX query",
-                    format!("Using cached MX records for {domain}"),
-                    None,
-                );
-                mx
-            } else {
-                match self.network.mx(&domain).await {
-                    Ok(mut mx) if !mx.is_empty() => {
-                        mx.sort();
-                        self.cache
-                            .mx
-                            .lock()
-                            .await
-                            .insert(domain.clone(), mx.clone());
-                        Step::add(
-                            &mut r.verification_steps,
-                            "success",
-                            "DNS MX query",
-                            format!("Found MX: {mx:?}"),
-                            None,
-                        );
-                        mx
+            let cell = self
+                .cache
+                .mx
+                .lock()
+                .await
+                .entry(domain.clone())
+                .or_default()
+                .clone();
+            let mut looked_up = false;
+            let found = cell
+                .get_or_try_init(|| async {
+                    looked_up = true;
+                    match self.network.mx(&domain).await {
+                        Ok(mut mx) if !mx.is_empty() => {
+                            mx.sort();
+                            Ok(mx)
+                        }
+                        Ok(_) => Err(ProbeError::new(
+                            "dns_resolver_failure",
+                            format!("Unexpected error during DNS MX query for {domain}: No MX records found for {domain}."),
+                        )),
+                        Err(e) => Err(e),
                     }
-                    Ok(_) => {
-                        r.outcome(Some(false),"dns_resolver_failure",&format!("Unexpected error during DNS MX query for {domain}: No MX records found for {domain}."));
-                        return r;
-                    }
-                    Err(e) => {
-                        Step::add(
-                            &mut r.verification_steps,
-                            "error",
-                            "DNS MX query",
-                            &e.message,
-                            None,
-                        );
-                        r.outcome(Some(false), &e.status, &e.message);
-                        return r;
-                    }
+                })
+                .await;
+            let mx = match found {
+                Ok(mx) if looked_up => {
+                    Step::add(
+                        &mut r.verification_steps,
+                        "success",
+                        "DNS MX query",
+                        format!("Found MX: {mx:?}"),
+                        None,
+                    );
+                    mx.clone()
+                }
+                Ok(mx) => {
+                    Step::add(
+                        &mut r.verification_steps,
+                        "info",
+                        "DNS MX query",
+                        format!("Using cached MX records for {domain}"),
+                        None,
+                    );
+                    mx.clone()
+                }
+                Err(e) => {
+                    Step::add(
+                        &mut r.verification_steps,
+                        "error",
+                        "DNS MX query",
+                        &e.message,
+                        None,
+                    );
+                    r.outcome(Some(false), &e.status, &e.message);
+                    return r;
                 }
             };
             r.is_catchall = self.catchall(&domain, &mx, &mut r.verification_steps).await;
@@ -550,7 +613,7 @@ impl Verifier {
                 r.mx_record = Some(host.clone());
                 match self
                     .probe(
-                        email,
+                        &rcpt,
                         &domain,
                         host,
                         self.settings.connect_port,
@@ -561,7 +624,14 @@ impl Verifier {
                 {
                     Ok(reply) => {
                         r.smtp_code_internal = Some(reply.code);
-                        r.outcome(Some(reply.valid), &reply.status, &reply.message);
+                        let verdict = if reply.valid {
+                            Some(true)
+                        } else if classify::is_unknown_status(&reply.status) {
+                            None
+                        } else {
+                            Some(false)
+                        };
+                        r.outcome(verdict, &reply.status, &reply.message);
                         return r;
                     }
                     Err(e) => {

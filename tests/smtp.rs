@@ -384,3 +384,79 @@ async fn saved_python_smtp_dialogues_keep_documented_verdicts() {
         assert_eq!(actual, case["rust"], "{case}");
     }
 }
+
+#[tokio::test]
+async fn policy_and_unusual_temporary_recipient_refusals_carry_no_verdict() {
+    for (reply, status) in [
+        (
+            "550 5.7.1 Client host blocked using zen.spamhaus.org\r\n",
+            "rcpt_policy_reject",
+        ),
+        ("553 5.7.1 Relaying denied\r\n", "rcpt_policy_reject"),
+        ("455 4.5.5 Try later\r\n", "rcpt_temp_reject"),
+        ("550 5.1.1 User unknown\r\n", "invalid_mailbox"),
+    ] {
+        let (port, task) = server(vec![
+            ("EHLO probe.example.com", "250 mock\r\n"),
+            ("MAIL FROM:<sender@example.com>", "250 OK\r\n"),
+            ("RCPT TO:<a@example.com>", reply),
+            ("RSET", "250 OK\r\n"),
+            ("QUIT", "221 Bye\r\n"),
+        ]);
+        let r = smtp_session(
+            "127.0.0.1".parse().unwrap(),
+            port,
+            "a@example.com",
+            "example.com",
+            &settings(),
+            &mut vec![],
+            false,
+        )
+        .await
+        .unwrap();
+        assert!(!r.valid);
+        assert_eq!(r.status, status, "{reply}");
+        task.join().unwrap();
+    }
+}
+#[tokio::test]
+async fn non_ascii_local_part_is_sent_only_when_the_server_advertises_smtputf8() {
+    let (port, task) = server(vec![
+        ("EHLO probe.example.com", "250-mock\r\n250 SMTPUTF8\r\n"),
+        ("MAIL FROM:<sender@example.com> SMTPUTF8", "250 OK\r\n"),
+        ("RCPT TO:<řehoř@example.com>", "250 Accepted\r\n"),
+        ("RSET", "250 OK\r\n"),
+        ("QUIT", "221 Bye\r\n"),
+    ]);
+    let r = smtp_session(
+        "127.0.0.1".parse().unwrap(),
+        port,
+        "řehoř@example.com",
+        "example.com",
+        &settings(),
+        &mut vec![],
+        false,
+    )
+    .await
+    .unwrap();
+    assert!(r.valid);
+    task.join().unwrap();
+    let (port, task) = server(vec![
+        ("EHLO probe.example.com", "250-mock\r\n250 PIPELINING\r\n"),
+        ("QUIT", "221 Bye\r\n"),
+    ]);
+    let r = smtp_session(
+        "127.0.0.1".parse().unwrap(),
+        port,
+        "řehoř@example.com",
+        "example.com",
+        &settings(),
+        &mut vec![],
+        false,
+    )
+    .await
+    .unwrap();
+    assert!(!r.valid);
+    assert_eq!(r.status, "smtputf8_unsupported");
+    task.join().unwrap();
+}

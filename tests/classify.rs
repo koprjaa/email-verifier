@@ -281,3 +281,30 @@ fn ipv4_mapped_and_reserved_ipv6_are_refused() {
     }
     assert!(!is_blocked_ip("::ffff:8.8.8.8"));
 }
+
+#[test]
+fn ietf_protocol_block_is_not_routable_except_its_global_parts() {
+    for ip in ["2001::1", "2001:2::1", "2001:10::1", "2001:1::4"] {
+        assert!(is_blocked_ip(ip), "{ip}");
+    }
+    for ip in ["2001:1::1", "2001:3::1", "2001:4:112::1", "2001:200::1"] {
+        assert!(!is_blocked_ip(ip), "{ip}");
+    }
+}
+#[test]
+fn policy_refusals_are_not_mailbox_verdicts() {
+    use email_verifier::classify::{is_rcpt_policy_rejection as policy, is_unknown_status};
+    assert!(policy(
+        550,
+        "5.7.1 Service unavailable; Client host [1.2.3.4] blocked using zen.spamhaus.org"
+    ));
+    assert!(policy(554, "5.7.1 Message rejected as spam"));
+    assert!(!policy(550, "5.1.1 User unknown"));
+    assert!(!policy(
+        550,
+        "5.1.1 Recipient address rejected: User unknown in virtual mailbox table"
+    ));
+    assert!(!policy(550, "No such user here"));
+    assert!(!policy(450, "5.7.1 greylisted"));
+    assert!(is_unknown_status("rcpt_policy_reject") && !is_unknown_status("invalid_mailbox"));
+}
