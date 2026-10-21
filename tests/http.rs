@@ -261,12 +261,6 @@ async fn upload_errors_and_missing_columns() {
     assert_eq!(upload(&r, "/load_csv", "wrong.txt", b"a,b").await.0, 400);
     assert_eq!(upload(&r, "/load_csv", "empty.csv", b"").await.0, 500);
     assert_eq!(
-        upload(&r, "/load_csv", "single.csv", b"email\na@example.com")
-            .await
-            .0,
-        400
-    );
-    assert_eq!(
         upload(&r, "/load_txt", "empty.txt", b"no addresses")
             .await
             .0,
@@ -287,6 +281,15 @@ async fn upload_errors_and_missing_columns() {
             .await
             .0,
         500
+    );
+}
+#[tokio::test]
+async fn single_column_csv_is_accepted() {
+    let (_dir, _app, r) = app(None, json!({}));
+    let (status, body) = upload(&r, "/load_csv", "single.csv", b"email\na@example.com").await;
+    assert_eq!(
+        (status, body["columns"].clone()),
+        (StatusCode::OK, json!(["email"]))
     );
 }
 #[tokio::test]

@@ -35,7 +35,8 @@ fn encoding_detection() {
 #[test]
 fn delimiter_priority_and_single_column_behavior() {
     assert_eq!(csv_headers("email;name,other\na;b,c\n").unwrap().0, b',');
-    assert!(csv_headers("email\na@example.com\n").is_err());
+    assert_eq!(csv_headers("email\na@example.com\n").unwrap().1, ["email"]);
+    assert!(csv_headers("").is_err());
     for separator in [',', ';', '\t', '|'] {
         assert_eq!(
             csv_headers(&format!("a{separator}b\n")).unwrap().1,

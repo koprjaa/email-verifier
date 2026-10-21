@@ -49,6 +49,8 @@ pub fn csv_headers(text: &str) -> Result<(u8, Vec<String>), String> {
         .iter()
         .copied()
         .find(|c| line.contains(*c as char))
+        // a single column has no delimiter; the comma is as good as any
+        .or((!line.is_empty()).then_some(b','))
         .ok_or("Could not read CSV headers. Check the encoding and column delimiter.")?;
     let text = normalized_csv(text);
     let mut reader = csv::ReaderBuilder::new()
