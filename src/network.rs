@@ -6,8 +6,9 @@
 
 use crate::verifier::{Settings, Step};
 use hickory_resolver::{
-    config::{NameServerConfig, Protocol, ResolverConfig, ResolverOpts},
-    TokioAsyncResolver,
+    config::{NameServerConfig, ResolverConfig, ResolverOpts},
+    proto::rr::RData,
+    TokioResolver,
 };
 use std::{
     future::Future,
@@ -60,7 +61,7 @@ pub trait Network: Send + Sync {
     ) -> NetFuture<'a, Reply>;
 }
 pub struct RealNetwork {
-    resolver: TokioAsyncResolver,
+    resolver: TokioResolver,
     semaphore: Arc<Semaphore>,
 }
 impl RealNetwork {
@@ -68,16 +69,14 @@ impl RealNetwork {
         let (mut config, mut opts) = hickory_resolver::system_conf::read_system_conf()
             .unwrap_or_else(|_| (ResolverConfig::default(), ResolverOpts::default()));
         if !settings.dns_servers.is_empty() {
-            config = ResolverConfig::new();
+            let mut servers = Vec::new();
             for server in &settings.dns_servers {
                 let ip = server
                     .parse()
                     .map_err(|_| format!("Invalid DNS server: {server}"))?;
-                for protocol in [Protocol::Udp, Protocol::Tcp] {
-                    config
-                        .add_name_server(NameServerConfig::new(SocketAddr::new(ip, 53), protocol));
-                }
+                servers.push(NameServerConfig::udp_and_tcp(ip));
             }
+            config = ResolverConfig::from_name_servers(servers);
         }
         opts.timeout =
             Duration::try_from_secs_f64(settings.dns_timeout).map_err(|_| "Invalid DNS timeout")?;
@@ -89,7 +88,14 @@ impl RealNetwork {
         opts.attempts = settings.dns_tries;
         opts.cache_size = 0;
         Ok(Self {
-            resolver: TokioAsyncResolver::tokio(config, opts),
+            resolver: {
+                let mut builder = TokioResolver::builder_with_config(
+                    config,
+                    hickory_resolver::net::runtime::TokioRuntimeProvider::default(),
+                );
+                *builder.options_mut() = opts;
+                builder.build().map_err(|e| format!("DNS resolver: {e}"))?
+            },
             semaphore: Arc::new(Semaphore::new(settings.max_concurrent_domains)),
         })
     }
@@ -104,12 +110,14 @@ impl Network for RealNetwork {
                 )
             })?;
             let mut records: Vec<_> = response
+                .answers()
                 .iter()
-                .map(|r| {
-                    (
-                        r.preference(),
-                        r.exchange().to_utf8().trim_end_matches('.').to_string(),
-                    )
+                .filter_map(|r| match &r.data {
+                    RData::MX(mx) => Some((
+                        mx.preference,
+                        mx.exchange.to_utf8().trim_end_matches('.').to_string(),
+                    )),
+                    _ => None,
                 })
                 .collect();
             records.sort();
@@ -123,10 +131,16 @@ impl Network for RealNetwork {
         Box::pin(async move {
             let mut ips = vec![];
             if let Ok(answer) = self.resolver.ipv4_lookup(host).await {
-                ips.extend(answer.iter().map(|a| IpAddr::V4(a.0)));
+                ips.extend(answer.answers().iter().filter_map(|r| match &r.data {
+                    RData::A(a) => Some(IpAddr::V4(a.0)),
+                    _ => None,
+                }));
             }
             if let Ok(answer) = self.resolver.ipv6_lookup(host).await {
-                ips.extend(answer.iter().map(|a| IpAddr::V6(a.0)));
+                ips.extend(answer.answers().iter().filter_map(|r| match &r.data {
+                    RData::AAAA(a) => Some(IpAddr::V6(a.0)),
+                    _ => None,
+                }));
             }
             Ok(ips)
         })
