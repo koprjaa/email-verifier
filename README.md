@@ -3,7 +3,7 @@
 Checks whether email addresses exist, one by one or in bulk.
 
 [![Rust CI](https://github.com/koprjaa/email-verifier/actions/workflows/ci.yml/badge.svg)](https://github.com/koprjaa/email-verifier/actions/workflows/ci.yml)
-[![MIT license](https://img.shields.io/badge/license-MIT-A31F34?style=flat-square)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-A31F34?style=flat-square)](LICENSE)
 
 ## What it does
 
@@ -47,4 +47,4 @@ Paths are relative to the working directory: `config.json`, `data/disposable_dom
 
 ## License
 
-[MIT](LICENSE)
+[AGPL-3.0-or-later](LICENSE)

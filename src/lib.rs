@@ -2,8 +2,7 @@
 // File: lib.rs
 // Description: Public modules for email verification and the web application.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 pub mod classify;
 pub mod files;
 pub mod network;

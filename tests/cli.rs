@@ -2,8 +2,7 @@
 // File: tests/cli.rs
 // Description: Process-level startup, environment and exit-code checks without external network.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use std::{
     io::{BufRead, BufReader},
     process::{Command, Stdio},

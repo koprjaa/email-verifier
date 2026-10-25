@@ -2,8 +2,7 @@
 // File: web.rs
 // Description: HTTP endpoints, synchronized run state, bulk jobs and file lifecycle.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use crate::{
     files,
     verifier::{VerificationResult, Verifier},

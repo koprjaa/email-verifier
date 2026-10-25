@@ -2,8 +2,7 @@
 // File: tests/verification.rs
 // Description: Offline pipeline tests, retry outcomes, cache behavior and concurrency isolation.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 mod support;
 use email_verifier::{
     network::{ProbeError, Reply},

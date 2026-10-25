@@ -2,8 +2,7 @@
 // File: tests/smtp.rs
 // Description: Real SMTP protocol exercised against loopback fixtures only.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use email_verifier::{network::smtp_session, verifier::Settings};
 use serde_json::json;
 use std::{

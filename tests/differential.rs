@@ -2,7 +2,7 @@
 // File: tests/differential.rs
 // Description: Replay Python reference outputs without requiring the replaced runtime.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
+// License: AGPL-3.0-or-later
 use email_verifier::{files, verifier::validate_syntax};
 use serde_json::{json, Value};
 #[test]

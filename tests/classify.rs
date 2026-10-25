@@ -2,8 +2,7 @@
 // File: tests/classify.rs
 // Description: Equivalents of every original classification and shipped-list test.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use email_verifier::classify::*;
 use std::collections::{HashMap, HashSet};
 fn disposable() -> HashSet<String> {

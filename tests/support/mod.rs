@@ -2,8 +2,7 @@
 // File: tests/support/mod.rs
 // Description: Deterministic network replacement and isolated working directories.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use email_verifier::{
     network::{NetFuture, Network, ProbeError, Reply},
     verifier::{Settings, Step, Verifier},

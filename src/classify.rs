@@ -2,8 +2,7 @@
 // File: classify.rs
 // Description: Network-independent address and SMTP policy decisions.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use std::{
     collections::{HashMap, HashSet},
     net::IpAddr,

@@ -2,8 +2,7 @@
 // File: tests/files.rs
 // Description: Encoding, extraction and byte-level CSV regression tests.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use email_verifier::{
     files::*,
     verifier::{validate_syntax, Settings, VerificationResult},

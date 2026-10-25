@@ -2,8 +2,7 @@
 // File: network.rs
 // Description: DNS lookups and bounded plaintext SMTP sessions to pinned IP addresses.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use crate::verifier::{Settings, Step};
 use hickory_resolver::{
     config::{NameServerConfig, ResolverConfig, ResolverOpts},

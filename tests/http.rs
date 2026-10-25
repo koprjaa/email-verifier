@@ -2,8 +2,7 @@
 // File: tests/http.rs
 // Description: Offline HTTP integration tests for authentication, upload, jobs and downloads.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 mod support;
 use axum::{
     body::Body,

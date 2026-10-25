@@ -2,8 +2,7 @@
 // File: verifier.rs
 // Description: Isolated verification traces, DNS caches, catch-all tests and retry orchestration.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use crate::{
     classify,
     network::{Network, ProbeError, Reply},

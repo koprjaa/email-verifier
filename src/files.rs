@@ -2,8 +2,7 @@
 // File: files.rs
 // Description: Encoding detection, ordered address extraction and result CSV serialization.
 // Author: Jan Alexandr Kopřiva
-// License: MIT
-
+// License: AGPL-3.0-or-later
 use crate::verifier::VerificationResult;
 use serde_json::Value;
 use std::{collections::HashSet, sync::LazyLock};
