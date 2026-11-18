@@ -46,6 +46,7 @@ pub fn is_unknown_status(status: &str) -> bool {
         "smtputf8_unsupported",
         "rcpt_temp_reject",
         "rcpt_policy_reject",
+        "mailbox_full", // schránka existuje, jen je plná: ani platná doručitelná, ani neexistující
     ]
     .contains(&status)
 }

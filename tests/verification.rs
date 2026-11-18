@@ -112,14 +112,19 @@ async fn successful_retry_and_nonretryable_timeout() {
 }
 #[tokio::test]
 async fn dns_failures_return_false() {
+    // selhání resolveru (timeout, SERVFAIL) = neznámo; jen definitivní „žádné MX" je neplatná adresa (18. 11.)
     let mock = MockNetwork::new();
     *mock.mx_error.lock().unwrap() = Some(ProbeError::new("dns_resolver_failure", "DNS failed"));
     let r = verifier(mock.clone(), json!({}))
         .verify("a@example.com")
         .await;
-    assert_eq!(r.is_valid, Some(false));
+    assert_eq!(r.is_valid, None);
     assert_eq!(r.message, "DNS failed");
     assert!(mock.calls.lock().unwrap().is_empty());
+    let mock = MockNetwork::new();
+    *mock.mx_error.lock().unwrap() = Some(ProbeError::new("no_mx", "No MX records found"));
+    let r = verifier(mock.clone(), json!({})).verify("b@example.com").await;
+    assert_eq!(r.is_valid, Some(false));
 }
 #[tokio::test]
 async fn catchall_result_is_cached_and_freemail_skipped() {

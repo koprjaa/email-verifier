@@ -440,7 +440,8 @@ impl Verifier {
                 let outcome = self
                     .probe(&email, domain, host, 25, &mut probe_steps, true)
                     .await;
-                answered += usize::from(outcome.is_ok());
+                // 4xx a policy odmítnutí o schránce nic neříkají: nepočítat jako odpověď (jinak se cachuje „není catch-all")
+                answered += usize::from(outcome.as_ref().is_ok_and(|r| !matches!(r.status.as_str(), "rcpt_temp_reject" | "rcpt_policy_reject")));
                 match outcome {
                     Ok(r)
                         if is_microsoft(domain, host)
@@ -603,7 +604,9 @@ impl Verifier {
                         &e.message,
                         None,
                     );
-                    r.outcome(Some(false), &e.status, &e.message);
+                    // verdikt jen u definitivní odpovědi DNS; selhání resolveru = neznámo (dřív „invalid", nikdy znovu)
+                    let verdikt = matches!(e.status.as_str(), "no_mx" | "null_mx").then_some(false);
+                    r.outcome(verdikt, &e.status, &e.message);
                     return r;
                 }
             };

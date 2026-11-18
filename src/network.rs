@@ -102,9 +102,10 @@ impl RealNetwork {
 impl Network for RealNetwork {
     fn mx<'a>(&'a self, domain: &'a str) -> NetFuture<'a, Vec<(u16, String)>> {
         Box::pin(async move {
+            // „žádné MX" je odpověď (no_mx), timeout/SERVFAIL ne: ten nesmí udělat z platné adresy neplatnou
             let response = self.resolver.mx_lookup(domain).await.map_err(|e| {
                 ProbeError::new(
-                    "dns_resolver_failure",
+                    if e.is_no_records_found() { "no_mx" } else { "dns_resolver_failure" },
                     format!("DNS error (MX) for {domain}: {e}"),
                 )
             })?;
@@ -127,7 +128,7 @@ impl Network for RealNetwork {
                 ));
             }
             if records.is_empty() {
-                return Err(ProbeError::new("dns_resolver_failure",format!("Unexpected error during DNS MX query for {domain}: No MX records found for {domain}.")));
+                return Err(ProbeError::new("no_mx",format!("No MX records found for {domain}.")));
             }
             Ok(records)
         })
@@ -341,7 +342,9 @@ pub async fn smtp_session(
         if !catchall {let _=session.command("RSET").await;}
         if [421,450,451,452].contains(&code) {return Err(ProbeError{status:"rcpt_to_temp_fail".into(),message:format!("RCPT TO temp error: {code} {message}"),retryable:true});}
         // only a plain mailbox refusal is a verdict; a 4xx or a policy refusal says nothing about the mailbox
-        let status=if success(code){"valid"}else if (400..500).contains(&code){"rcpt_temp_reject"}else if crate::classify::is_rcpt_policy_rejection(code,&message){"rcpt_policy_reject"}else{"invalid_mailbox"};
+        // 552 / 5.2.x (plná schránka, kvóta) = schránka existuje, není to „neexistuje" (revize 18. 11.)
+        let plna=code==552||message.contains(" 5.2.")||message.to_ascii_lowercase().contains("quota")||message.to_ascii_lowercase().contains("mailbox full");
+        let status=if success(code){"valid"}else if (400..500).contains(&code){"rcpt_temp_reject"}else if plna{"mailbox_full"}else if crate::classify::is_rcpt_policy_rejection(code,&message){"rcpt_policy_reject"}else{"invalid_mailbox"};
         Ok(Reply{valid:success(code),status:status.into(),message,code})
     }.await;
     let _ = session.command("QUIT").await;
